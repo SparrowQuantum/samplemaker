@@ -1,7 +1,36 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel",
-    "pybind11"
+requires = ["scikit-build-core>=0.11.6", "pybind11>=3.0.1"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "samplemaker"
+authors = [
+    { name = "Leonardo Midolo", email = "midolo@nbi.ku.dk"}
 ]
-build-backend = "setuptools.build_meta"
+description = "Lithographic mask design package"
+readme = "README.md"
+requires-python = ">=3.13"
+license-files = ["LICENSE.md"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+]
+version = "5.4.3"
+dependencies = [
+    "matplotlib>=3.7.5",
+    "numpy>=2.3.5",
+]
+
+[project.urls]
+Repository = "https://github.com/lmidolo/samplemaker.git"
+
+[tool.scikit-build]
+minimum-version = "0.11.6"
+build-dir = "build/{wheel_tag}"
+cmake.source-dir = "src/boopy"
+wheel.install-dir = "samplemaker"
+wheel.packages = ["src/samplemaker"]
+
+[tool.scikit-build.cmake.define]
+PYBIND11_FINDPYTHON = "ON"
