@@ -43,3 +43,4 @@ before-all = "brew install boost"
 
 [tool.cibuildwheel.windows]
 before-all = "vcpkg install boost-polygon:x64-windows"
+environment = { VCPKG_ROOT = "C:\\vcpkg", CMAKE_TOOLCHAIN_FILE = "C:\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake" }
