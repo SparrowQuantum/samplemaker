@@ -44,6 +44,7 @@ before-all = "brew install boost"
 [tool.cibuildwheel.windows]
 before-all = [
     "vcpkg install boost-polygon:x64-windows",
+    "vcpkg install boost-polygon:x86-windows",
     "vcpkg integrate install",
 ]
 
