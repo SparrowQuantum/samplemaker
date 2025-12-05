@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15...3.27)
+cmake_minimum_required(VERSION 3.15...3.29)
 project(${SKBUILD_PROJECT_NAME} LANGUAGES CXX)
 
 # Find Python
@@ -8,6 +8,10 @@ find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
 # Find Boost (header-only for polygon)
+if(POLICY CMP0167)
+  # Keep old behavior for Boost finding (incompatible with cmake >= 3.30)
+  cmake_policy(SET CMP0167 OLD)
+endif()
 find_package(Boost REQUIRED)
 
 # Create the Python extension module
