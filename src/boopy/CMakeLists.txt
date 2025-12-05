@@ -8,10 +8,15 @@ find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
 # Find Boost
-# Try CONFIG mode first (for vcpkg/newer Boost), fall back to MODULE mode
-find_package(Boost QUIET CONFIG)
-if(NOT Boost_FOUND)
-    find_package(Boost REQUIRED)
+if(WIN32)
+    # On Windows with vcpkg, use CONFIG mode only
+    find_package(Boost REQUIRED CONFIG)
+else()
+    # On Linux/macOS, try CONFIG first, fall back to MODULE mode
+    find_package(Boost QUIET CONFIG)
+    if(NOT Boost_FOUND)
+        find_package(Boost REQUIRED)
+    endif()
 endif()
 
 # Create the Python extension module

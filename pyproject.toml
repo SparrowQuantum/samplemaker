@@ -42,8 +42,10 @@ before-all = "yum install -y boost-devel"
 before-all = "brew install boost"
 
 [tool.cibuildwheel.windows]
-environment = { CMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" }
 before-all = [
     "vcpkg install boost-polygon:x64-windows",
     "vcpkg integrate install",
 ]
+
+[tool.cibuildwheel.windows.config-settings]
+cmake.args = ["-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake"]
