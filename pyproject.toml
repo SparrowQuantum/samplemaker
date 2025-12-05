@@ -32,9 +32,6 @@ cmake.source-dir = "src/boopy"
 wheel.install-dir = "samplemaker"
 wheel.packages = ["src/samplemaker"]
 
-#[tool.scikit-build.cmake.define]
-#PYBIND11_FINDPYTHON = "ON"
-
 [tool.cibuildwheel]
 skip = "*-musllinux*"
 
