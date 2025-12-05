@@ -33,7 +33,7 @@ wheel.install-dir = "samplemaker"
 wheel.packages = ["src/samplemaker"]
 
 [tool.cibuildwheel]
-skip = "*-musllinux*"
+skip = ["*-musllinux*", "*-win32*"]
 
 [tool.cibuildwheel.linux]
 before-all = "yum install -y boost-devel"
@@ -44,10 +44,9 @@ before-all = "brew install boost"
 [tool.cibuildwheel.windows]
 environment = { BOOST_ROOT = "C:/vcpkg/installed/x64-windows" }
 before-all = [
-    "vcpkg install boost-polygon:x86-windows",
     "vcpkg install boost-polygon:x64-windows",
     "vcpkg integrate install",
 ]
 
 [tool.cibuildwheel.windows.config-settings]
-cmake.args = ["-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake"]
+cmake.args = []
