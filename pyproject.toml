@@ -49,7 +49,7 @@ before-all = [
 ]
 
 [[tool.cibuildwheel.overrides]]
-selector = "*-win32*"
+select = "*-win32*"
 environment = { BOOST_ROOT = "C:/vcpkg/installed/x86-windows" }
 before-all = [
     "vcpkg install boost-polygon:x86-windows",
