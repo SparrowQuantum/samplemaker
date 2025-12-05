@@ -44,15 +44,8 @@ before-all = "brew install boost"
 [tool.cibuildwheel.windows]
 environment = { BOOST_ROOT = "C:/vcpkg/installed/x64-windows" }
 before-all = [
-    "vcpkg install boost-polygon:x64-windows",
-    "vcpkg integrate install",
-]
-
-[[tool.cibuildwheel.overrides]]
-select = "*-win32*"
-environment = { BOOST_ROOT = "C:/vcpkg/installed/x86-windows" }
-before-all = [
     "vcpkg install boost-polygon:x86-windows",
+    "vcpkg install boost-polygon:x64-windows",
     "vcpkg integrate install",
 ]
 
