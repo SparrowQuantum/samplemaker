@@ -11,15 +11,25 @@ description = "Lithographic mask design package"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 license-files = ["LICENSE.md"]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: BSD License",
-    "Operating System :: OS Independent",
-]
+license = "BSD-3-Clause"
 version = "5.4.3"
 dependencies = [
     "matplotlib>=3.7.5",
     "numpy==2.*",
+]
+classifiers = [
+    "Programming Language :: C++",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Operating System :: Unix",
+    "Operating System :: POSIX :: Linux",
 ]
 
 [project.urls]
@@ -42,11 +52,7 @@ before-all = "yum install -y boost-devel"
 before-all = "brew install boost"
 
 [tool.cibuildwheel.windows]
-environment = { BOOST_ROOT = "C:/vcpkg/installed/x64-windows" }
 before-all = [
     "vcpkg install boost-polygon:x64-windows",
     "vcpkg integrate install",
 ]
-
-[tool.cibuildwheel.windows.config-settings]
-cmake.args = []
