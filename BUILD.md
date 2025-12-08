@@ -4,23 +4,29 @@ This document explains how to build SampleMaker with its C++ extension module (b
 
 ## Overview
 
-SampleMaker includes a C++ component called "boopy" that provides high-performance Boolean polygon operations using Boost.Polygon and is exposed to Python via pybind11. The project uses:
+SampleMaker includes a C++ component called "boopy" that provides high-performance Boolean polygon operations using 
+Boost.Polygon and is exposed to Python via pybind11. The project uses:
 
-- **scikit-build-core**: Modern build system that uses CMake and pure pyproject.toml configuration
-- **CMake**: For configuring the C++ extension build
-- **cibuildwheel**: For cross-platform wheel building
-- **astral uv**: For faster dependency installation during builds
+- **[scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/)**: 
+  Modern build system that uses CMake and pure `pyproject.toml` configuration.
+- **[CMake](https://cmake.org/)**: For configuring the C++ extension build.
+- **[Astral uv](https://docs.astral.sh/uv/)**: For faster dependency installation during builds.
+- **[cibuildwheel](https://cibuildwheel.pypa.io/en/stable/)**: 
+  For cross-platform wheel building.
 
-## Prerequisites
 
-### All Platforms
-- Python 3.8 or later
+## Local Development Build
+
+### Prerequisites
+- Python 3.10 or later
 - CMake 3.15 or later
 - A C++14-compatible compiler
 - pybind11 (installed automatically during build)
 - Boost (header-only, for polygon operations)
 
 ### Linux
+
+Install the required packages using your distribution's package manager:
 ```bash
 # Ubuntu/Debian
 sudo apt-get install build-essential cmake libboost-dev
@@ -29,35 +35,48 @@ sudo apt-get install build-essential cmake libboost-dev
 sudo yum install gcc-c++ make cmake boost-devel
 ```
 
-### macOS
+Navigate to the project directory and build:
 ```bash
-brew install boost cmake
-```
+# Using Astral uv (recommended)
+uv sync
 
-### Windows
-```powershell
-# Using vcpkg
-git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
-C:\vcpkg\bootstrap-vcpkg.bat
-C:\vcpkg\vcpkg.exe install boost-polygon:x64-windows
-```
-
-## Local Development Build
-
-### Installing in Development Mode
-
-```bash
-# Clone the repository
-git clone https://github.com/lmidolo/samplemaker.git
-cd samplemaker
-
-# Install in editable mode with build dependencies
+# Using pip
 pip install -e .
 ```
 
-### Testing the Build
+### macOS
+Work in progress...
 
-```python
-# Test that boopy imports correctly
-python -c "from samplemaker.resources import boopy; print('Success!')"
+### Windows
+To build on Windows, ensure you have Visual Studio with C++ build tools installed.
+
+Boost can be installed via vcpkg:
+```powershell
+git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
+C:\vcpkg\bootstrap-vcpkg.bat
+C:\vcpkg\vcpkg.exe install boost-polygon
+C:\vcpkg\vcpkg.exe integrate install
+```
+
+Open `x64 Native Tools Command Prompt for VS` and navigate to the project directory:
+```cmd
+cd path\to\samplemaker
+set CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+
+# Astral uv (recommended)
+uv sync
+
+# Using pip
+pip install -e .
+```
+
+If boost is not found, try setting the CMAKE_TOOLCHAIN_FILE directly in the build command:
+```cmd
+cd path\to\samplemaker
+
+# Astral uv (recommended)
+uv sync -C cmake.args="-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+
+# Using pip
+pip install -e . -C cmake.args="-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
 ```
