@@ -683,13 +683,13 @@ class Device:
             
             if hsh not in _DevicePool:
                 _DeviceCountPool[srefname] += 1
-                srefname += "_%0.4i"%_DeviceCountPool[srefname]
+                srefname += f"_{_DeviceCountPool[srefname]:04d}"
                 LayoutPool[srefname] = self.geom()
                 _BoundingBoxPool[srefname] = LayoutPool[srefname].bounding_box()
                 _DevicePool[hsh] = srefname
                 _DeviceLocalParamPool[hsh] = deepcopy(self._localp)
             else:
-                srefname += "_%0.4i"%_DeviceCountPool[srefname]
+                srefname += f"_{_DeviceCountPool[srefname]:04d}"
                 self._localp = _DeviceLocalParamPool[hsh]
             # now create a ref
             g = make_sref(self._x0,self._y0, _DevicePool[hsh], 
@@ -1046,7 +1046,7 @@ class Circuit(Device):
                 dev=_DeviceList[nle.devname].build()
                 for key,value in nle.params.items():
                     dev.set_param(key,value)
-                self.addparameter("dev_%s_%i"%(nle.devname,i), dev._p, "Device parameters for %s"%nle.devname)
+                self.addparameter(f"dev_{nle.devname}_{i:d}", dev._p, f"Device parameters for {nle.devname}")
             i+=1
            
     def set_param(self, param_name: str, value):
@@ -1109,7 +1109,7 @@ class Circuit(Device):
             if(hasattr(dev,"_seq")):
                 dev._seq.reset()               
             # Set all parameter from Netlist hierarchy
-            dev._p = self._p["dev_%s_%i"%(nle.devname,i)]
+            dev._p = self._p[f"dev_{nle.devname}_{i:d}"]
             i+=1
             dev._x0 = nle.x0
             dev._y0 = nle.y0

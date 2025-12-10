@@ -33,7 +33,6 @@ import samplemaker.makers as sm
 from samplemaker.shapes import GeomGroup
 import math
 import numpy as np
-from typing import List
 from samplemaker.layout import LayoutPool
 from copy import deepcopy
 
@@ -45,12 +44,12 @@ class Crystal:
 
         Parameters
         ----------
-        xpts : List[float], optional
+        xpts : list[float], optional
             List of x-coordinates (normalized) of the lattice sites. The default is [].
-        ypts : List[float], optional
+        ypts : list[float], optional
             List of y-coordinates (normalized) of the lattice sites. The default is [].
-        params : List[float], optional
-            2D List of paramter values of the lattice sites. Should be of the form params[pindex,site_index]. 
+        params : list[float], optional
+            2D list of paramter values of the lattice sites. Should be of the form params[pindex,site_index]. 
             The default is [].
 
         Returns
@@ -70,7 +69,7 @@ class Crystal:
 
         Parameters
         ----------
-        index : List[int]
+        index : list[int]
             indexes to be removed from the list used to initialize the crystal.
 
         Returns
@@ -90,7 +89,7 @@ class Crystal:
 
         Parameters
         ----------
-        index : List[int]
+        index : list[int]
             A list of indexes to be shifted.
         shift_x : float
             x-amount of shift (in normalized units).
@@ -151,7 +150,7 @@ class Crystal:
 
         Returns
         -------
-        sel : List[float]
+        sel : list[float]
             A list of coordinate indices.
 
         """
@@ -322,9 +321,9 @@ class Crystal:
         Ny : int
             Number of holes in the y direction, note that we consider Ny=1 the
             row where y=sqrt(3). The crystal will span from -Ny to Ny.
-        spacing : List[float]
+        spacing : list[float]
             Array of lattice constants to be used for the various sections of the hetero phc.
-        periods : List[int]
+        periods : list[int]
             How many times should each spacing be repeated (always end with 1 for the remaining).
         Nparams : int, optional
             Number of parameters to be controlled for each lattice site. 
@@ -402,7 +401,7 @@ def make_phc(crystal: "Crystal", scaling: float, cellparams: list[float], x0: fl
         The crystal template.
     scaling : float
         An overall scaling factor in um.
-    cellparams : List[float]
+    cellparams : list[float]
         A list with the scaling parameters to be passed to the cell function.
     x0 : float
         Position x-coordinate in um.
@@ -447,7 +446,7 @@ def make_phc_inpoly(crystal: "Crystal", poly: "sm.Poly", scaling: float, cellpar
         The polygon used to clip. Should be created with samplemaker.shapes.Poly
     scaling : float
         An overall scaling factor in um.
-    cellparams : List[float]
+    cellparams : list[float]
         A list with the scaling parameters to be passed to the cell function.
     x0 : float
         Position x-coordinate in um.

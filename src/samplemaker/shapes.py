@@ -67,7 +67,6 @@ import numpy as np
 from copy import deepcopy
 import math
 import samplemaker.resources.boopy as boopy
-from typing import List
 from samplemaker import _BoundingBoxPool
 
 _glyphs = dict()
@@ -143,7 +142,7 @@ class GeomGroup:
 
         Parameters
         ----------
-        layer_list : List[int], optional
+        layer_list : list[int], optional
             A list of layers that should be used when flattening. The default is [] (=all).
 
         Returns
@@ -500,7 +499,7 @@ class GeomGroup:
 
         Parameters
         ----------
-        layers : List[int]
+        layers : list[int]
             The selected layer list.
 
         Returns
@@ -521,7 +520,7 @@ class GeomGroup:
 
         Parameters
         ----------
-        layers : List[int]
+        layers : list[int]
             A list of layer to deselect.
 
         Returns
@@ -657,7 +656,7 @@ class GeomGroup:
 
         Returns
         -------
-        res : List
+        res : list
             A list of coordinate pairs, corresponding to the location of the pattern.
 
         """

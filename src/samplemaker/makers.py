@@ -17,8 +17,7 @@ directly.
 import math
 import samplemaker.shapes as smsh
 from samplemaker.shapes import GeomGroup
-from typing import List
-  
+
 def make_dot(x0: float, y0: float)-> "smsh.Dot":
     """
     Creates a dot object. Dots cannot be exported to GDS but they are useful
@@ -48,9 +47,9 @@ def make_poly(xpts: list[float],ypts: list[float],
 
     Parameters
     ----------
-    xpts : List[float]
+    xpts : list[float]
         x coordinates in um.
-    ypts : List[float]
+    ypts : list[float]
         y coordinates in um.
     layer : int, optional
         layer. The default is 1.
@@ -74,9 +73,9 @@ def make_path(xpts: list[float],ypts: list[float],
 
     Parameters
     ----------
-    xpts : List[float]
+    xpts : list[float]
         x coordinates in um.
-    ypts : List[float]
+    ypts : list[float]
         y coordinates in um.
     width : float
         path width in um.
@@ -501,11 +500,11 @@ def make_tapered_path(xpts: list[float],ypts: list[float],
 
     Parameters
     ----------
-    xpts : List[float]
+    xpts : list[float]
         x coordinates in um.
-    ypts : List[float]
+    ypts : list[float]
         y coordinates in um.
-    widths : List[float]
+    widths : list[float]
         path widths in um at each point (should be the same size as xpts).
     layer : int, optional
         The path layer. The default is 1.
