@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module contains the base classes for generating re-usable device classes.
 
@@ -1327,18 +1326,18 @@ def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel"):
                 y = g.data[1::2]
                 for i in range(len(x)-1):
                     if ((x[i+1]-x[i])**2 +(y[i+1]-y[i])**2 > 0.2): 
-                        f.write("<Line {x0} {y0} {x1} {y1} wire>\n".format(x0=int(x[i]),y0=int(y[i]),x1=int(x[i+1]),y1=int(y[i+1])))
+                        f.write(f"<Line {int(x[i])} {int(y[i])} {int(x[i+1])} {int(y[i+1])} wire>\n")
                     
         dev.ports()
         for pname, port in dev._ports.items():
-            f.write("<Port {x} {y} {name}>\n".format(x=int(port.x0*100/scale),y=int(port.y0*100/scale),name=pname))
+            f.write(f"<Port {int(port.x0*100/scale)} {int(port.y0*100/scale)} {pname}>\n")
             
         f.write("</Symbol>\n")
         #f.write("<Offsetlabel 0 -50 -50>\n")
         f.write("<Netlist spice>\n")
         f.write("$devicename ")
         for pname, port in dev._ports.items():
-            f.write("{name} $node({name}) ".format(name=pname))
+            f.write(f"{pname} $node({pname}) ")
         f.write(". ")
         for p,val in oj._p.items():
             f.write(p+" $" + p +" ")

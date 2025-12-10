@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Functions that generate shapes into `samplemaker.shapes.GeomGroup` objects.
 
@@ -41,7 +40,7 @@ def make_dot(x0: float, y0: float)-> "smsh.Dot":
     return smsh.Dot(x0,y0)
     
 
-def make_poly(xpts: List[float],ypts: List[float],
+def make_poly(xpts: list[float],ypts: list[float],
               layer: int = 1)-> 'GeomGroup':
     """
     Creates a closed polygon object. 
@@ -66,7 +65,7 @@ def make_poly(xpts: List[float],ypts: List[float],
     g.add(smsh.Poly(xpts,ypts,layer))
     return g        
 
-def make_path(xpts: List[float],ypts: List[float],
+def make_path(xpts: list[float],ypts: list[float],
               width: float,layer: int = 1,
               to_poly: bool = 0)-> 'GeomGroup':
     """
@@ -494,8 +493,8 @@ def make_rounded_rect(x0: float,y0: float,width: float,
         r1.translate(xoff*(width+2*corner_radius)/2,yoff*(height+2*corner_radius)/2)
     return r1
 
-def make_tapered_path(xpts: List[float],ypts: List[float],
-              widths: List[float],layer: int = 1)-> 'GeomGroup':
+def make_tapered_path(xpts: list[float],ypts: list[float],
+              widths: list[float],layer: int = 1)-> 'GeomGroup':
     """
     Creates a path with variable width. A list of path widths is given
     so that at each point the width can be changed. A polygon is produced

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Shape classes supported by the GDS format and most lithography systems / pattern generators.
 
@@ -136,7 +135,7 @@ class GeomGroup:
         """
         return deepcopy(self)
     
-    def flatten(self, layer_list: List[int] = []) -> "GeomGroup":
+    def flatten(self, layer_list: list[int] = []) -> "GeomGroup":
         """
         Flattens the entire group. Turns all SREF and AREF objects in flattened objects.
         All references to cell are removed. A new flattened group is returned and no 
@@ -495,7 +494,7 @@ class GeomGroup:
                 g.add(geom)
         return g
     
-    def select_layers(self,layers: List[int]) -> 'GeomGroup':
+    def select_layers(self,layers: list[int]) -> 'GeomGroup':
         """
         Create a new GeomGroup containing only shapes in a list of layers.
 
@@ -516,7 +515,7 @@ class GeomGroup:
                 g.add(geom)
         return g
     
-    def deselect_layers(self, layers: List[int])-> 'GeomGroup':
+    def deselect_layers(self, layers: list[int])-> 'GeomGroup':
         """
         Create a new GeomGroup containing only shapes that are not in layer list
 

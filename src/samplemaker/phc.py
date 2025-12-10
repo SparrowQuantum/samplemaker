@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Classes for drawing photonic crystals and periodic sturctures.
 
@@ -39,7 +38,7 @@ from samplemaker.layout import LayoutPool
 from copy import deepcopy
 
 class Crystal:
-    def __init__(self,xpts: List[float] =[],ypts: List[float] = [],params: List[float]=[]):
+    def __init__(self,xpts: list[float] =[],ypts: list[float] = [],params: list[float]=[]):
         """
         Initialize a Crystal template.
 
@@ -65,7 +64,7 @@ class Crystal:
             params=np.float64(params)
         self.params = params
         
-    def remove_at_index(self, index: List[int]):
+    def remove_at_index(self, index: list[int]):
         """
         Removes lattice sites from a list of indices
 
@@ -84,7 +83,7 @@ class Crystal:
             self.ypts=np.delete(self.ypts, index)
             self.params=np.delete(self.params, index,axis=1)
     
-    def shift_at_index(self, index: List[int], shift_x: float, shift_y: float,
+    def shift_at_index(self, index: list[int], shift_x: float, shift_y: float,
                        relative: bool = False, orig_x: float = 0, orig_y: float = 0):
         """
         Shifts the lattice sites specified in the list
@@ -307,7 +306,7 @@ class Crystal:
     
     @classmethod
     def triangular_heterophc(cls,Nx: float, Ny: float, 
-                             spacing: List[float], periods: List[int],
+                             spacing: list[float], periods: list[int],
                              Nparams: int = 1):
         """
         Creates a triangular photonic crystal in the shape of a rectangular 
@@ -392,7 +391,7 @@ def __circref_cellfun__(x,y,params):
     else:
         return sm.make_sref(x, y, "_CIRCLE",LayoutPool["_CIRCLE"],mag=params[0])
 
-def make_phc(crystal: "Crystal", scaling: float, cellparams: List[float], x0: float, y0: float, 
+def make_phc(crystal: "Crystal", scaling: float, cellparams: list[float], x0: float, y0: float, 
              cellfun = __circ_cellfun__, name: str = ""):
     """
     Creates a photonic crystal geometry
@@ -435,7 +434,7 @@ def make_phc(crystal: "Crystal", scaling: float, cellparams: List[float], x0: fl
     phc.translate(x0,y0)
     return phc
 
-def make_phc_inpoly(crystal: "Crystal", poly: "sm.Poly", scaling: float, cellparams: List[float], 
+def make_phc_inpoly(crystal: "Crystal", poly: "sm.Poly", scaling: float, cellparams: list[float], 
                     x0: float, y0: float, cellfun = __circ_cellfun__, name: str = ""):
     """
     Creates a photonic crystal geometry clipped inside a polygon area.

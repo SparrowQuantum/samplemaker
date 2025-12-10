@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module contains the classes to configure the mask layout. 
 
@@ -889,7 +888,7 @@ class Mask:
                     _DevicePool[key]=data[3][key]
                 for key in data[4].keys():                
                     _BoundingBoxPool[key]=data[4][key]
-        except IOError:
+        except OSError:
             pass
     
     def __cleanup_cellref(self):
