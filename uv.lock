@@ -563,8 +563,8 @@ wheels = [
 ]
 
 [[package]]
-name = "samplemaker"
-version = "5.4.3"
+name = "samplemaker-sparrow"
+version = "5.4.5"
 source = { editable = "." }
 dependencies = [
     { name = "matplotlib" },
