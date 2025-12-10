@@ -63,15 +63,19 @@ to save memory and computation time. For example
 
 """
 
+import pathlib
 import numpy as np
 from copy import deepcopy
 import math
-from pkg_resources import resource_filename
 import samplemaker.resources.boopy as boopy
 from typing import List
 from samplemaker import _BoundingBoxPool
 
 _glyphs = dict()
+
+_STENCIL_FONT_FILENAME = "sm_stencil_font.txt"
+_STENCIL_FONT_ENCODING = "ISO-8859-1"
+_STENCIL_FONT_PATH = pathlib.Path(__file__).parent / "resources" / _STENCIL_FONT_FILENAME
 
 class GeomGroup:
     def __init__(self):
@@ -1380,7 +1384,7 @@ class Poly:
         self.Npts = math.floor(self.data.size/2)
         
     def int_data(self):
-        return np.round_(self.data*1000).astype(int)
+        return np.round(self.data*1000).astype(int)
     
     def set_int_data(self, idata):
         self.data = idata.astype("float64")/1000;
@@ -2224,7 +2228,7 @@ class Arc(Ring):
 # Load fonts and store the glyphs
 # Maybe we should place this somewhere else
 caps=dict()
-with open(resource_filename('samplemaker.resources','sm_stencil_font.txt'),encoding="ISO-8859-1") as f: 
+with open(_STENCIL_FONT_PATH, encoding=_STENCIL_FONT_ENCODING) as f: 
     c = 'a';
     for line in f: 
         test = line.rstrip('\n').split(' ')
