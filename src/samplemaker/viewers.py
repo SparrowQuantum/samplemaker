@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Basic functions to plot and inspect geometries.
 
