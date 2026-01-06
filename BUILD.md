@@ -45,7 +45,19 @@ pip install -e .
 ```
 
 ### macOS
-Work in progress...
+
+Install the required packages using Homebrew:
+```bashbash
+brew install cmake boost
+```
+
+Navigate to the project directory and build:
+```bash
+# Using Astral uv (recommended)
+uv sync
+# Using pip
+pip install -e .
+```
 
 ### Windows
 To build on Windows, ensure you have Visual Studio with C++ build tools installed.
@@ -113,7 +125,15 @@ cibuildwheel .
 ```
 
 ### macOS
-Work in progress...
+On macOS, you can build wheels directly without Docker. Run the following command in the project directory:
+```bash
+# Using Astral uv (recommended)
+uvx cibuildwheel .
+
+# Using pip
+pip install cibuildwheel
+cibuildwheel .
+```
 
 ### Windows
 To build Windows wheels locally, the correct version of `vcpkg` must be added to the PATH environment variable.
