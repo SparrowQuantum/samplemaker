@@ -47,7 +47,7 @@ pip install -e .
 ### macOS
 
 Install the required packages using Homebrew:
-```bashbash
+```bash
 brew install cmake boost
 ```
 
