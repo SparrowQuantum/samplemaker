@@ -5,14 +5,15 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "samplemaker-sparrow"
 authors = [
-    { name = "Leonardo Midolo", email = "midolo@nbi.ku.dk"}
+    { name = "Leonardo Midolo", email = "midolo@nbi.ku.dk"},
+    { name = "Jeppe Roulund", email = "jeppe.roulund@sparrowquantum.com"}
 ]
 description = "Lithographic mask design package"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 license-files = ["LICENSE.md"]
 license = "BSD-3-Clause"
-version = "5.4.5"
+version = "5.4.6"
 dependencies = [
     "matplotlib>=3.7.5",
     "numpy==2.*",
@@ -33,7 +34,7 @@ classifiers = [
 ]
 
 [project.urls]
-Repository = "https://github.com/lmidolo/samplemaker.git"
+Repository = "https://github.com/SparrowQuantum/samplemaker.git"
 
 [tool.scikit-build]
 minimum-version = "0.11.6"

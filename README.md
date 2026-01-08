@@ -12,4 +12,10 @@ the European Research Council (ERC) under the European Union’s Horizon 2020 re
 
 ### How do I get set up?
 
-* For local development build instructions, please refer to [BUILD.md](BUILD.md).
+The package can be installed on most platforms via pip:
+
+```bash
+pip install samplemaker-sparrow
+```
+
+For local development build instructions, please refer to [BUILD.md](https://github.com/SparrowQuantum/samplemaker/blob/master/BUILD.md).
