@@ -6,12 +6,12 @@
 # We now look at some more advanced features, i.e. how to make waveguides.
 # We illustrate the sequencer object using the base waveguide library in samplemaker
 
+import samplemaker.baselib.devices  # noqa: F401
 import samplemaker.layout as smlay  # used for layout
 import samplemaker.makers as sm  # used for drawing
 
 # Used for the sequencer
 from samplemaker.baselib.waveguides import BaseWaveguideSequencer
-import samplemaker.baselib.devices  # noqa: F401
 
 # Create a simple mask layout
 themask = smlay.Mask("07_Tutorial_Waveguides")

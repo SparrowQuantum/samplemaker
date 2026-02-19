@@ -9,11 +9,13 @@ Note that individual device methods are not documented but should be readable an
 self-explanatory.
 """
 
-import numpy as np
 import math
-from samplemaker.devices import Device, registerDevicesInModule
+
+import numpy as np
+
 import samplemaker.makers as sm
-from samplemaker.baselib.waveguides import BaseWaveguideSequencer, BaseWaveguidePort
+from samplemaker.baselib.waveguides import BaseWaveguidePort, BaseWaveguideSequencer
+from samplemaker.devices import Device, registerDevicesInModule
 
 
 class CrossMark(Device):

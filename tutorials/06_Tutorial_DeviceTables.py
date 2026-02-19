@@ -7,16 +7,15 @@
 # different scripts. We moved the device from the previous tutorial into a separate file
 # and we called it TutorialCollection.py. Check out this file before starting.
 
-# Let's import basic stuff
-import samplemaker.layout as smlay  # used for layout
-import samplemaker.makers as sm  # used for drawing
-import samplemaker.devices as smdev  # used for device function
+# Let's use numpy arrays
+import numpy as np
 
 # Let's import the tutorial collection of devices, they get automatically registered:
 import TutorialCollection  # noqa: F401
 
-# Let's use numpy arrays
-import numpy as np
+import samplemaker.devices as smdev  # used for device function
+import samplemaker.layout as smlay  # used for layout
+import samplemaker.makers as sm  # used for drawing
 
 # Create a simple mask layout
 themask = smlay.Mask("06_Tutorial_DeviceTables")

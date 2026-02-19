@@ -15,6 +15,7 @@ directly.
 """
 
 import math
+
 import samplemaker.shapes as smsh
 from samplemaker.shapes import GeomGroup
 

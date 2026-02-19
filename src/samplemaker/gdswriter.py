@@ -7,9 +7,11 @@ in the `samplemaker.layout` submodule.
 """
 
 import math
-import numpy as np
 import struct
 import time
+
+import numpy as np
+
 import samplemaker.shapes as smsh
 from samplemaker.shapes import GeomGroup
 

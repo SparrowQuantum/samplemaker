@@ -9,7 +9,7 @@ viewers.
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import PatchCollection
-from matplotlib.patches import Circle, Polygon, Ellipse, Arrow, PathPatch
+from matplotlib.patches import Arrow, Circle, Ellipse, PathPatch, Polygon
 from matplotlib.textpath import TextPath
 from matplotlib.widgets import Slider
 

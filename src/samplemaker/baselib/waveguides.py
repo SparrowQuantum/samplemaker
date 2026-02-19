@@ -9,12 +9,14 @@ This module can be used as template to develop different waveguide libraries.
 
 import math
 from copy import deepcopy
+
 import numpy as np
-from samplemaker.devices import DevicePort
-from samplemaker.shapes import GeomGroup
-import samplemaker.sequencer as smseq
+
 import samplemaker.makers as sm
+import samplemaker.sequencer as smseq
+from samplemaker.devices import DevicePort
 from samplemaker.routers import WaveguideConnect
+from samplemaker.shapes import GeomGroup
 
 # First step in defining a waveguide library is to define a sequencer
 # and its dictionary.

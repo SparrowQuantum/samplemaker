@@ -29,12 +29,14 @@ with the designed parameters.
 
 """
 
-import samplemaker.makers as sm
-from samplemaker.shapes import GeomGroup, Poly
 import math
-import numpy as np
-from samplemaker.layout import LayoutPool
 from copy import deepcopy
+
+import numpy as np
+
+import samplemaker.makers as sm
+from samplemaker.layout import LayoutPool
+from samplemaker.shapes import GeomGroup, Poly
 
 
 class Crystal:

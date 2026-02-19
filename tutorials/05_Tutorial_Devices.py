@@ -17,7 +17,6 @@ from samplemaker.devices import Device
 # And the device inspection tool
 from samplemaker.viewers import DeviceInspect
 
-
 # Create a simple mask layout
 themask = smlay.Mask("05_Tutorial_Devices")
 

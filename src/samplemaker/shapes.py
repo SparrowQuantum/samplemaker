@@ -67,10 +67,12 @@ to save memory and computation time. For example
 
 """
 
-import pathlib
-import numpy as np
-from copy import deepcopy
 import math
+import pathlib
+from copy import deepcopy
+
+import numpy as np
+
 import samplemaker.resources.boopy as boopy
 from samplemaker import _BoundingBoxPool
 

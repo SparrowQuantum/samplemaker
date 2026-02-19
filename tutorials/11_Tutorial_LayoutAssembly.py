@@ -5,16 +5,13 @@
 
 # Now we will look into final assembly of the mask
 
-# Let's import basic stuff
-import samplemaker.layout as smlay  # used for layout
-import samplemaker.makers as sm  # used for drawing
-import samplemaker.devices as smdev  # used for device function
+import numpy as np
 
 # Let's get the sample maker devices
 import samplemaker.baselib.devices  # noqa: F401
-
-# Numpy
-import numpy as np
+import samplemaker.devices as smdev  # used for device function
+import samplemaker.layout as smlay  # used for layout
+import samplemaker.makers as sm  # used for drawing
 
 # Create a simple mask layout
 themask = smlay.Mask("11_Tutorial_LayoutAssembly")

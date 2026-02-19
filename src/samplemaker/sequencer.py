@@ -56,8 +56,8 @@ with `samplemaker`.
 import math
 from copy import deepcopy
 
-from samplemaker.shapes import GeomGroup
 from samplemaker.devices import _DeviceList
+from samplemaker.shapes import GeomGroup
 
 
 def __changeState(args, state, options):

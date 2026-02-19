@@ -9,16 +9,16 @@
 
 # Let's import basic stuff
 import numpy as np
+from TutorialCollection import FreeFreeMembrane
+
 import samplemaker.layout as smlay  # used for layout
 import samplemaker.makers as sm  # used for drawing
-
-# We take the default router from sample maker
-from samplemaker.routers import ElbowRouter
 
 # We need the base DevicePort class
 from samplemaker.devices import DevicePort
 
-from TutorialCollection import FreeFreeMembrane
+# We take the default router from sample maker
+from samplemaker.routers import ElbowRouter
 
 # Create a simple mask layout
 themask = smlay.Mask("10_Tutorial_ElectricalPorts")

@@ -94,16 +94,16 @@ from copy import deepcopy
 
 from samplemaker import (
     LayoutPool,
-    _DevicePool,
+    _BoundingBoxPool,
     _DeviceCountPool,
     _DeviceLocalParamPool,
-    _BoundingBoxPool,
+    _DevicePool,
 )
 from samplemaker.devices import Device
 from samplemaker.gdsreader import GDSReader
 from samplemaker.gdswriter import GDSWriter
-from samplemaker.makers import make_aref, make_path, make_circle, make_text
-from samplemaker.shapes import GeomGroup, Box, SRef
+from samplemaker.makers import make_aref, make_circle, make_path, make_text
+from samplemaker.shapes import Box, GeomGroup, SRef
 
 
 class Marker:

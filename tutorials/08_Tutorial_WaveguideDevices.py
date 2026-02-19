@@ -6,18 +6,18 @@
 # In this tutorial we create a simple directional coupler
 # as a Device that can be re-used in circuits.
 
-# Let's import basic stuff
 import numpy as np
+
 import samplemaker.layout as smlay  # used for layout
+
+# Used for the sequencer:
+from samplemaker.baselib.waveguides import BaseWaveguidePort, BaseWaveguideSequencer
 
 # We need the device class
 from samplemaker.devices import Device
 
 # And the device inspection tool
 from samplemaker.viewers import DeviceInspect
-
-# Used for the sequencer:
-from samplemaker.baselib.waveguides import BaseWaveguideSequencer, BaseWaveguidePort
 
 # We have imported the BaseWaveguidePort, which can be used to build ports interfacing
 # the device to the outside (e.g. to other devices in a circuit).

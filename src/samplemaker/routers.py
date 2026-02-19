@@ -5,10 +5,12 @@ Automatic port-to-port routing functions.
 """
 
 import math
-import numpy as np
-from samplemaker.devices import DevicePort
-import samplemaker.makers as sm
 from copy import deepcopy
+
+import numpy as np
+
+import samplemaker.makers as sm
+from samplemaker.devices import DevicePort
 
 
 # The following are routines for the connector

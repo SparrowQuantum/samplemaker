@@ -8,9 +8,9 @@
 # a circuit file (see CircuitFile.txt).
 
 # Let's import basic stuff
-import samplemaker.layout as smlay  # used for layout
-import samplemaker.devices as smdev  # used for device function
 import samplemaker.baselib.devices  # noqa: F401
+import samplemaker.devices as smdev  # used for device function
+import samplemaker.layout as smlay  # used for layout
 
 # Create a simple mask layout
 themask = smlay.Mask("12_Tutorial_ImportCircuits")

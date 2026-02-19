@@ -180,21 +180,23 @@ More details on specifying circuits are given in the tutorials, where it is also
 explained how to nest circuits together (i.e. creating netlists of netslists)
 """
 
+import inspect
 import math
 import sys
-import inspect
-import numpy as np
 from copy import deepcopy
-from samplemaker.shapes import GeomGroup, Poly
-from samplemaker.makers import make_sref, make_text
+
+import numpy as np
+
 from samplemaker import (
     LayoutPool,
+    _BoundingBoxPool,
     _DeviceCountPool,
     _DeviceLocalParamPool,
     _DevicePool,
-    _BoundingBoxPool,
 )
 from samplemaker.gdswriter import GDSWriter
+from samplemaker.makers import make_sref, make_text
+from samplemaker.shapes import GeomGroup, Poly
 
 
 class DevicePort:
