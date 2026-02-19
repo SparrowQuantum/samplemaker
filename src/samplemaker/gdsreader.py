@@ -7,15 +7,14 @@ Not to be used in actual scripts, unless it is for very special purposes.
 """
 
 import math
-import numpy as np
 import struct
-import time
-import array
-import os
 from copy import deepcopy
+
+import numpy as np
+
+import samplemaker.makers as sm
 import samplemaker.shapes as smsh
 from samplemaker.shapes import GeomGroup
-import samplemaker.makers as sm
 
 
 class GDSRecord:

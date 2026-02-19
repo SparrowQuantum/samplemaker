@@ -417,7 +417,7 @@ class GeomGroup:
             "width": bb.width,
             "height": bb.height,
         }
-        stat["LayerList"] = [l for l in layer_list]
+        stat["LayerList"] = list(layer_list)
         for layer in layer_list:
             cnt = self.__entity_count(True, True, layer)
             cnt = {k: v for k, v in cnt.items() if v != 0}
