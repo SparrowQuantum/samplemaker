@@ -167,7 +167,7 @@ class Crystal:
             A list of coordinate indices.
 
         """
-        if type(xc) != np.ndarray:
+        if not isinstance(xc, np.ndarray) or not isinstance(yc, np.ndarray):
             xc = np.array(xc)
             yc = np.array(yc)
         sel = []
@@ -175,7 +175,7 @@ class Crystal:
             sx = abs(self.xpts - xc[i]) < 1e-6
             sy = abs(self.ypts - yc[i]) < 1e-6
             res = np.where(sx & sy)
-            if (res[0].size) == 0:
+            if res[0].size == 0:
                 print("defect_at_coord(): warning, no match for ", xc[i], yc[i])
             else:
                 sel.append(res[0][0])

@@ -201,10 +201,10 @@ def DeviceInspect(devcl: Device):
         valstep = dev._p[param] / 10
         if valstep == 0:
             valstep = 0.1
-        if dev._ptype[param] == int:
+        if isinstance(dev._ptype[param], int):
             maxv = int(maxv)
             valstep = 1
-        if dev._ptype[param] == bool:
+        if isinstance(dev._ptype[param], bool):
             maxv = 1
             valstep = 1
         if maxv == 0:
