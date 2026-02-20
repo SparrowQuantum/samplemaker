@@ -168,12 +168,12 @@ def DeviceInspect(devcl: Device | type[Device]):
     global _ViewerCurrentDevice
     global _ViewerCurrentSliders
     global _ViewerCurrentAxes
-    if isinstance(devcl, type) and issubclass(devcl, Device):
-        # Build device with default values
-        dev = devcl.build()
-    elif isinstance(devcl, Device):
-        dev = devcl
-    else:
+
+    dev = devcl.build()  # Device copy with default parameters
+    if isinstance(devcl, Device):
+        for param, value in devcl._p.items():
+            dev.set_param(param, value)
+    elif not isinstance(devcl, type) or not issubclass(devcl, Device):
         raise ValueError("DeviceInspect only accepts Device objects or classes.")
 
     dev.use_references = False
