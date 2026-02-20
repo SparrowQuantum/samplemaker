@@ -408,6 +408,12 @@ class DeviceTableAnnotations:
         return g
 
 
+class IncompatiblePortError(RuntimeError):
+    """
+    Exception raised when trying to link incompatible ports.
+    """
+
+
 class DeviceTable:
     def __init__(self, dev: Device, nrow: int, ncol: int, rowvars: dict, colvars: dict):
         """
@@ -625,7 +631,6 @@ class DeviceTable:
                 for pp in self._portmap[j][i].values():
                     pp.x0 += self.pos_xy[j][i][0]
                     pp.y0 += self.pos_xy[j][i][1]
-                    # print(i,j,pp.name,pp.x0,pp.y0)
 
     def auto_align(self, min_dist_x: float, min_dist_y: float, numkey: int = 5):
         """
@@ -679,20 +684,15 @@ class DeviceTable:
                 if bboxes[j][i].lly < y_extrB[j]:
                     y_extrB[j] = bboxes[j][i].lly
 
-        # print(x_extrR,x_extrL,y_extrT,y_extrB)
-
         sx = [(x_extrR[i - 1] - x_extrL[i] + min_dist_x) for i in range(1, self.ncol)]
         sy = [(y_extrT[j - 1] - y_extrB[j] + min_dist_y) for j in range(1, self.nrow)]
-        # print(sx,sy)
 
         for i in range(self.ncol):
             for j in range(self.nrow):
-                # print(self.pos_xy[j][i])
                 if i != 0:
                     self.pos_xy[j][i][0] += sum(sx[0:i])
                 if j != 0:
                     self.pos_xy[j][i][1] += sum(sy[0:j])
-                # print(self.pos_xy[j][i])
 
     def get_geometries(self) -> GeomGroup:
         """
@@ -702,6 +702,11 @@ class DeviceTable:
         -------
         samplemaker.shapes.GeomGroup
             The rendered table geometry
+
+        Raises
+        ------
+        IncompatiblePortError
+            Raised if ports that are linked together have different connector functions.
 
         """
         if self._getgeom_ran:
@@ -744,20 +749,20 @@ class DeviceTable:
                             p1 = portmap[j][i - 1][links[0]]
                             p2 = portmap[j][i][links[1]]
 
-                            # print(i,j,p1.x0,p1.y0,p2.x0,p2.y0)
-                            if p1.connector_function == p2.connector_function:
-                                if clalign and p1.dx() != 0 and p2.dx() != 0:
-                                    ydiff = p2.y0 - p1.y0
-                                    geom.translate(0, -ydiff)
-                                    for pp in portmap[j][i].values():
-                                        pp.y0 -= ydiff
-
-                                g += p1.connector_function(p1, p2)
-                            else:
-                                print(
-                                    "Warning, incompatible ports for connection "
-                                    f"between {p1.name} and {p2.name}"
+                            if p1.connector_function != p2.connector_function:
+                                msg = (
+                                    f"Incompatible ports for connection between "
+                                    f"{p1.name} and {p2.name}"
                                 )
+                                raise IncompatiblePortError(msg)
+
+                            if clalign and p1.dx() != 0 and p2.dx() != 0:
+                                ydiff = p2.y0 - p1.y0
+                                geom.translate(0, -ydiff)
+                                for pp in portmap[j][i].values():
+                                    pp.y0 -= ydiff
+
+                            g += p1.connector_function(p1, p2)
 
                 if j > 0:
                     for links in rlports:
@@ -765,19 +770,19 @@ class DeviceTable:
                             p1 = portmap[j - 1][i][links[0]]
                             p2 = portmap[j][i][links[1]]
 
-                            # print(i,j,p1.x0,p1.y0,p2.x0,p2.y0)
-                            if p1.connector_function == p2.connector_function:
-                                if rlalign and p1.dy() != 0 and p2.yx() != 0:
-                                    xdiff = p2.x0 - p1.x0
-                                    geom.translate(0, -xdiff)
-                                    for pp in portmap[j][i].values():
-                                        pp.x0 -= xdiff
-                                g += p1.connector_function(p1, p2)
-                            else:
-                                print(
-                                    "Warning, incompatible ports for connection "
-                                    f"between {p1.name} and {p2.name}"
+                            if p1.connector_function != p2.connector_function:
+                                msg = (
+                                    f"Incompatible ports for connection between "
+                                    f"{p1.name} and {p2.name}"
                                 )
+                                raise IncompatiblePortError(msg)
+
+                            if rlalign and p1.dy() != 0 and p2.yx() != 0:
+                                xdiff = p2.x0 - p1.x0
+                                geom.translate(0, -xdiff)
+                                for pp in portmap[j][i].values():
+                                    pp.x0 -= xdiff
+                            g += p1.connector_function(p1, p2)
 
                 # Store external ports to expose them
                 for pp in portmap[j][i].values():
@@ -963,14 +968,14 @@ class Mask:
             Reference to the geometry group.
 
         """
-        if cellname in LayoutPool:
-            return LayoutPool[cellname]
-        else:
-            print("Cell named", cellname, "does not exist")
-            return GeomGroup()
+        if cellname not in LayoutPool:
+            msg = f"Cell named {cellname} does not exist."
+            raise ValueError(msg)
+
+        return LayoutPool[cellname]
 
     def __export_cache(self):
-        print("Storing objects in cache file")
+        print("Storing objects in cache file...")  # noqa: T201
         cachefile = open(self.name + ".cache", "wb")
         # Note that we do not need the full geometry, as we will just reload
         # it from the GDS file. So we keep the references only.
@@ -989,14 +994,14 @@ class Mask:
         )
         pickle.dump(data, cachefile)
         cachefile.close()
-        print("Done.")
+        print("Done.")  # noqa: T201
 
     def __import_cache(self):
         try:
             with open(self.name + ".cache", "rb") as cachefile:
-                print("Loading cache data")
+                print("Loading cache data...")  # noqa: T201
                 data = pickle.load(cachefile)
-                print("Done")
+                print("Done.")  # noqa: T201
                 for key in data[0].keys():
                     LayoutPool[key] = data[0][key]
                 LayoutPool.pop(self.mainsymbol, None)
