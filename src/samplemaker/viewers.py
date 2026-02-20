@@ -157,8 +157,8 @@ def DeviceInspect(devcl: Device | type[Device]):
 
     Parameters
     ----------
-    devcl : samplemaker.devices.Device
-        A device object to be displayed.
+    devcl : Device | type[Device]
+        A device instance or class to be displayed.
 
     Returns
     -------
@@ -231,9 +231,6 @@ def DeviceInspect(devcl: Device | type[Device]):
             valstep=valstep,
         )
         samp.on_changed(__update_scrollbar)
-        # cb = lambda x: onclick(x,param)
-        # samp.connect_event('button_press_event', cb)
         _ViewerCurrentSliders.append(samp)
 
     plt.show()
-    # return sliders
