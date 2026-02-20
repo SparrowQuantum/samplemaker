@@ -91,38 +91,43 @@ def __insertDevice(args, state, options):
     devname = args[0]
     inport = args[1]
     outport = args[2]
-    if devname in _DeviceList:
-        dev = _DeviceList[devname].build()
-        # pass the local parameters now
-        dev._p = options["dev_" + devname]
-        if hasattr(dev, "_seq"):
-            dev._seq.state = deepcopy(state)
-            dev._seq.options = deepcopy(options)
-        g = dev.run()
-        if inport in dev._ports and outport in dev._ports:
-            p1 = dev._ports[inport]
-            xd = p1.x0
-            yd = p1.y0
-            ad = math.degrees(p1.angle()) + 180
-            p2 = dev._ports[outport]
-            xdo = p2.x0
-            ydo = p2.y0
-            ado = math.degrees(p2.angle())
-            g.rotate(xd, yd, -ad + state["a"])
-            g.translate(state["x"] - xd, state["y"] - yd)
-            state["x"] += (xdo - xd) * math.cos(math.radians(state["a"] - ad)) - (
-                ydo - yd
-            ) * math.sin(math.radians(state["a"] - ad))
-            state["y"] += (xdo - xd) * math.sin(math.radians(state["a"] - ad)) + (
-                ydo - yd
-            ) * math.cos(math.radians(state["a"] - ad))
-            state["a"] += ado
-        else:
-            print(f"Warning: device has no port called {inport} or {outport}")
-        return g
-    else:
-        print(f"No device found with name {devname}")
-    return GeomGroup()
+    if devname not in _DeviceList:
+        msg = f"No device found with name {devname}."
+        raise ValueError(msg)
+
+    dev = _DeviceList[devname].build()
+    dev._p = options["dev_" + devname]
+    if hasattr(dev, "_seq"):
+        dev._seq.state = deepcopy(state)
+        dev._seq.options = deepcopy(options)
+
+    g = dev.run()
+    if inport not in dev._ports or outport not in dev._ports:
+        msg = (
+            f"Device {devname} has no port called {inport} or {outport}. "
+            f"Available ports are {list(dev._ports.keys())}"
+        )
+        raise ValueError(msg)
+
+    p1 = dev._ports[inport]
+    xd = p1.x0
+    yd = p1.y0
+    ad = math.degrees(p1.angle()) + 180
+    p2 = dev._ports[outport]
+    xdo = p2.x0
+    ydo = p2.y0
+    ado = math.degrees(p2.angle())
+    g.rotate(xd, yd, -ad + state["a"])
+    g.translate(state["x"] - xd, state["y"] - yd)
+    state["x"] += (xdo - xd) * math.cos(math.radians(state["a"] - ad)) - (
+        ydo - yd
+    ) * math.sin(math.radians(state["a"] - ad))
+    state["y"] += (xdo - xd) * math.sin(math.radians(state["a"] - ad)) + (
+        ydo - yd
+    ) * math.cos(math.radians(state["a"] - ad))
+    state["a"] += ado
+
+    return g
 
 
 def default_command_list():
@@ -289,20 +294,28 @@ class Sequencer:
         for instr in self.seq:
             if not len(instr):
                 continue
+
             cmd = instr[0]
             args = instr[1:]
-            if cmd in self.dic:
-                action = self.dic[cmd]
-                if action[0] != len(args):
-                    print(f"Wrong number of arguments for command {cmd}")
-                    break
-                else:
-                    g += action[1](args, self.state, self.options)
-                    if self.debug_state:
-                        print(f"self state {self.state}")
-            else:
-                print(f"Command {cmd} does not exist")
-                break
+            if cmd not in self.dic:
+                msg = (
+                    f"Command {cmd} does not exist. "
+                    f"Available commands are {list(self.dic.keys())}"
+                )
+                raise ValueError(msg)
+
+            action = self.dic[cmd]
+            if action[0] != len(args):
+                msg = (
+                    f"Wrong number of arguments for command {cmd}."
+                    f" Expected {action[0]}, got {len(args)}"
+                )
+                raise ValueError(msg)
+
+            g += action[1](args, self.state, self.options)
+            if self.debug_state:
+                print(f"self state {self.state}")  # noqa: T201
+
         g.translate(self.state["__XC__"], self.state["__YC__"])
         self.state["x"] += self.state["__XC__"]
         self.state["y"] += self.state["__YC__"]
@@ -310,6 +323,6 @@ class Sequencer:
             coords[0] += self.state["__XC__"]
             coords[1] += self.state["__YC__"]
         if self.debug_state:
-            print(f"final state {self.state}")
+            print(f"final state {self.state}")  # noqa: T201
 
         return g
