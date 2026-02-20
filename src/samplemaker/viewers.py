@@ -117,51 +117,52 @@ def GeomView(grp: GeomGroup):
     plt.show()
 
 
-def __update_scrollbar(val):
+def __update_scrollbar(_val):
     global _ViewerCurrentDevice
     global _ViewerCurrentSliders
     global _ViewerCurrentAxes
     dev = _ViewerCurrentDevice
-    if dev is None or _ViewerCurrentAxes is None:
+    ax = _ViewerCurrentAxes
+    if dev is None or ax is None:
         return
 
-    pn = 0
-    for param in dev._p.keys():
-        # print(_ViewerCurrentSliders[pn].val)
-        dev.set_param(param, _ViewerCurrentSliders[pn].val)
-        pn = pn + 1
+    for i, param in enumerate(dev._p):
+        dev.set_param(param, _ViewerCurrentSliders[i].val)
 
-    # xlim = _ViewerCurrentAxes.get_xlim()
-    # ylim = _ViewerCurrentAxes.get_ylim()
-    dev.use_references = False
     dev.initialize()
     g = dev.run()
-    bb = g.bounding_box()
-    # g=g.flatten()
+
     patches = __get_geom_patches(g)
     patches += __get_device_ports_patches(dev)
     p = PatchCollection(patches, match_original=True)
-    _ViewerCurrentAxes.clear()
-    _ViewerCurrentAxes.add_collection(p)
-    _ViewerCurrentAxes.grid(True)
-    _ViewerCurrentAxes.set_xlim((bb.llx, bb.urx()))
-    _ViewerCurrentAxes.set_ylim((bb.lly, bb.ury()))
-    _ViewerCurrentAxes.aspect = "equal"
-    _ViewerCurrentAxes.set_title(dev._name)
+
+    ax.clear()
+    ax.add_collection(p)
+    ax.grid(True)
+    ax.set_title(dev._name)
+
+    ax.margins(0.02)
+    ax.autoscale_view()
+
+    ax.figure.canvas.draw_idle()
 
 
-def DeviceInspect(devcl: Device):
+def DeviceInspect(devcl: Device | type[Device]):
     """
     Interactive display of devices defined from `samplemaker.devices`.
-    The device is rendered according to the default parameters.
+
+    If a device class is provided, the device is rendered using its default
+    parameter values. If a device instance is provided, the device is rendered
+    using the instance's current parameter values.
+
     Additionally a set of scrollbars is created to interactively modify
     the parameters and observe the changes in real time.
     If the device includes ports, they are displayed as blue arrows.
 
     Parameters
     ----------
-    devcl : samplemaker.devices.Device
-        A device object to be displayed.
+    devcl : Device | type[Device]
+        A device instance or class to be displayed.
 
     Returns
     -------
@@ -171,21 +172,39 @@ def DeviceInspect(devcl: Device):
     global _ViewerCurrentDevice
     global _ViewerCurrentSliders
     global _ViewerCurrentAxes
-    dev = devcl.build()
+
+    if isinstance(devcl, Device):
+        dev = devcl.build()  # Device copy with default parameters
+        for param, value in devcl._p.items():
+            dev.set_param(param, value)
+    elif isinstance(devcl, type) and issubclass(devcl, Device):
+        dev = devcl.build()
+    else:
+        msg = "DeviceInspect only accepts Device classes or Device instances."
+        raise TypeError(msg)
+
+    dev.use_references = False
     _ViewerCurrentDevice = dev
     g = dev.run()
-    g = g.flatten()
+
     plt.close("all")
+
     fig, ax = plt.subplots()
+    _ViewerCurrentAxes = ax
+
     patches = __get_geom_patches(g)
     patches += __get_device_ports_patches(dev)
     p = PatchCollection(patches, match_original=True)
+
     ax.add_collection(p)
-    _ViewerCurrentAxes = ax
-    plt.grid()
-    plt.axis("equal")
-    plt.title(dev._name)
+    ax.grid(True)
+    ax.set_title(dev._name)
+
+    ax.set_aspect("equal", adjustable="datalim")
+    ax.margins(0.02)
+
     plt.subplots_adjust(bottom=0.5)
+
     _ViewerCurrentSliders = []
     n_params = len(dev._p.keys())
     for pn, param in enumerate(dev._p.keys()):
@@ -219,9 +238,6 @@ def DeviceInspect(devcl: Device):
             valstep=valstep,
         )
         samp.on_changed(__update_scrollbar)
-        # cb = lambda x: onclick(x,param)
-        # samp.connect_event('button_press_event', cb)
         _ViewerCurrentSliders.append(samp)
 
     plt.show()
-    # return sliders
