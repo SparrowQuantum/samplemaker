@@ -150,7 +150,11 @@ def __update_scrollbar(_val):
 def DeviceInspect(devcl: Device | type[Device]):
     """
     Interactive display of devices defined from `samplemaker.devices`.
-    The device is rendered according to the default parameters.
+
+    If a device class is provided, the device is rendered using its default
+    parameter values. If a device instance is provided, the device is rendered
+    using the instance's current parameter values.
+
     Additionally a set of scrollbars is created to interactively modify
     the parameters and observe the changes in real time.
     If the device includes ports, they are displayed as blue arrows.
@@ -169,12 +173,15 @@ def DeviceInspect(devcl: Device | type[Device]):
     global _ViewerCurrentSliders
     global _ViewerCurrentAxes
 
-    dev = devcl.build()  # Device copy with default parameters
     if isinstance(devcl, Device):
+        dev = devcl.build()  # Device copy with default parameters
         for param, value in devcl._p.items():
             dev.set_param(param, value)
-    elif not isinstance(devcl, type) or not issubclass(devcl, Device):
-        raise ValueError("DeviceInspect only accepts Device objects or classes.")
+    elif isinstance(devcl, type) and issubclass(devcl, Device):
+        dev = devcl.build()
+    else:
+        msg = "DeviceInspect only accepts Device classes or Device instances."
+        raise TypeError(msg)
 
     dev.use_references = False
     _ViewerCurrentDevice = dev
