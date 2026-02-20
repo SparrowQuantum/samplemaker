@@ -1013,8 +1013,7 @@ class Mask:
 
     def __cleanup_cellref(self):
         # Remove useless references
-        reflist = set()
-        reflist = LayoutPool[self.mainsymbol].get_sref_list(reflist)
+        reflist = LayoutPool[self.mainsymbol].get_sref_list()
         reflist.add(self.mainsymbol)
 
         unref = []
@@ -1088,7 +1087,7 @@ class Mask:
         for cname in gdsr.celldata:
             gg = gdsr.get_cell(cname)
             self.addCell(cname, gg)
-            reflist = gg.get_sref_list(reflist)
+            reflist.update(gg.get_sref_list())
         for cname in gdsr.celldata:
             if cname not in reflist:
                 mainsymbolcandidates.add(cname)
