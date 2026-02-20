@@ -57,3 +57,8 @@ environment = { BOOST_ROOT = "C:/vcpkg/installed/x64-windows" }
 before-all = [
     "vcpkg install boost-polygon:x64-windows",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff==0.15.1",
+]

@@ -4,21 +4,23 @@ Functions that generate shapes into `samplemaker.shapes.GeomGroup` objects.
 The concept of "makers"
 ---------------------
 The `samplemaker.makers` module contains functions that are directly related
-to the shape objects defined in the `samplemaker.shapes` submodule. 
-For each shape, a make_* function is provided. 
+to the shape objects defined in the `samplemaker.shapes` submodule.
+For each shape, a make_* function is provided.
 
 Each make_ function returns a `GeomGroup` object, which can be combined with other
 objects created by other calls to make_ functions.
 Often, the maker function also provides an option to convert the shape to polygon
-directly. 
+directly.
 
 """
 
 import math
+
 import samplemaker.shapes as smsh
 from samplemaker.shapes import GeomGroup
 
-def make_dot(x0: float, y0: float)-> "smsh.Dot":
+
+def make_dot(x0: float, y0: float) -> smsh.Dot:
     """
     Creates a dot object. Dots cannot be exported to GDS but they are useful
     to store coordinates and perform rotations.
@@ -36,13 +38,12 @@ def make_dot(x0: float, y0: float)-> "smsh.Dot":
         A Dot object.
 
     """
-    return smsh.Dot(x0,y0)
-    
+    return smsh.Dot(x0, y0)
 
-def make_poly(xpts: list[float],ypts: list[float],
-              layer: int = 1)-> 'GeomGroup':
+
+def make_poly(xpts: list[float], ypts: list[float], layer: int = 1) -> GeomGroup:
     """
-    Creates a closed polygon object. 
+    Creates a closed polygon object.
     The first and last point should not be specified twice.
 
     Parameters
@@ -61,15 +62,20 @@ def make_poly(xpts: list[float],ypts: list[float],
 
     """
     g = GeomGroup()
-    g.add(smsh.Poly(xpts,ypts,layer))
-    return g        
+    g.add(smsh.Poly(xpts, ypts, layer))
+    return g
 
-def make_path(xpts: list[float],ypts: list[float],
-              width: float,layer: int = 1,
-              to_poly: bool = 0)-> 'GeomGroup':
+
+def make_path(
+    xpts: list[float],
+    ypts: list[float],
+    width: float,
+    layer: int = 1,
+    to_poly: bool = 0,
+) -> GeomGroup:
     """
     Creates a path object (open line with width).
-    Ideally the width should be >0, a width of zero should be avoided.    
+    Ideally the width should be >0, a width of zero should be avoided.
 
     Parameters
     ----------
@@ -91,16 +97,25 @@ def make_path(xpts: list[float],ypts: list[float],
 
     """
     g = GeomGroup()
-    path = smsh.Path(xpts,ypts,width,layer)
-    if(to_poly):
-        g=path.to_polygon()
+    path = smsh.Path(xpts, ypts, width, layer)
+    if to_poly:
+        g = path.to_polygon()
     else:
         g.add(path)
     return g
 
-def make_text(x0: float,y0: float,text: str,
-              height: float,width: float, numkey: int = 5, angle: float = 0, 
-              layer: int = 1, to_poly: bool = 0) -> "GeomGroup":
+
+def make_text(
+    x0: float,
+    y0: float,
+    text: str,
+    height: float,
+    width: float,
+    numkey: int = 5,
+    angle: float = 0,
+    layer: int = 1,
+    to_poly: bool = 0,
+) -> GeomGroup:
     """
     Create a text object
 
@@ -115,13 +130,13 @@ def make_text(x0: float,y0: float,text: str,
     height : float
         Text height (note, this is what GDS calls "text width").
     width : float
-        The width of the lines composing the text 
+        The width of the lines composing the text
         (a good value is 1/10th of height).
     numkey : int, optional
-        The numkey specifies the location of the origin (x0,y0) compared to 
-        the text position. The reference point x0,y0 can be any of the corners 
-        or mid-points specified by the numerical keypad on a standard keyboard. 
-        For example numkey=1 means that x0,y0 will be the lower-left corner of 
+        The numkey specifies the location of the origin (x0,y0) compared to
+        the text position. The reference point x0,y0 can be any of the corners
+        or mid-points specified by the numerical keypad on a standard keyboard.
+        For example numkey=1 means that x0,y0 will be the lower-left corner of
         the rectangle as 1 is located in the lower-left corner of the numerical
         keypad. Similarly, numkey=9 will be the upper-right corner.
         The default is 5 (=center).
@@ -138,19 +153,29 @@ def make_text(x0: float,y0: float,text: str,
         A geometry containing a single text element.
 
     """
-    g = GeomGroup();
-    if(numkey<1 | numkey>9): numkey = 5
-    posu = (numkey-1)%3
-    posv = math.floor((9-numkey)/3)
-    txt=smsh.Text(x0,y0,text,posu,posv,height,width,angle,layer)
-    if(to_poly==1):
+    g = GeomGroup()
+    if numkey < 1 or numkey > 9:
+        # TODO: Raise error here instead
+        numkey = 5
+    posu = (numkey - 1) % 3
+    posv = math.floor((9 - numkey) / 3)
+    txt = smsh.Text(x0, y0, text, posu, posv, height, width, angle, layer)
+    if to_poly == 1:
         g = txt.to_polygon()
     else:
         g.add(txt)
     return g
 
-def make_sref(x0: float, y0: float, cellname: str, group: "GeomGroup",
-              mag: float = 1.0, angle: float = 0, mirror: bool = 0) -> "GeomGroup":
+
+def make_sref(
+    x0: float,
+    y0: float,
+    cellname: str,
+    group: GeomGroup,
+    mag: float = 1.0,
+    angle: float = 0,
+    mirror: bool = 0,
+) -> GeomGroup:
     """
     Create a CELL reference or SREF element in GDS
 
@@ -162,7 +187,7 @@ def make_sref(x0: float, y0: float, cellname: str, group: "GeomGroup",
         Y coordinate of CELL position in um.
     cellname : str
         A string conaining a valid GDS cell reference name.
-    group : "GeomGroup"
+    group : GeomGroup
         The group of geometries that are being referenced.
     mag : float, optional
         Magnification factor. The default is 1.0.
@@ -177,13 +202,26 @@ def make_sref(x0: float, y0: float, cellname: str, group: "GeomGroup",
         A geometry containing a single cell reference.
 
     """
-    g = GeomGroup();
-    g.add(smsh.SRef(x0,y0,cellname,group,mag,angle,mirror))
+    g = GeomGroup()
+    g.add(smsh.SRef(x0, y0, cellname, group, mag, angle, mirror))
     return g
 
-def make_aref(x0: float, y0: float, cellname: str, group: "GeomGroup",
-              ncols: int, nrows: int, ax: float, ay: float, bx: float, by: float,
-              mag: float = 1.0, angle: float = 0, mirror: bool = 0) -> "GeomGroup":
+
+def make_aref(
+    x0: float,
+    y0: float,
+    cellname: str,
+    group: GeomGroup,
+    ncols: int,
+    nrows: int,
+    ax: float,
+    ay: float,
+    bx: float,
+    by: float,
+    mag: float = 1.0,
+    angle: float = 0,
+    mirror: bool = 0,
+) -> GeomGroup:
     """
     Create an ARRAY of cell references or AREF element in GDS
 
@@ -195,7 +233,7 @@ def make_aref(x0: float, y0: float, cellname: str, group: "GeomGroup",
         Y coordinate of CELL position in um.
     cellname : str
         A string conaining a valid GDS cell reference name.
-    group : "GeomGroup"
+    group : GeomGroup
         The group of geometries that are being referenced.
     ncols : int
         Number of repetitions along the "a" vector.
@@ -222,12 +260,23 @@ def make_aref(x0: float, y0: float, cellname: str, group: "GeomGroup",
         A geometry containing a single array reference to a cell.
 
     """
-    g = GeomGroup();
-    g.add(smsh.ARef(x0, y0, cellname, group, ncols, nrows, ax, ay, bx, by, mag, angle, mirror))
+    g = GeomGroup()
+    g.add(
+        smsh.ARef(
+            x0, y0, cellname, group, ncols, nrows, ax, ay, bx, by, mag, angle, mirror
+        )
+    )
     return g
 
-def make_circle(x0: float,y0: float,r: float,layer: int = 1, 
-                to_poly: bool = False, vertices: int = 32) -> 'GeomGroup':
+
+def make_circle(
+    x0: float,
+    y0: float,
+    r: float,
+    layer: int = 1,
+    to_poly: bool = False,
+    vertices: int = 32,
+) -> GeomGroup:
     """
     Create a filled circle
 
@@ -254,16 +303,24 @@ def make_circle(x0: float,y0: float,r: float,layer: int = 1,
 
     """
     g = GeomGroup()
-    c = smsh.Circle(x0,y0,r,layer)
-    if (to_poly):
+    c = smsh.Circle(x0, y0, r, layer)
+    if to_poly:
         g = c.to_polygon(vertices)
     else:
         g.add(c)
     return g
-    
-def make_ellipse(x0: float,y0: float,rX: float,rY: float, 
-                 rot: float, layer: int = 1,
-                 to_poly: bool = 0, vertices: int = 32) -> 'GeomGroup':
+
+
+def make_ellipse(
+    x0: float,
+    y0: float,
+    rX: float,
+    rY: float,
+    rot: float,
+    layer: int = 1,
+    to_poly: bool = 0,
+    vertices: int = 32,
+) -> GeomGroup:
     """
     Create a filled ellipse
 
@@ -278,7 +335,7 @@ def make_ellipse(x0: float,y0: float,rX: float,rY: float,
     rY : float
         Radius of the ellipse in Y direction in um.
     rot: float
-        Rotation angle (counterclockwise) in degrees. 
+        Rotation angle (counterclockwise) in degrees.
     layer : int, optional
         The ellipse layer. The default is 1.
     to_poly : bool, optional
@@ -286,7 +343,7 @@ def make_ellipse(x0: float,y0: float,rX: float,rY: float,
     vertices : int, optional
         Specify the number of vertices to be used for conversion to polygon.
         The default is 32.
-        
+
     Returns
     -------
     g : GeomGroup
@@ -294,16 +351,25 @@ def make_ellipse(x0: float,y0: float,rX: float,rY: float,
 
     """
     g = GeomGroup()
-    c = smsh.Ellipse(x0,y0,rX,rY,layer,rot)
-    if (to_poly):
+    c = smsh.Ellipse(x0, y0, rX, rY, layer, rot)
+    if to_poly:
         g = c.to_polygon(vertices)
     else:
         g.add(c)
     return g
 
-def make_ring(x0: float,y0: float,rX: float,rY: float,
-              rot: float,w: float,layer: int = 1,
-              to_poly: bool = 0, vertices: int = 32) -> 'GeomGroup':
+
+def make_ring(
+    x0: float,
+    y0: float,
+    rX: float,
+    rY: float,
+    rot: float,
+    w: float,
+    layer: int = 1,
+    to_poly: bool = 0,
+    vertices: int = 32,
+) -> GeomGroup:
     """
     Create an elliptical ring (if rX=rY a circular ring is made).
     The width should be >0.
@@ -337,17 +403,28 @@ def make_ring(x0: float,y0: float,rX: float,rY: float,
 
     """
     g = GeomGroup()
-    c=smsh.Ring(x0,y0,rX,rY,layer,rot,w)
-    if (to_poly):
+    c = smsh.Ring(x0, y0, rX, rY, layer, rot, w)
+    if to_poly:
         g = c.to_polygon(vertices)
     else:
         g.add(c)
     return g
 
-def make_arc(x0: float,y0: float,rX: float,rY: float,
-              rot: float,w: float,a1: float,a2: float,
-              layer: int = 1,to_poly: bool = 0, vertices: int = 32,
-              split: bool = False) -> 'GeomGroup':
+
+def make_arc(
+    x0: float,
+    y0: float,
+    rX: float,
+    rY: float,
+    rot: float,
+    w: float,
+    a1: float,
+    a2: float,
+    layer: int = 1,
+    to_poly: bool = 0,
+    vertices: int = 32,
+    split: bool = False,
+) -> GeomGroup:
     """
     Create an elliptical arc (if rX=rY a circular arc is made).
     The width should be >0.
@@ -388,20 +465,21 @@ def make_arc(x0: float,y0: float,rX: float,rY: float,
 
     """
     g = GeomGroup()
-    c=smsh.Arc(x0,y0,rX,rY,layer,rot,w,a1,a2)
-    if (to_poly):
-        g = c.to_polygon(vertices,split)
+    c = smsh.Arc(x0, y0, rX, rY, layer, rot, w, a1, a2)
+    if to_poly:
+        g = c.to_polygon(vertices, split)
     else:
         g.add(c)
     return g
 
 
-def make_rect(x0: float,y0: float,width: float,
-              height: float,numkey: int = 5,layer: int = 1) -> 'GeomGroup':
+def make_rect(
+    x0: float, y0: float, width: float, height: float, numkey: int = 5, layer: int = 1
+) -> GeomGroup:
     """
     Create a rectangle centered in x0,y0.
-    Optionally, the reference point x0,y0 can be any of the corners by 
-    specifying a "numkey" parameter. 
+    Optionally, the reference point x0,y0 can be any of the corners by
+    specifying a "numkey" parameter.
 
     Parameters
     ----------
@@ -416,9 +494,9 @@ def make_rect(x0: float,y0: float,width: float,
     layer : int, optional
         The rectangle layer. The default is 1.
     numkey : int, optional
-        The reference point x0,y0 can be any of the corners or mid-points 
+        The reference point x0,y0 can be any of the corners or mid-points
         specified by the numerical keypad on a standard keyboard. For example
-        numkey=1 means that x0,y0 will be the lower-left corner of the 
+        numkey=1 means that x0,y0 will be the lower-left corner of the
         rectangle as 1 is located in the lower-left corner of the numerical
         keypad. Similarly, numkey=9 will be the upper-right corner.
         The default is 5 (=center).
@@ -429,22 +507,33 @@ def make_rect(x0: float,y0: float,width: float,
         A geometry containing a single rectangle.
 
     """
-    r1 = make_poly([x0-width/2,x0+width/2,x0+width/2,x0-width/2],
-                   [y0-height/2,y0-height/2,y0+height/2,y0+height/2],layer);
-    if(numkey!=5):
-        xoff = -((numkey-1)%3-1)
-        yoff = math.floor((9-numkey)/3)-1
-        r1.translate(xoff*width/2,yoff*height/2)
-    
+    r1 = make_poly(
+        [x0 - width / 2, x0 + width / 2, x0 + width / 2, x0 - width / 2],
+        [y0 - height / 2, y0 - height / 2, y0 + height / 2, y0 + height / 2],
+        layer,
+    )
+    if numkey != 5:
+        xoff = -((numkey - 1) % 3 - 1)
+        yoff = math.floor((9 - numkey) / 3) - 1
+        r1.translate(xoff * width / 2, yoff * height / 2)
+
     return r1
 
-def make_rounded_rect(x0: float,y0: float,width: float,
-              height: float, corner_radius: float, resolution: int = 16,
-              numkey: int = 5,layer: int = 1) -> 'GeomGroup':
+
+def make_rounded_rect(
+    x0: float,
+    y0: float,
+    width: float,
+    height: float,
+    corner_radius: float,
+    resolution: int = 16,
+    numkey: int = 5,
+    layer: int = 1,
+) -> GeomGroup:
     """
     Create a rectangle centered in x0,y0 with corners rounded
-    Optionally, the reference point x0,y0 can be any of the corners by 
-    specifying a "numkey" parameter. 
+    Optionally, the reference point x0,y0 can be any of the corners by
+    specifying a "numkey" parameter.
 
     Parameters
     ----------
@@ -463,9 +552,9 @@ def make_rounded_rect(x0: float,y0: float,width: float,
     layer : int, optional
         The rectangle layer. The default is 1.
     numkey : int, optional
-        The reference point x0,y0 can be any of the corners or mid-points 
+        The reference point x0,y0 can be any of the corners or mid-points
         specified by the numerical keypad on a standard keyboard. For example
-        numkey=1 means that x0,y0 will be the lower-left corner of the 
+        numkey=1 means that x0,y0 will be the lower-left corner of the
         rectangle as 1 is located in the lower-left corner of the numerical
         keypad. Similarly, numkey=9 will be the upper-right corner.
         The default is 5 (=center).
@@ -478,22 +567,29 @@ def make_rounded_rect(x0: float,y0: float,width: float,
     """
     w0 = width
     h0 = height
-    width=width-2*corner_radius
-    height=height-2*corner_radius
-    r1 = make_poly([x0-width/2,x0+width/2,x0+width/2,x0-width/2],
-                   [y0-height/2,y0-height/2,y0+height/2,y0+height/2],layer);
-    
-    r1.poly_resize(corner_radius, layer, corner_radius>0, resolution*4)
+    width = width - 2 * corner_radius
+    height = height - 2 * corner_radius
+    r1 = make_poly(
+        [x0 - width / 2, x0 + width / 2, x0 + width / 2, x0 - width / 2],
+        [y0 - height / 2, y0 - height / 2, y0 + height / 2, y0 + height / 2],
+        layer,
+    )
+    r1.poly_resize(corner_radius, layer, corner_radius > 0, resolution * 4)
     bb1 = r1.bounding_box()
-    r1.scale(x0,y0,w0/bb1.width,h0/bb1.height)
-    if(numkey!=5):
-        xoff = -((numkey-1)%3-1)
-        yoff = math.floor((9-numkey)/3)-1
-        r1.translate(xoff*(width+2*corner_radius)/2,yoff*(height+2*corner_radius)/2)
+    r1.scale(x0, y0, w0 / bb1.width, h0 / bb1.height)
+    if numkey != 5:
+        xoff = -((numkey - 1) % 3 - 1)
+        yoff = math.floor((9 - numkey) / 3) - 1
+        r1.translate(
+            xoff * (width + 2 * corner_radius) / 2,
+            yoff * (height + 2 * corner_radius) / 2,
+        )
     return r1
 
-def make_tapered_path(xpts: list[float],ypts: list[float],
-              widths: list[float],layer: int = 1)-> 'GeomGroup':
+
+def make_tapered_path(
+    xpts: list[float], ypts: list[float], widths: list[float], layer: int = 1
+) -> GeomGroup:
     """
     Creates a path with variable width. A list of path widths is given
     so that at each point the width can be changed. A polygon is produced
@@ -515,70 +611,73 @@ def make_tapered_path(xpts: list[float],ypts: list[float],
         A group containing a single path.
 
     """
-    
-    x=xpts
-    y=ypts
-    w=widths
-    p1 = smsh.Poly([0],[0],layer)
-    Npts = len(x)
-    if(Npts==1):
-        p1.set_points([-w[0]/2,w[0]/2,w[0]/2,-w[0]/2],
-                      [-w[0]/2,-w[0]/2,w[0]/2,w[0]/2])
-        p1.translate(x[0],y[0])
-    if(Npts==2):
-        ang1 = math.atan2(y[1]-y[0],x[1]-x[0]);
-        c1 = 1/2*math.cos(ang1-math.pi/2);
-        c2 = 1/2*math.cos(ang1+math.pi/2);
-        s1 = 1/2*math.sin(ang1-math.pi/2);
-        s2 = 1/2*math.sin(ang1+math.pi/2);
-        p1.set_points([x[0]+c1*w[0],x[1]+c1*w[1],x[1]+c2*w[1],x[0]+c2*w[0]],
-                      [y[0]+s1*w[0],y[1]+s1*w[1],y[1]+s2*w[1],y[0]+s2*w[0]])
 
-    if(Npts>2):
+    x = xpts
+    y = ypts
+    w = widths
+    p1 = smsh.Poly([0], [0], layer)
+    Npts = len(x)
+    if Npts == 1:
+        p1.set_points(
+            [-w[0] / 2, w[0] / 2, w[0] / 2, -w[0] / 2],
+            [-w[0] / 2, -w[0] / 2, w[0] / 2, w[0] / 2],
+        )
+        p1.translate(x[0], y[0])
+    if Npts == 2:
+        ang1 = math.atan2(y[1] - y[0], x[1] - x[0])
+        c1 = 1 / 2 * math.cos(ang1 - math.pi / 2)
+        c2 = 1 / 2 * math.cos(ang1 + math.pi / 2)
+        s1 = 1 / 2 * math.sin(ang1 - math.pi / 2)
+        s2 = 1 / 2 * math.sin(ang1 + math.pi / 2)
+        p1.set_points(
+            [x[0] + c1 * w[0], x[1] + c1 * w[1], x[1] + c2 * w[1], x[0] + c2 * w[0]],
+            [y[0] + s1 * w[0], y[1] + s1 * w[1], y[1] + s2 * w[1], y[0] + s2 * w[0]],
+        )
+
+    if Npts > 2:
         xp1 = []
         yp1 = []
         xp2 = []
         yp2 = []
-        for j in range(1,Npts-1):
-            ang1 = math.atan2(y[j]-y[j-1],x[j]-x[j-1])
-            ang2 = math.atan2(y[j+1]-y[j],x[j+1]-x[j])
-            d = (x[j+1]-x[j-1])*(y[j]-y[j-1])\
-                - (y[j+1]-y[j-1])*(x[j]-x[j-1])
-            if(j==1):
-                xp1.append(x[j-1]+w[j-1]/2*math.cos(ang1-math.pi/2));
-                yp1.append(y[j-1]+w[j-1]/2*math.sin(ang1-math.pi/2));
-                xp2.append(x[j-1]+w[j-1]/2*math.cos(ang1+math.pi/2));
-                yp2.append(y[j-1]+w[j-1]/2*math.sin(ang1+math.pi/2));
-                
-            if(d<0):
-                xp1.append(x[j]+w[j]/2*math.cos(ang1-math.pi/2));
-                yp1.append(y[j]+w[j]/2*math.sin(ang1-math.pi/2));
-                xp1.append(x[j]+w[j]/2*math.cos(ang2-math.pi/2));
-                yp1.append(y[j]+w[j]/2*math.sin(ang2-math.pi/2));
-                wx = w[j]/2/math.cos((ang2-ang1)/2);
-                a0 = math.pi/2-(ang1+ang2)/2;
-                xp2.append(x[j]-wx*math.cos(a0));
-                yp2.append(y[j]+wx*math.sin(a0));
+        for j in range(1, Npts - 1):
+            ang1 = math.atan2(y[j] - y[j - 1], x[j] - x[j - 1])
+            ang2 = math.atan2(y[j + 1] - y[j], x[j + 1] - x[j])
+            d = (x[j + 1] - x[j - 1]) * (y[j] - y[j - 1]) - (y[j + 1] - y[j - 1]) * (
+                x[j] - x[j - 1]
+            )
+            if j == 1:
+                xp1.append(x[j - 1] + w[j - 1] / 2 * math.cos(ang1 - math.pi / 2))
+                yp1.append(y[j - 1] + w[j - 1] / 2 * math.sin(ang1 - math.pi / 2))
+                xp2.append(x[j - 1] + w[j - 1] / 2 * math.cos(ang1 + math.pi / 2))
+                yp2.append(y[j - 1] + w[j - 1] / 2 * math.sin(ang1 + math.pi / 2))
+
+            if d < 0:
+                xp1.append(x[j] + w[j] / 2 * math.cos(ang1 - math.pi / 2))
+                yp1.append(y[j] + w[j] / 2 * math.sin(ang1 - math.pi / 2))
+                xp1.append(x[j] + w[j] / 2 * math.cos(ang2 - math.pi / 2))
+                yp1.append(y[j] + w[j] / 2 * math.sin(ang2 - math.pi / 2))
+                wx = w[j] / 2 / math.cos((ang2 - ang1) / 2)
+                a0 = math.pi / 2 - (ang1 + ang2) / 2
+                xp2.append(x[j] - wx * math.cos(a0))
+                yp2.append(y[j] + wx * math.sin(a0))
             else:
-                xp2.append(x[j]+w[j]/2*math.cos(ang1+math.pi/2));
-                yp2.append(y[j]+w[j]/2*math.sin(ang1+math.pi/2));
-                xp2.append(x[j]+w[j]/2*math.cos(ang2+math.pi/2));
-                yp2.append(y[j]+w[j]/2*math.sin(ang2+math.pi/2));
-                wx = w[j]/2/math.cos((ang2-ang1)/2);
-                a0 = math.pi/2-(ang1+ang2)/2;
-                xp1.append(x[j]+wx*math.cos(a0));
-                yp1.append(y[j]-wx*math.sin(a0));
-            if(j==Npts-2):
-                xp1.append(x[j+1]+w[j+1]/2*math.cos(ang2-math.pi/2));
-                yp1.append(y[j+1]+w[j+1]/2*math.sin(ang2-math.pi/2));
-                xp2.append(x[j+1]+w[j+1]/2*math.cos(ang2+math.pi/2));
-                yp2.append(y[j+1]+w[j+1]/2*math.sin(ang2+math.pi/2));
-        
+                xp2.append(x[j] + w[j] / 2 * math.cos(ang1 + math.pi / 2))
+                yp2.append(y[j] + w[j] / 2 * math.sin(ang1 + math.pi / 2))
+                xp2.append(x[j] + w[j] / 2 * math.cos(ang2 + math.pi / 2))
+                yp2.append(y[j] + w[j] / 2 * math.sin(ang2 + math.pi / 2))
+                wx = w[j] / 2 / math.cos((ang2 - ang1) / 2)
+                a0 = math.pi / 2 - (ang1 + ang2) / 2
+                xp1.append(x[j] + wx * math.cos(a0))
+                yp1.append(y[j] - wx * math.sin(a0))
+            if j == Npts - 2:
+                xp1.append(x[j + 1] + w[j + 1] / 2 * math.cos(ang2 - math.pi / 2))
+                yp1.append(y[j + 1] + w[j + 1] / 2 * math.sin(ang2 - math.pi / 2))
+                xp2.append(x[j + 1] + w[j + 1] / 2 * math.cos(ang2 + math.pi / 2))
+                yp2.append(y[j + 1] + w[j + 1] / 2 * math.sin(ang2 + math.pi / 2))
+
         xp2.reverse()
         yp2.reverse()
-        p1.set_points(xp1+xp2,yp1+yp2)
-    g = GeomGroup();
+        p1.set_points(xp1 + xp2, yp1 + yp2)
+    g = GeomGroup()
     g.add(p1)
     return g
-    
-        
