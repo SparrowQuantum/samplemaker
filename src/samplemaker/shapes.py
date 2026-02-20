@@ -688,7 +688,8 @@ class GeomGroup:
         psearch.all_to_poly()
         psearch.boolean_union(layer)
         if len(psearch.group) != 1:
-            print("It is only possible to search for a single polygon shape")
+            msg = "It is only possible to search for a single polygon shape"
+            raise ValueError(msg)
         plook = self.copy().boolean_union(layer)
         b1 = psearch.bounding_box()
         psearch.translate(-b1.cx(), -b1.cy())
@@ -1708,12 +1709,10 @@ class Poly:
             fpx = xpts[i + 1]
             fpy = ypts[i + 1]
             a = (fpy > y) != (bpy > y)
-            # print(a)
             if bpy - fpy == 0:
                 b = True
             else:
                 b = x < ((bpx - fpx) * (y - fpy) / (bpy - fpy) + fpx)
-            # print(b)
             if a and b:
                 c = not c
             bpx = fpx
@@ -1987,7 +1986,6 @@ class Text:
         offset = 0
         g = GeomGroup()
         for c in self.text:
-            # print("processing letter %s" % c)
             if c == " ":
                 offset += self.height
             if c in _glyphs:
@@ -2364,14 +2362,12 @@ for i in caps:
         x = data[j] / 3.6
         y = (data[j + 1]) / 3.6
         flag = data[j + 2]
-        # print(i,x,y,flag)
         if flag == 0:
             if j > 0:
                 gl.add(Path(xpts, ypts, 1, 0))
             xpts = [x]
             ypts = [y]
         elif flag > 0:
-            # append
             xpts.append(x)
             ypts.append(y)
         else:
