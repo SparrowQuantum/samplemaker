@@ -30,6 +30,7 @@ with the designed parameters.
 """
 
 import math
+import warnings
 from copy import deepcopy
 
 import numpy as np
@@ -178,7 +179,8 @@ class Crystal:
             sy = abs(self.ypts - yc[i]) < 1e-6
             res = np.where(sx & sy)
             if res[0].size == 0:
-                print("defect_at_coord(): warning, no match for ", xc[i], yc[i])
+                msg = f"No coordinate match for ({xc[i]}, {yc[i]})"
+                warnings.warn(msg, UserWarning, stacklevel=2)
             else:
                 sel.append(res[0][0])
         return sel
