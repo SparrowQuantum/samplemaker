@@ -30,6 +30,7 @@ with the designed parameters.
 """
 
 import math
+from collections.abc import Iterable
 from copy import deepcopy
 
 import numpy as np
@@ -41,7 +42,10 @@ from samplemaker.shapes import GeomGroup, Poly
 
 class Crystal:
     def __init__(
-        self, xpts: list[float] = [], ypts: list[float] = [], params: list[float] = []
+        self,
+        xpts: Iterable[float] | None = None,
+        ypts: Iterable[float] | None = None,
+        params: Iterable[float] | None = None,
     ):
         """
         Initialize a Crystal template.
@@ -49,12 +53,12 @@ class Crystal:
 
         Parameters
         ----------
-        xpts : list[float], optional
+        xpts : Iterable[float], optional
             List of x-coordinates (normalized) of the lattice sites. The default is [].
-        ypts : list[float], optional
+        ypts : Iterable[float], optional
             List of y-coordinates (normalized) of the lattice sites. The default is [].
-        params : list[float], optional
-            2D list of paramter values of the lattice sites. Should be of the form
+        params : Iterable[float], optional
+            2D list of parameter values of the lattice sites. Should be of the form
             params[pindex,site_index]. The default is [].
 
         Returns
@@ -62,11 +66,13 @@ class Crystal:
         None.
 
         """
-        self.xpts = xpts
-        self.ypts = ypts
-        if isinstance(params, np.ndarray):
-            params = np.float64(params)
-        self.params = params
+        xpts = xpts or []
+        ypts = ypts or []
+        params = params or []
+
+        self.xpts = np.array(xpts, dtype=np.float64)
+        self.ypts = np.array(ypts, dtype=np.float64)
+        self.params = np.array(params, dtype=np.float64)
 
     def remove_at_index(self, index: list[int]):
         """
@@ -149,8 +155,7 @@ class Crystal:
         None.
 
         """
-        if len(index) > 0:
-            self.params[pindex, index] = pvalues
+        self.params[pindex, index] = pvalues
 
     def coord_to_index(self, xc, yc):
         """
@@ -158,14 +163,14 @@ class Crystal:
 
         Parameters
         ----------
-        xc : float
+        xc : float | np.ndarray
             x-coordinate(s) in normalized units.
-        yc : float
+        yc : float | np.ndarray
             y-coordinate(s) in normalized units.
 
         Returns
         -------
-        sel : list[float]
+        sel : list[int]
             A list of coordinate indices.
 
         """
@@ -416,7 +421,7 @@ def __circref_cellfun__(x, y, params):
 
 
 def make_phc(
-    crystal: "Crystal",
+    crystal: Crystal,
     scaling: float,
     cellparams: list[float],
     x0: float,
@@ -429,7 +434,7 @@ def make_phc(
 
     Parameters
     ----------
-    crystal : "Crystal"
+    crystal : Crystal
         The crystal template.
     scaling : float
         An overall scaling factor in um.
