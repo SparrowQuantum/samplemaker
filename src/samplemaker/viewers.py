@@ -6,6 +6,8 @@ and circuits. They can be used instead of writing and opening GDS files external
 viewers.
 """
 
+import warnings
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import PatchCollection
@@ -47,7 +49,9 @@ def __get_geom_patches(grp: GeomGroup):
             tmpp.set_fill(False)
             patches.append(tmpp)
         elif isinstance(geom, smsh.Text):
-            print("text display is not supported, please convert to polygon first.")
+            # stacklevel=3 to point to calling function, not this one.
+            msg = "text display is not supported, please convert to polygon first."
+            warnings.warn(msg, stacklevel=3, category=UserWarning)
         elif isinstance(geom, smsh.Ellipse):
             tmpe = Ellipse((geom.x0, geom.y0), geom.r * 2, geom.r1 * 2, angle=geom.rot)
             tmpe.set_facecolor(lcolor)
@@ -69,7 +73,8 @@ def __get_geom_patches(grp: GeomGroup):
             tmpp.set_facecolor(lcolor)
             patches.append(tmpp)
         elif isinstance(geom, smsh.SRef):
-            print("SRef and ARef display is not supported, please flatten first.")
+            msg = "SRef and ARef display is not supported, please flatten first."
+            warnings.warn(msg, stacklevel=3, category=UserWarning)
     return patches
 
 
