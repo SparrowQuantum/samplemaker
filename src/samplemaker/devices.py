@@ -196,6 +196,7 @@ from samplemaker import (
     _DevicePool,
 )
 from samplemaker.gdswriter import GDSWriter
+from samplemaker.layout import IncompatiblePortError
 from samplemaker.makers import make_sref, make_text
 from samplemaker.shapes import GeomGroup, Poly
 
@@ -1217,7 +1218,7 @@ class Circuit(Device):
                 port2 = output_ports[portname]
                 if port1.connector_function != port2.connector_function:
                     msg = f"Incompatible ports for connection named {portname}"
-                    raise ValueError(msg)
+                    raise IncompatiblePortError(msg)
 
                 if portname not in paths:
                     g += port1.connector_function(port1, port2)
