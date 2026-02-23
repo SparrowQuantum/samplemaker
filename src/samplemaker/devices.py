@@ -622,7 +622,7 @@ class Device:
             The DevicePort object associated to the port (empty if does not exist).
 
         """
-        if not port_name in self._ports:
+        if port_name not in self._ports:
             msg = (
                 f"Could not find port named {port_name} in {self._name} as it was "
                 f"not defined by device."
