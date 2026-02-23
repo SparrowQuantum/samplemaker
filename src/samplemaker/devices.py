@@ -1254,7 +1254,7 @@ class Circuit(Device):
                 self._localp["external_ports"][portname] = p1
             else:
                 # Stacklevel=3 to point at code calling self.run() and not this method.
-                msg = f"Warning: port {portname} is unconnected"
+                msg = f"Port {portname} is unconnected."
                 warnings.warn(msg, UserWarning, stacklevel=3)
 
         return g

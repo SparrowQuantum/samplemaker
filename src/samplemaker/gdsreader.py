@@ -73,7 +73,7 @@ class GDSReader:
 
     def get_cell(self, cellname: str):
         if cellname not in self.celldata:
-            msg = f"Cellname {cellname} does not exist in GDS record"
+            msg = f"Cellname {cellname} does not exist in GDS record."
             raise ValueError(msg)
 
         gg = GeomGroup()

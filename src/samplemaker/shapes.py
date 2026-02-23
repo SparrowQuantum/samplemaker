@@ -672,7 +672,7 @@ class GeomGroup:
         psearch.all_to_poly()
         psearch.boolean_union(layer)
         if len(psearch.group) != 1:
-            msg = "It is only possible to search for a single polygon shape"
+            msg = "It is only possible to search for a single polygon shape."
             raise ValueError(msg)
         plook = self.copy().boolean_union(layer)
         b1 = psearch.bounding_box()
@@ -1429,8 +1429,9 @@ class Box:
 
         """
         if numkey < 1 or numkey > 9:
-            # TODO: raise error
-            numkey = 5
+            msg = f"numkey should be between 1 and 9. Provided value is {numkey}"
+            raise ValueError(msg)
+        numkey = int(numkey)
         xoff = -((numkey - 1) % 3 - 1)
         yoff = math.floor((9 - numkey) / 3) - 1
         return self.cx() - xoff * self.width / 2, self.cy() - yoff * self.height / 2

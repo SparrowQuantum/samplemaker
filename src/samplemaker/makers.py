@@ -114,7 +114,7 @@ def make_text(
     numkey: int = 5,
     angle: float = 0,
     layer: int = 1,
-    to_poly: bool = 0,
+    to_poly: bool = False,
 ) -> GeomGroup:
     """
     Create a text object
@@ -145,7 +145,7 @@ def make_text(
     layer : int, optional
         The text layer. The default is 1.
     to_poly : bool, optional
-        If true, the text is converted to a polygon. The default is 0.
+        If true, the text is converted to a polygon. The default is False.
 
     Returns
     -------
@@ -153,16 +153,17 @@ def make_text(
         A geometry containing a single text element.
 
     """
-    g = GeomGroup()
     if numkey < 1 or numkey > 9:
-        # TODO: Raise error here instead
-        numkey = 5
+        msg = f"numkey should be between 1 and 9. Provided value is {numkey}"
+        raise ValueError(msg)
+    numkey = int(numkey)
     posu = (numkey - 1) % 3
     posv = math.floor((9 - numkey) / 3)
     txt = smsh.Text(x0, y0, text, posu, posv, height, width, angle, layer)
     if to_poly == 1:
         g = txt.to_polygon()
     else:
+        g = GeomGroup()
         g.add(txt)
     return g
 
