@@ -975,7 +975,7 @@ class Mask:
         return LayoutPool[cellname]
 
     def __export_cache(self):
-        print("Storing objects in cache file...")  # noqa: T201
+        print("Storing objects in cache file...")
         cachefile = open(self.name + ".cache", "wb")
         # Note that we do not need the full geometry, as we will just reload
         # it from the GDS file. So we keep the references only.
@@ -994,14 +994,14 @@ class Mask:
         )
         pickle.dump(data, cachefile)
         cachefile.close()
-        print("Done.")  # noqa: T201
+        print("Done.")
 
     def __import_cache(self):
         try:
             with open(self.name + ".cache", "rb") as cachefile:
-                print("Loading cache data...")  # noqa: T201
+                print("Loading cache data...")
                 data = pickle.load(cachefile)
-                print("Done.")  # noqa: T201
+                print("Done.")
                 for key in data[0].keys():
                     LayoutPool[key] = data[0][key]
                 LayoutPool.pop(self.mainsymbol, None)

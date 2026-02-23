@@ -314,7 +314,7 @@ class Sequencer:
 
             g += action[1](args, self.state, self.options)
             if self.debug_state:
-                print(f"self state {self.state}")  # noqa: T201
+                print(f"self state {self.state}")
 
         g.translate(self.state["__XC__"], self.state["__YC__"])
         self.state["x"] += self.state["__XC__"]
@@ -323,6 +323,6 @@ class Sequencer:
             coords[0] += self.state["__XC__"]
             coords[1] += self.state["__YC__"]
         if self.debug_state:
-            print(f"final state {self.state}")  # noqa: T201
+            print(f"final state {self.state}")
 
         return g
