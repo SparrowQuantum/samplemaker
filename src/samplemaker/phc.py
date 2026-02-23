@@ -30,8 +30,8 @@ with the designed parameters.
 """
 
 import math
-from collections.abc import Iterable
 import warnings
+from collections.abc import Iterable
 from copy import deepcopy
 
 import numpy as np
