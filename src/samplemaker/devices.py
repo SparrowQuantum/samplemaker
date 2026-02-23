@@ -183,6 +183,7 @@ explained how to nest circuits together (i.e. creating netlists of netslists)
 import inspect
 import math
 import sys
+import warnings
 from copy import deepcopy
 
 import numpy as np
@@ -441,8 +442,8 @@ class Device:
 
         """
         if param_name.find(":") != -1:
-            print("Cannot define variable names containing ':'")
-            return
+            msg = f"Cannot define variable names containing ':'. Got '{param_name}'."
+            raise ValueError(msg)
         self._p[param_name] = default_value
         self._pdescr[param_name] = param_description
         self._ptype[param_name] = param_type
@@ -480,8 +481,8 @@ class Device:
 
         """
         if param_name.find(":") != -1:
-            print("Cannot define variable names containing ':'")
-            return
+            msg = f"Cannot define variable names containing ':'. Got '{param_name}'."
+            raise ValueError(msg)
         self._localp[param_name] = default_value
         self._pdescr[param_name] = param_description
         self._ptype[param_name] = param_type
@@ -521,14 +522,13 @@ class Device:
 
         """
         lports = self._localp["_ports_"]
-        if portname in lports:
-            return lports[portname]
-        else:
-            print(
+        if portname not in lports:
+            msg = (
                 f"Could not find port named {portname} in {self._name} as it was "
                 f"not defined by device."
             )
-            return DevicePort(0, 0, True, True)
+            raise ValueError(msg)
+        return lports[portname]
 
     def remove_localport(self, portname: str):
         """
@@ -566,25 +566,17 @@ class Device:
         """
         param_hier = param_name.split("::")
         p = self._p
-        for i in range(len(param_hier)):
-            if i == (len(param_hier) - 1):
-                if param_hier[i] in p:
-                    p[param_hier[i]] = value
-                else:
-                    print(
-                        f"Could not set parameter named {param_hier[i]} as it was not "
-                        f"defined by device.",
-                    )
-                    return
+        for i, cur_p in enumerate(param_hier):
+            if i == (len(param_hier) - 1) and cur_p in p:
+                p[cur_p] = value
+            elif cur_p in p:
+                p = p[cur_p]
             else:
-                if param_hier[i] in p:
-                    p = p[param_hier[i]]
-                else:
-                    print(
-                        f"Could not set parameter named {param_hier[i]} as it was not "
-                        f"defined by device.",
-                    )
-                    return
+                msg = (
+                    f"Could not set parameter '{param_name}', "
+                    "as it was not defined by device."
+                )
+                raise ValueError(msg)
 
     def get_params(self, cast_types: bool = True, clip_in_range: bool = True) -> dict:
         """
@@ -630,14 +622,13 @@ class Device:
             The DevicePort object associated to the port (empty if does not exist).
 
         """
-        if port_name in self._ports:
-            return self._ports[port_name]
-        else:
-            print(
+        if not port_name in self._ports:
+            msg = (
                 f"Could not find port named {port_name} in {self._name} as it was "
                 f"not defined by device."
             )
-            return DevicePort(0, 0, True, True)
+            raise ValueError(msg)
+        return self._ports[port_name]
 
     def set_name(self, name: str):
         """
@@ -787,10 +778,10 @@ class Device:
             The device to be built.
 
         """
-        if name in _DeviceList:
-            return _DeviceList[name].build()
-        else:
-            print(f"No device named {name} found.")
+        if name not in _DeviceList:
+            msg = f"No device named {name} found."
+            raise ValueError(msg)
+        return _DeviceList[name].build()
 
     @classmethod
     def build(cls):
@@ -996,23 +987,24 @@ class NetList:
                     wirename = tokens[1]
                     pathlist = []
                     if (len(tokens[2:]) % 3) > 0:
-                        print(
-                            "Warning: wrong number of values specified for "
-                            ".PATH command"
+                        msg = (
+                            "Wrong number of values specified for .PATH command. "
+                            f"Got {len(tokens[2:])} values, expected a multiple of 3."
                         )
-                    else:
-                        for i in range(0, len(tokens[2:]), 3):
-                            pathlist += [float(tokens[2 + i])]  # X
-                            pathlist += [float(tokens[3 + i])]  # Y
-                            angle = tokens[4 + i]  # angle
-                            if angle == "N":
-                                pathlist += [90]
-                            if angle == "E":
-                                pathlist += [0]
-                            if angle == "W":
-                                pathlist += [180]
-                            if angle == "S":
-                                pathlist += [270]
+                        raise ValueError(msg)
+
+                    for i in range(0, len(tokens[2:]), 3):
+                        pathlist += [float(tokens[2 + i])]  # X
+                        pathlist += [float(tokens[3 + i])]  # Y
+                        angle = tokens[4 + i]  # angle
+                        if angle == "N":
+                            pathlist += [90]
+                        if angle == "E":
+                            pathlist += [0]
+                        if angle == "W":
+                            pathlist += [180]
+                        if angle == "S":
+                            pathlist += [270]
 
                     current_path[wirename] = pathlist
                     continue
@@ -1084,7 +1076,6 @@ class Circuit(Device):
 
         """
         self._name = "X"
-        pass
 
     def parameters(self):
         """
@@ -1095,30 +1086,32 @@ class Circuit(Device):
         None.
 
         """
-        self.addparameter("NETLIST", [], "A list of NetListEntry specifying a circuit")
-        self.addlocalparameter(
-            "external_ports",
-            {},
-            "Locally store the ports that connect to the circuit",
+        self.addparameter(
+            param_name="NETLIST",
+            default_value=[],
+            param_description="A list of NetListEntry specifying a circuit",
         )
-        pass
+        self.addlocalparameter(
+            param_name="external_ports",
+            default_value={},
+            param_description="Locally store the ports that connect to the circuit",
+        )
 
     def update_parameters(self):
         netlist = self._p["NETLIST"].entry_list
-        i = 1
-        for nle in netlist:
+        for i, nle in enumerate(netlist):
             if nle.devname not in _DeviceList:
-                print("Warning, no device named", nle.devname, "found.")
-            else:
-                dev = _DeviceList[nle.devname].build()
-                for key, value in nle.params.items():
-                    dev.set_param(key, value)
-                self.addparameter(
-                    f"dev_{nle.devname}_{i:d}",
-                    dev._p,
-                    f"Device parameters for {nle.devname}",
-                )
-            i += 1
+                msg = f"No device named {nle.devname} found."
+                raise ValueError(msg)
+
+            dev = _DeviceList[nle.devname].build()
+            for key, value in nle.params.items():
+                dev.set_param(key, value)
+            self.addparameter(
+                param_name=f"dev_{nle.devname}_{i + 1:d}",
+                default_value=dev._p,
+                param_description=f"Device parameters for {nle.devname}",
+            )
 
     def set_param(self, param_name: str, value):
         """
@@ -1169,8 +1162,9 @@ class Circuit(Device):
         i = 1
         for nle in netlist:
             if nle.devname not in _DeviceList:
-                print("Warning, no device named", nle.devname, "found.")
-                return g
+                msg = f"No device named {nle.devname} found."
+                raise ValueError(msg)
+
             dev = _DeviceList[nle.devname].build()
             dev.use_references = self.use_references
             # Force sequencer reset if has _seq subfield
@@ -1197,65 +1191,71 @@ class Circuit(Device):
 
         # Now we align ports
         for portname in aligned_ports:
-            if portname in input_ports.keys() and portname in output_ports.keys():
-                # port 2 is always slave to port1
-                port1 = input_ports[portname]
-                port2 = output_ports[portname]
-                if port1.dx() != 0 and port2.dx() != 0:
-                    # align y-values
-                    ydiff = port2.y0 - port1.y0
-                    port2._geometry.translate(0, -ydiff)
-                    for pp in port2._parentports.values():
-                        pp.y0 -= ydiff
-                if port1.dy() != 0 and port2.dy() != 0:
-                    # align x values
-                    xdiff = port2.x0 - port1.x0
-                    port2._geometry.translate(-xdiff, 0)
-                    for pp in port2._parentports.values():
-                        pp.x0 -= xdiff
+            if not (portname in input_ports.keys() and portname in output_ports.keys()):
+                continue
+
+            # port 2 is always slave to port1
+            port1 = input_ports[portname]
+            port2 = output_ports[portname]
+            if port1.dx() != 0 and port2.dx() != 0:
+                # align y-values
+                ydiff = port2.y0 - port1.y0
+                port2._geometry.translate(0, -ydiff)
+                for pp in port2._parentports.values():
+                    pp.y0 -= ydiff
+            if port1.dy() != 0 and port2.dy() != 0:
+                # align x values
+                xdiff = port2.x0 - port1.x0
+                port2._geometry.translate(-xdiff, 0)
+                for pp in port2._parentports.values():
+                    pp.x0 -= xdiff
 
         # Now we run connectors
         for portname in input_ports.keys():
             port1 = input_ports[portname]
             if portname in output_ports:
                 port2 = output_ports[portname]
-                if port1.connector_function == port2.connector_function:
-                    if portname in paths:
-                        # Force connector between virtual points
-                        pts = paths[portname]
-                        if len(pts) % 3 > 0:
-                            print(
-                                f"Warning, specified path for wire {portname} should "
-                                "include 3 values for each point (x,y,angle)"
-                            )
-                        else:
-                            portx = deepcopy(port1)
-                            for i in range(0, len(pts), 3):
-                                print(f"Connecting {pts[i]} {pts[i + 1]}")
-                                portx.x0 = pts[i]
-                                portx.y0 = pts[i + 1]
-                                portx.set_angle(math.radians(pts[i + 2]))
-                                portx.bf = not portx.bf
-                                g += port1.connector_function(port1, portx)
-                                portx.bf = not portx.bf
-                                port1 = deepcopy(portx)
+                if port1.connector_function != port2.connector_function:
+                    msg = f"Incompatible ports for connection named {portname}"
+                    raise ValueError(msg)
 
-                            g += portx.connector_function(portx, port2)
-                    else:
-                        g += port1.connector_function(port1, port2)
-                else:
-                    print(
-                        f"Warning, incompatible ports for connection named {portname}"
+                if portname not in paths:
+                    g += port1.connector_function(port1, port2)
+                    continue
+
+                # Force connector between virtual points
+                pts = paths[portname]
+                if len(pts) % 3 > 0:
+                    msg = (
+                        f"Specified path for wire {portname} "
+                        f"should include 3 values for each point (x,y,angle)"
                     )
+                    raise ValueError(msg)
+
+                portx = deepcopy(port1)
+                for i in range(0, len(pts), 3):
+                    print(f"Connecting {pts[i]} {pts[i + 1]}")
+                    portx.x0 = pts[i]
+                    portx.y0 = pts[i + 1]
+                    portx.set_angle(math.radians(pts[i + 2]))
+                    portx.bf = not portx.bf
+                    g += port1.connector_function(port1, portx)
+                    portx.bf = not portx.bf
+                    port1 = deepcopy(portx)
+
+                g += portx.connector_function(portx, port2)
+
+            elif portname in external_ports:
+                port1._geometry = GeomGroup()
+                port1._parentports = {}
+                p1 = deepcopy(port1)
+                p1.name = portname
+                self._localp["external_ports"][portname] = p1
             else:
-                if portname in external_ports:
-                    port1._geometry = GeomGroup()
-                    port1._parentports = {}
-                    p1 = deepcopy(port1)
-                    p1.name = portname
-                    self._localp["external_ports"][portname] = p1
-                else:
-                    print(f"Warning: port {portname} is unconnected")
+                # Stacklevel=3 to point at code calling self.run() and not this method.
+                msg = f"Warning: port {portname} is unconnected"
+                warnings.warn(msg, UserWarning, stacklevel=3)
+
         return g
 
     def ports(self):
@@ -1293,7 +1293,6 @@ def registerDevicesInModule(module_name: str):
     """
     for name, obj in inspect.getmembers(sys.modules[module_name]):
         if inspect.isclass(obj):
-            # print("found",name)
             # Recursively check bases for Device
             baseobj = obj.__bases__[0]
             while baseobj != Device:
