@@ -196,9 +196,14 @@ from samplemaker import (
     _DevicePool,
 )
 from samplemaker.gdswriter import GDSWriter
-from samplemaker.layout import IncompatiblePortError
 from samplemaker.makers import make_sref, make_text
 from samplemaker.shapes import GeomGroup, Poly
+
+
+class IncompatiblePortError(RuntimeError):
+    """
+    Exception raised when trying to link incompatible ports.
+    """
 
 
 class DevicePort:
