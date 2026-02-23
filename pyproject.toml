@@ -46,7 +46,8 @@ wheel.packages = ["src/samplemaker"]
 [tool.cibuildwheel]
 skip = ["*-musllinux*", "*-win32*"]
 test-requires = "pytest"
-test-command = "pytest ./tests"
+test-sources = ["tests"]
+test-command = "pytest {project}/tests"
 
 [tool.cibuildwheel.linux]
 before-all = "yum install -y boost-devel"
