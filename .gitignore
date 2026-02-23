@@ -54,7 +54,7 @@ Thumbs.db
 *.gds
 src/boopy/*.pro.user
 html/
-tests/
+
 # Python build artifacts
 build/
 *.egg-info/
