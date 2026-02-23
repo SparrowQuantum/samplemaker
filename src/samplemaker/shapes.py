@@ -70,6 +70,7 @@ to save memory and computation time. For example
 import math
 import pathlib
 from copy import deepcopy
+from typing import Collection
 
 import numpy as np
 
@@ -144,7 +145,7 @@ class GeomGroup:
         """
         return deepcopy(self)
 
-    def flatten(self, layer_list: list[int] | None = None) -> "GeomGroup":
+    def flatten(self, layer_list: Collection[int] | None = None) -> "GeomGroup":
         """
         Flatten the entire group. Turns all SREF and AREF objects in flattened objects.
         All references to cell are removed. A new flattened group is returned and no
@@ -152,8 +153,8 @@ class GeomGroup:
 
         Parameters
         ----------
-        layer_list : list[int], optional
-            A list of layers that should be used when flattening. All layers are
+        layer_list : set[int], optional
+            A set of layers that should be used when flattening. All layers are
             flattened by default.
 
         Returns
@@ -162,7 +163,7 @@ class GeomGroup:
             A detached copy of the flattened geometry.
 
         """
-        if layer_list is None:
+        if not layer_list:
             layer_list = self.get_layer_list()
 
         g = GeomGroup()

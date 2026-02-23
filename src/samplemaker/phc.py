@@ -66,9 +66,9 @@ class Crystal:
         None.
 
         """
-        xpts = xpts or []
-        ypts = ypts or []
-        params = params or []
+        xpts = [] if xpts is None else xpts
+        ypts = [] if ypts is None else ypts
+        params = [] if params is None else params
 
         self.xpts = np.array(xpts, dtype=np.float64)
         self.ypts = np.array(ypts, dtype=np.float64)
