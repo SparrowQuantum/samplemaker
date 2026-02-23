@@ -63,7 +63,7 @@ class GDSReader:
 
     @staticmethod
     def __read_real8(data):
-        sign = -1 if data[0] >> 7 else 1
+        # sign = -1 if data[0] >> 7 else 1
         ex = 64 - data[0] % 128
         mantissa = 0
         for i in range(6, -1, -1):
@@ -73,7 +73,8 @@ class GDSReader:
 
     def get_cell(self, cellname: str):
         if cellname not in self.celldata:
-            print(f"Cellname {cellname} does not exist in GDS record")
+            msg = f"Cellname {cellname} does not exist in GDS record."
+            raise ValueError(msg)
 
         gg = GeomGroup()
 
