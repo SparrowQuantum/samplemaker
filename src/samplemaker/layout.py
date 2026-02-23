@@ -99,7 +99,7 @@ from samplemaker import (
     _DeviceLocalParamPool,
     _DevicePool,
 )
-from samplemaker.devices import Device
+from samplemaker.devices import Device, IncompatiblePortError
 from samplemaker.gdsreader import GDSReader
 from samplemaker.gdswriter import GDSWriter
 from samplemaker.makers import make_aref, make_circle, make_path, make_text
@@ -406,12 +406,6 @@ class DeviceTableAnnotations:
         if self.to_poly:
             g.all_to_poly()
         return g
-
-
-class IncompatiblePortError(RuntimeError):
-    """
-    Exception raised when trying to link incompatible ports.
-    """
 
 
 class DeviceTable:
