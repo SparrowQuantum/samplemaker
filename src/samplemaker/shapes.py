@@ -70,6 +70,7 @@ to save memory and computation time. For example
 import math
 import pathlib
 from copy import deepcopy
+from typing import Collection
 
 import numpy as np
 
@@ -144,7 +145,7 @@ class GeomGroup:
         """
         return deepcopy(self)
 
-    def flatten(self, layer_list: list[int] = []) -> "GeomGroup":
+    def flatten(self, layer_list: Collection[int] | None = None) -> "GeomGroup":
         """
         Flatten the entire group. Turns all SREF and AREF objects in flattened objects.
         All references to cell are removed. A new flattened group is returned and no
@@ -152,9 +153,9 @@ class GeomGroup:
 
         Parameters
         ----------
-        layer_list : list[int], optional
-            A list of layers that should be used when flattening.
-            The default is [] (=all).
+        layer_list : set[int], optional
+            A set of layers that should be used when flattening. All layers are
+            flattened by default.
 
         Returns
         -------
@@ -162,35 +163,22 @@ class GeomGroup:
             A detached copy of the flattened geometry.
 
         """
-        g = GeomGroup()
         if not layer_list:
-            for geom in self.group:
-                if isinstance(geom, SRef):
-                    flatg = geom.group.flatten()
-                    flatg = geom.place_group(flatg)
-                    g += flatg
-                else:
-                    g.add(deepcopy(geom))
-        else:
-            for geom in self.group:
-                if isinstance(geom, SRef):
-                    flatg = geom.group.flatten(layer_list)
-                    flatg = geom.place_group(flatg)
-                    g += flatg
-                else:
-                    if geom.layer in layer_list:
-                        g.add(deepcopy(geom))
+            layer_list = self.get_layer_list()
+
+        g = GeomGroup()
+        for geom in self.group:
+            if isinstance(geom, SRef):
+                flatg = geom.group.flatten(layer_list)
+                g += geom.place_group(flatg)
+            elif geom.layer in layer_list:
+                g.add(deepcopy(geom))
         return g
 
-    def get_sref_list(self, sref_list=set()):
+    def get_sref_list(self):
         """
-        Return a unique list of strings with the
-        structures referenced by the object (recursively).
-
-        Parameters
-        ----------
-        sref_list : set, optional
-            A set of strings with cell names. The default is an empty set.
+        Return a unique list of strings with the structures referenced by the object
+        (recursively).
 
         Returns
         -------
@@ -198,21 +186,16 @@ class GeomGroup:
             The complete reference list.
 
         """
+        sref_list = set()
         for geom in self.group:
             if isinstance(geom, SRef):
                 sref_list.add(geom.cellname)
-                sref_list = geom.group.get_sref_list(sref_list)
+                sref_list.update(geom.group.get_sref_list())
         return sref_list
 
-    def get_layer_list(self, layer_list=set()) -> set:
+    def get_layer_list(self) -> set[int]:
         """
-        Return a unique set of int with the layers in the object (recursively)
-        Should be called by the user without arguments, when querying the layers
-
-        Parameters
-        ----------
-        layer_list : set, optional
-            A set of integers with layers. The default is empty set.
+        Return a unique set of int with the layers in the object (recursively).
 
         Returns
         -------
@@ -220,9 +203,10 @@ class GeomGroup:
             The complete layer list.
 
         """
+        layer_list = set()
         for geom in self.group:
             if isinstance(geom, SRef):
-                layer_list = geom.group.get_layer_list(layer_list)
+                layer_list.update(geom.group.get_layer_list())
             else:
                 layer_list.add(geom.layer)
 
