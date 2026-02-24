@@ -5,8 +5,44 @@ import pytest
 
 from samplemaker import shapes as sp
 
+_COORD = tuple[float, float]
+_LF = list[float]
 
-def test_dot_transformations():
+
+@pytest.fixture
+def box_llxy() -> _COORD:
+    """Box lower-left x and y coordinates."""
+    return 0.0, 1.0
+
+
+@pytest.fixture
+def box_wh() -> _COORD:
+    """Box width and height."""
+    return 2.0, 3.0
+
+
+@pytest.fixture
+def box(box_llxy: _COORD, box_wh: _COORD) -> sp.Box:
+    llx, lly = box_llxy
+    width, height = box_wh
+    return sp.Box(llx, lly, width, height)
+
+
+@pytest.fixture
+def poly_pts() -> tuple[_LF, _LF]:
+    """Points in test polygon."""
+    xpts = [0.0, 3.0, 3.0, 0.0]
+    ypts = [0.0, 0.0, 2.0, 2.0]
+    return xpts, ypts
+
+
+@pytest.fixture
+def poly(poly_pts: tuple[_LF, _LF]) -> sp.Poly:
+    xpts, ypts = poly_pts
+    return sp.Poly(xpts, ypts, layer=2)
+
+
+def test_dot_transformations() -> None:
     d = sp.Dot(1.0, 2.0)
     assert (d.x, d.y) == pytest.approx((1.0, 2.0))
 
@@ -27,58 +63,74 @@ def test_dot_transformations():
 
 
 class TestBox:
-    def test_basic_ops(self):
-        box = sp.Box(0.0, 1.0, 2.0, 3.0)
-        assert box.cx() == pytest.approx(1.0)
-        assert box.cy() == pytest.approx(2.5)
-        assert box.urx() == pytest.approx(2.0)
-        assert box.ury() == pytest.approx(4.0)
+    def test_basic_ops(self, box: sp.Box) -> None:
+        expected_cx = box.llx + box.width / 2
+        expected_cy = box.lly + box.height / 2
+        expected_urx = box.llx + box.width
+        expected_ury = box.lly + box.height
+
+        assert box.cx() == pytest.approx(expected_cx)
+        assert box.cy() == pytest.approx(expected_cy)
+        assert box.urx() == pytest.approx(expected_urx)
+        assert box.ury() == pytest.approx(expected_ury)
 
         other = sp.Box(-1.0, 0.0, 1.0, 1.0)
         box.combine(other)
-        assert box.llx == pytest.approx(-1.0)
-        assert box.lly == pytest.approx(0.0)
-        assert box.urx() == pytest.approx(2.0)
-        assert box.ury() == pytest.approx(4.0)
-        assert box.width == pytest.approx(3.0)
-        assert box.height == pytest.approx(4.0)
 
-    def test_to_poly(self):
-        box = sp.Box(0.0, 1.0, 2.0, 3.0)
-        p = box.toPoly()
-        assert isinstance(p, sp.Poly)
-        # p.data should be of the format [x0, y0, x1, y1, x2, y2, x3, y3, ..., x0, y0]
-        assert isinstance(p.data, np.ndarray)
-        assert len(p.data) == 10
+        expected_llx = min(box.llx, other.llx)
+        expected_lly = min(box.lly, other.lly)
+        expected_urx = max(box.urx(), other.urx())
+        expected_ury = max(box.ury(), other.ury())
+        expected_width = expected_urx - expected_llx
+        expected_height = expected_ury - expected_lly
 
-        reshaped_data = p.data.reshape((-1, 2))
+        assert box.llx == pytest.approx(expected_llx)
+        assert box.lly == pytest.approx(expected_lly)
+        assert box.urx() == pytest.approx(expected_urx)
+        assert box.ury() == pytest.approx(expected_ury)
+        assert box.width == pytest.approx(expected_width)
+        assert box.height == pytest.approx(expected_height)
+
+    def test_to_poly(self, box: sp.Box) -> None:
+        poly = box.toPoly()
+        assert isinstance(poly, sp.Poly)
+        # poly.data should be of the format [x0, y0, x1, y1, x2, y2, x3, y3, ..., x0, y0]
+        assert isinstance(poly.data, np.ndarray)
+        assert len(poly.data) == 10
+
+        reshaped_data = poly.data.reshape((-1, 2))
         xpts, ypts = reshaped_data[:, 0], reshaped_data[:, 1]
-        expected_xpts = [0.0, 2.0, 2.0, 0.0, 0.0]
-        expected_ypts = [1.0, 1.0, 4.0, 4.0, 1.0]
+
+        llx, lly = box.llx, box.lly
+        urx, ury = box.urx(), box.ury()
+        expected_xpts = [llx, urx, urx, llx, llx]
+        expected_ypts = [lly, lly, ury, ury, lly]
+
         assert list(xpts) == pytest.approx(expected_xpts)
         assert list(ypts) == pytest.approx(expected_ypts)
-        assert p.layer == 0
+        assert poly.layer == 0
 
-    def test_to_rect(self):
-        box = sp.Box(0.0, 1.0, 2.0, 3.0)
+    def test_to_rect(self, box: sp.Box) -> None:
         g = box.toRect()
         assert isinstance(g, sp.GeomGroup)
         assert len(g.group) == 1
         assert isinstance(g.group[0], sp.Poly)
 
-    def test_numkey_points(self):
-        box = sp.Box(-1.0, 1.0, 4.0, 3.0)
-
+    def test_numkey_points(self, box: sp.Box) -> None:
+        llx, lly = box.llx, box.lly
+        urx, ury = box.urx(), box.ury()
+        cx = (llx + urx) / 2
+        cy = (lly + ury) / 2
         expected_points = {
-            1: (-1.0, 1.0),  # ll
-            2: (1.0, 1.0),  # lc
-            3: (3.0, 1.0),  # lr
-            4: (-1.0, 2.5),  # cl
-            5: (1.0, 2.5),  # cc
-            6: (3.0, 2.5),  # cr
-            7: (-1.0, 4.0),  # ul
-            8: (1.0, 4.0),  # uc
-            9: (3.0, 4.0),  # ur
+            1: (llx, lly),  # lower-left
+            2: (cx, lly),  # lower-middle
+            3: (urx, lly),  # lower-right
+            4: (llx, cy),  # middle-left
+            5: (cx, cy),  # center
+            6: (urx, cy),  # middle-right
+            7: (llx, ury),  # upper-left
+            8: (cx, ury),  # upper-middle
+            9: (urx, ury),  # upper-right
         }
         for numkey, (exp_x, exp_y) in expected_points.items():
             x, y = box.get_numkey_point(numkey)
@@ -86,154 +138,163 @@ class TestBox:
 
 
 class TestPoly:
-    XPTS = (0.0, 3.0, 3.0, 0.0)
-    YPTS = (0.0, 0.0, 2.0, 2.0)
-    LAYER = 2
+    """
+    Tests for the Poly class.
 
-    DATA_XPTS = (0.0, 3.0, 3.0, 0.0, 0.0)
-    DATA_YPTS = (0.0, 0.0, 2.0, 2.0, 0.0)
+    Methods without coverage:
 
-    def test_init_poly(self):
-        p = sp.Poly(self.XPTS, self.YPTS, layer=self.LAYER)
+    * `three_point_filter`
+    * `identical_to`
+    * `anisotropic_resize`
 
-        # p.data should be of the format [x0, y0, x1, y1, x2, y2, x3, y3, ..., x0, y0]
-        assert isinstance(p.data, np.ndarray)
-        assert len(p.data) == 10
-        assert p.Npts == 5
-        assert p.layer == self.LAYER
+    """
 
-        reshaped_data = p.data.reshape((-1, 2))
+    def test_init_poly(self, poly: sp.Poly, poly_pts: tuple[_LF, _LF]) -> None:
+        # poly.data should be of the format
+        # [x0, y0, x1, y1, x2, y2, x3, y3, ..., x0, y0]
+        assert isinstance(poly.data, np.ndarray)
+        assert len(poly.data) == 2 * (len(poly_pts[0]) + 1)
+        assert poly.Npts == len(poly_pts[0]) + 1
+        assert poly.layer == 2
+
+        reshaped_data = poly.data.reshape((-1, 2))
         resh_xpts, resh_ypts = reshaped_data[:, 0], reshaped_data[:, 1]
-        expected_xpts = list(self.DATA_XPTS)
-        expected_ypts = list(self.DATA_YPTS)
+        # Close the polygon by repeating the first point at the end:
+        expected_xpts = poly_pts[0] + [poly_pts[0][0]]
+        expected_ypts = poly_pts[1] + [poly_pts[1][0]]
         assert list(resh_xpts) == pytest.approx(expected_xpts)
         assert list(resh_ypts) == pytest.approx(expected_ypts)
 
-        bb = p.bounding_box()
-        assert bb.width == pytest.approx(3.0)
-        assert bb.height == pytest.approx(2.0)
-        assert p.area() == pytest.approx(6.0)
-        assert p.perimeter() == pytest.approx(10.0)
-        assert p.centroid() == pytest.approx((1.5, 1.0))
+    def test_bounding_box(self, poly: sp.Poly, poly_pts: tuple[_LF, _LF]) -> None:
+        bb = poly.bounding_box()
+        xpts, ypts = poly_pts
+        expected_llx = min(xpts)
+        expected_lly = min(ypts)
+        expected_urx = max(xpts)
+        expected_ury = max(ypts)
+        expected_width = expected_urx - expected_llx
+        expected_height = expected_ury - expected_lly
 
-    def test_translate(self):
-        p = sp.Poly(self.XPTS, self.YPTS, layer=self.LAYER)
+        assert isinstance(bb, sp.Box)
+        assert bb.llx == pytest.approx(expected_llx)
+        assert bb.lly == pytest.approx(expected_lly)
+        assert bb.urx() == pytest.approx(expected_urx)
+        assert bb.ury() == pytest.approx(expected_ury)
+        assert bb.width == pytest.approx(expected_width)
+        assert bb.height == pytest.approx(expected_height)
 
-        p.translate(1.0, 2.0)
-        assert p.centroid() == pytest.approx((2.5, 3.0))
-        assert p.area() == pytest.approx(6.0)
-        assert p.perimeter() == pytest.approx(10.0)
+    def test_area(self, poly: sp.Poly) -> None:
+        assert poly.area() == pytest.approx(6.0)
 
-    def test_rotate(self):
-        p = sp.Poly(self.XPTS, self.YPTS, layer=self.LAYER)
+    def test_perimeter(self, poly: sp.Poly) -> None:
+        assert poly.perimeter() == pytest.approx(10.0)
 
-        p.rotate(0.0, 0.0, 90.0)
-        bb = p.bounding_box()
+    def test_centroid(self, poly: sp.Poly) -> None:
+        assert poly.centroid() == pytest.approx((1.5, 1.0))
+
+    def test_translate(self, poly: sp.Poly) -> None:
+        poly.translate(1.0, 2.0)
+        assert poly.centroid() == pytest.approx((2.5, 3.0))
+        assert poly.area() == pytest.approx(6.0)
+        assert poly.perimeter() == pytest.approx(10.0)
+
+    def test_rotate(self, poly: sp.Poly) -> None:
+        poly.rotate(0.0, 0.0, 90.0)
+        bb = poly.bounding_box()
         assert bb.width == pytest.approx(2.0)
         assert bb.height == pytest.approx(3.0)
-        assert p.centroid() == pytest.approx((-1.0, 1.5))
-        assert p.area() == pytest.approx(6.0)
-        assert p.perimeter() == pytest.approx(10.0)
+        assert poly.centroid() == pytest.approx((-1.0, 1.5))
+        assert poly.area() == pytest.approx(6.0)
+        assert poly.perimeter() == pytest.approx(10.0)
 
-        p.rotate(-1.0, 1.5, -45.0)
-        bb = p.bounding_box()
+        poly.rotate(-1.0, 1.5, -45.0)
+        bb = poly.bounding_box()
         assert bb.width == pytest.approx(3.5355339059327378)
         assert bb.height == pytest.approx(3.5355339059327378)
-        assert p.centroid() == pytest.approx((-1.0, 1.5))
-        assert p.area() == pytest.approx(6.0)
-        assert p.perimeter() == pytest.approx(10.0)
+        assert poly.centroid() == pytest.approx((-1.0, 1.5))
+        assert poly.area() == pytest.approx(6.0)
+        assert poly.perimeter() == pytest.approx(10.0)
 
-    def test_rotate_translate(self):
-        p = sp.Poly(self.XPTS, self.YPTS, layer=self.LAYER)
-
-        p.rotate_translate(2.0, 3.0, 180.0)
-        bb = p.bounding_box()
+    def test_rotate_translate(self, poly: sp.Poly) -> None:
+        poly.rotate_translate(2.0, 3.0, 180.0)
+        bb = poly.bounding_box()
         assert bb.width == pytest.approx(3.0)
         assert bb.height == pytest.approx(2.0)
-        assert p.centroid() == pytest.approx((0.5, 2.0))
-        assert p.area() == pytest.approx(6.0)
-        assert p.perimeter() == pytest.approx(10.0)
+        assert poly.centroid() == pytest.approx((0.5, 2.0))
+        assert poly.area() == pytest.approx(6.0)
+        assert poly.perimeter() == pytest.approx(10.0)
 
-    def test_scale(self):
-        p = sp.Poly(self.XPTS, self.YPTS, layer=self.LAYER)
-
-        p.scale(0.0, 0.0, 2.0, 3.0)
-        bb = p.bounding_box()
+    def test_scale(self, poly: sp.Poly) -> None:
+        poly.scale(0.0, 0.0, 2.0, 3.0)
+        bb = poly.bounding_box()
         assert bb.width == pytest.approx(6.0)
         assert bb.height == pytest.approx(6.0)
-        assert p.centroid() == pytest.approx((3.0, 3.0))
-        assert p.area() == pytest.approx(36.0)
-        assert p.perimeter() == pytest.approx(24.0)
+        assert poly.centroid() == pytest.approx((3.0, 3.0))
+        assert poly.area() == pytest.approx(36.0)
+        assert poly.perimeter() == pytest.approx(24.0)
 
-    def test_mirror_x(self):
-        p = sp.Poly(self.XPTS, self.YPTS, layer=self.LAYER)
-
-        p.mirrorX(1.5)
-        bb = p.bounding_box()
+    def test_mirror_x(self, poly: sp.Poly) -> None:
+        poly.mirrorX(1.5)
+        bb = poly.bounding_box()
         assert bb.width == pytest.approx(3.0)
         assert bb.height == pytest.approx(2.0)
-        assert p.centroid() == pytest.approx((1.5, 1.0))
-        assert p.area() == pytest.approx(6.0)
-        assert p.perimeter() == pytest.approx(10.0)
+        assert poly.centroid() == pytest.approx((1.5, 1.0))
+        assert poly.area() == pytest.approx(6.0)
+        assert poly.perimeter() == pytest.approx(10.0)
 
-    def test_mirror_y(self):
-        p = sp.Poly(self.XPTS, self.YPTS, layer=self.LAYER)
-
-        p.mirrorY(1.0)
-        bb = p.bounding_box()
+    def test_mirror_y(self, poly: sp.Poly) -> None:
+        poly.mirrorY(1.0)
+        bb = poly.bounding_box()
         assert bb.width == pytest.approx(3.0)
         assert bb.height == pytest.approx(2.0)
-        assert p.centroid() == pytest.approx((1.5, 1.0))
-        assert p.area() == pytest.approx(6.0)
-        assert p.perimeter() == pytest.approx(10.0)
+        assert poly.centroid() == pytest.approx((1.5, 1.0))
+        assert poly.area() == pytest.approx(6.0)
+        assert poly.perimeter() == pytest.approx(10.0)
 
-    def test_int_data(self):
-        scaled_xpts = [1000 * x for x in self.DATA_XPTS]
-        scaled_ypts = [1000 * y for y in self.DATA_YPTS]
+    def test_int_data(self, poly_pts: tuple[_LF, _LF]) -> None:
+        expected_xpts = poly_pts[0] + [poly_pts[0][0]]
+        expected_ypts = poly_pts[1] + [poly_pts[1][0]]
+        scaled_xpts = [1000 * x for x in expected_xpts]
+        scaled_ypts = [1000 * y for y in expected_ypts]
         int_data = np.array([scaled_xpts, scaled_ypts], dtype=int).T.reshape(-1)
-        p = sp.Poly([], [], layer=self.LAYER)
-        p.set_int_data(int_data)
+        poly = sp.Poly([], [], layer=2)
+        poly.set_int_data(int_data)
 
-        assert p.int_data() == pytest.approx(int_data)
-        assert p.Npts == 5
+        assert poly.int_data() == pytest.approx(int_data)
+        assert poly.Npts == len(expected_xpts)
 
-        reshaped_data = p.data.reshape((-1, 2))
+        reshaped_data = poly.data.reshape((-1, 2))
         resh_xpts, resh_ypts = reshaped_data[:, 0], reshaped_data[:, 1]
-        expected_xpts = list(self.DATA_XPTS)
-        expected_ypts = list(self.DATA_YPTS)
         assert list(resh_xpts) == pytest.approx(expected_xpts)
         assert list(resh_ypts) == pytest.approx(expected_ypts)
 
-        bb = p.bounding_box()
+        bb = poly.bounding_box()
         assert bb.width == pytest.approx(3.0)
         assert bb.height == pytest.approx(2.0)
-        assert p.area() == pytest.approx(6.0)
-        assert p.perimeter() == pytest.approx(10.0)
-        assert p.centroid() == pytest.approx((1.5, 1.0))
+        assert poly.area() == pytest.approx(6.0)
+        assert poly.perimeter() == pytest.approx(10.0)
+        assert poly.centroid() == pytest.approx((1.5, 1.0))
 
-    def test_to_polygon(self):
-        p = sp.Poly(self.XPTS, self.YPTS, layer=self.LAYER)
-        g = p.to_polygon()
+    def test_to_polygon(self, poly: sp.Poly) -> None:
+        g = poly.to_polygon()
         assert isinstance(g, sp.GeomGroup)
         assert len(g.group) == 1
-        assert g.group[0] is p
+        assert g.group[0] is poly
 
-    def test_to_circle(self):
+    def test_to_circle(self, poly: sp.Poly) -> None:
         # Rectangle will have a perfect circle fit
-        p = sp.Poly(self.XPTS, self.YPTS, layer=self.LAYER)
-
         # vcount too high -> return empty geometry group
-        gg = p.to_circle(thresh=0.0, vcount=10)
+        gg = poly.to_circle(thresh=0.0, vcount=10)
         assert isinstance(gg, sp.GeomGroup)
         assert len(gg.group) == 0
 
         # threshold too high -> return empty geometry group
-        gg = p.to_circle(thresh=1.1, vcount=4)
+        gg = poly.to_circle(thresh=1.1, vcount=4)
         assert isinstance(gg, sp.GeomGroup)
         assert len(gg.group) == 0
 
         # Perfect fit -> return one circle
-        gg = p.to_circle(thresh=0.98, vcount=4)
+        gg = poly.to_circle(thresh=0.98, vcount=4)
         assert isinstance(gg, sp.GeomGroup)
         assert len(gg.group) == 1
 
@@ -243,15 +304,13 @@ class TestPoly:
         assert circle.x0 == pytest.approx(1.5)
         assert circle.y0 == pytest.approx(1.0)
 
-    def test_point_inside(self):
-        p = sp.Poly(self.XPTS, self.YPTS, layer=self.LAYER)
-
+    def test_point_inside(self, poly: sp.Poly) -> None:
         # Points inside the rectangle
-        assert p.point_inside(1.0, 1.0) is True
-        assert p.point_inside(2.5, 0.5) is True
+        assert poly.point_inside(1.0, 1.0) is True
+        assert poly.point_inside(2.5, 0.5) is True
 
         # Points outside the rectangle
-        assert p.point_inside(-1.0, 1.0) is False
-        assert p.point_inside(4.0, 1.0) is False
-        assert p.point_inside(1.5, -1.0) is False
-        assert p.point_inside(1.5, 3.0) is False
+        assert poly.point_inside(-1.0, 1.0) is False
+        assert poly.point_inside(4.0, 1.0) is False
+        assert poly.point_inside(1.5, -1.0) is False
+        assert poly.point_inside(1.5, 3.0) is False
