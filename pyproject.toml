@@ -10,12 +10,12 @@ authors = [
 ]
 description = "Lithographic mask design package"
 readme = "README.md"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.11,<3.15"
 license-files = ["LICENSE.md"]
 license = "BSD-3-Clause"
 version = "5.4.6"
 dependencies = [
-    "matplotlib>=3.7.5",
+    "matplotlib>=3.10.5",
     "numpy==2.*",
 ]
 classifiers = [
@@ -23,10 +23,10 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: MacOS",
     "Operating System :: Unix",
