@@ -1,6 +1,7 @@
 """Common fixtures for tests."""
 
 import pytest
+
 import samplemaker
 
 

@@ -1,6 +1,7 @@
 """Unit tests for the makers module."""
 
 import pytest
+
 from samplemaker import makers as sm
 from samplemaker import shapes as sp
 
