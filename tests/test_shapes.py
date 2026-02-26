@@ -143,6 +143,28 @@ def aref_obj(geomgroup_obj: sp.GeomGroup, aref_kwargs: _AREF_KWARG_TYPE) -> sp.A
     )
 
 
+@pytest.fixture
+def circle_obj() -> sp.Circle:
+    return sp.Circle(x0=1.0, y0=2.0, r=3.0, layer=4)
+
+
+@pytest.fixture
+def ellipse_obj() -> sp.Ellipse:
+    return sp.Ellipse(x0=1.0, y0=2.0, rX=3.0, rY=2.0, layer=4, rot=0.0)
+
+
+@pytest.fixture
+def ring_obj() -> sp.Ring:
+    return sp.Ring(x0=1.0, y0=2.0, rX=3.0, rY=2.0, layer=4, rot=0.0, w=1.0)
+
+
+@pytest.fixture
+def arc_obj() -> sp.Arc:
+    return sp.Arc(
+        x0=1.0, y0=2.0, rX=3.0, rY=2.0, layer=4, rot=0.0, w=1.0, a1=0.0, a2=180.0
+    )
+
+
 def test_dot_transformations() -> None:
     d = sp.Dot(1.0, 2.0)
     assert (d.x, d.y) == pytest.approx((1.0, 2.0))
@@ -848,6 +870,27 @@ class TestSRef:
         assert bb.cx() == pytest.approx(sref.x0 + pool_box.cx() * sref.mag)
         assert bb.cy() == pytest.approx(sref.y0 + pool_box.cy() * sref.mag)
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="Known mismatch: SRef.bounding_box does not match placed "
+        "mirrored/rotated geometry.",
+    )
+    def test_bounding_box_mismatch_for_mirrored_rotated_sref_is_documented(
+        self, sref_obj: sp.SRef, geomgroup_obj: sp.GeomGroup
+    ) -> None:
+        sref_obj.mag = 2.0
+        sref_obj.angle = 45.0
+        sref_obj.mirror = True
+
+        placed = sref_obj.place_group(geomgroup_obj.flatten())
+        sref_bb = sref_obj.bounding_box()
+        placed_bb = placed.bounding_box()
+
+        assert sref_bb.cx() == pytest.approx(placed_bb.cx())
+        assert sref_bb.cy() == pytest.approx(placed_bb.cy())
+        assert sref_bb.width == pytest.approx(placed_bb.width)
+        assert sref_bb.height == pytest.approx(placed_bb.height)
+
 
 class TestAref:
     def test_init_aref(
@@ -1026,3 +1069,621 @@ class TestAref:
         assert aref_bb.cy() == pytest.approx(placed_bb.cy())
         assert aref_bb.width == pytest.approx(placed_bb.width)
         assert aref_bb.height == pytest.approx(placed_bb.height)
+
+
+class TestCircle:
+    def test_init_circle(self, circle_obj: sp.Circle) -> None:
+        assert circle_obj.x0 == 1.0
+        assert circle_obj.y0 == 2.0
+        assert circle_obj.r == 3.0
+        assert circle_obj.layer == 4
+
+    def test_translate(self, circle_obj: sp.Circle) -> None:
+        circle_obj.translate(2.0, -1.0)
+
+        assert circle_obj.x0 == pytest.approx(3.0)
+        assert circle_obj.y0 == pytest.approx(1.0)
+
+    def test_rotate(self, circle_obj: sp.Circle) -> None:
+        circle_obj.rotate(0.0, 0.0, 90.0)
+
+        assert circle_obj.x0 == pytest.approx(-2.0)
+        assert circle_obj.y0 == pytest.approx(1.0)
+
+    def test_rotate_translate(self, circle_obj: sp.Circle) -> None:
+        circle_obj.rotate_translate(2.0, 3.0, 180.0)
+
+        assert circle_obj.x0 == pytest.approx(1.0)
+        assert circle_obj.y0 == pytest.approx(1.0)
+
+    def test_scale(self, circle_obj: sp.Circle) -> None:
+        circle_obj.scale(0.0, 0.0, 2.0, 3.0)
+
+        assert circle_obj.x0 == pytest.approx(2.0)
+        assert circle_obj.y0 == pytest.approx(6.0)
+        assert circle_obj.r == pytest.approx(6.0)
+
+    def test_mirror_x(self, circle_obj: sp.Circle) -> None:
+        circle_obj.mirrorX(0.0)
+
+        assert circle_obj.x0 == pytest.approx(-1.0)
+        assert circle_obj.y0 == pytest.approx(2.0)
+
+    def test_mirror_y(self, circle_obj: sp.Circle) -> None:
+        circle_obj.mirrorY(0.0)
+
+        assert circle_obj.x0 == pytest.approx(1.0)
+        assert circle_obj.y0 == pytest.approx(-2.0)
+
+    def test_bounding_box(self, circle_obj: sp.Circle) -> None:
+        bb = circle_obj.bounding_box()
+
+        assert isinstance(bb, sp.Box)
+        assert bb.llx == pytest.approx(-2.0)
+        assert bb.lly == pytest.approx(-1.0)
+        assert bb.width == pytest.approx(6.0)
+        assert bb.height == pytest.approx(6.0)
+
+    def test_area(self, circle_obj: sp.Circle) -> None:
+        assert circle_obj.area() == pytest.approx(np.pi * 9.0)
+
+    def test_centroid(self, circle_obj: sp.Circle) -> None:
+        assert circle_obj.centroid() == pytest.approx((1.0, 2.0))
+
+    def test_perimeter(self, circle_obj: sp.Circle) -> None:
+        assert circle_obj.perimeter() == pytest.approx(2.0 * np.pi * 3.0)
+
+    def test_to_polygon(self, circle_obj: sp.Circle) -> None:
+        g = circle_obj.to_polygon(Npts=12)
+
+        assert isinstance(g, sp.GeomGroup)
+        assert len(g.group) == 1
+
+        poly = g.group[0]
+        assert isinstance(poly, sp.Poly)
+        assert poly.layer == circle_obj.layer
+        assert poly.Npts == 13
+
+
+class TestEllipse:
+    def test_init_ellipse(self, ellipse_obj: sp.Ellipse) -> None:
+        assert ellipse_obj.x0 == 1.0
+        assert ellipse_obj.y0 == 2.0
+        assert ellipse_obj.r == 3.0
+        assert ellipse_obj.r1 == 2.0
+        assert ellipse_obj.rot == 0.0
+        assert ellipse_obj.layer == 4
+
+    def test_rotate_translate(self, ellipse_obj: sp.Ellipse) -> None:
+        ellipse_obj.rotate_translate(2.0, 3.0, 180.0)
+
+        assert ellipse_obj.x0 == pytest.approx(1.0)
+        assert ellipse_obj.y0 == pytest.approx(1.0)
+        assert ellipse_obj.rot == pytest.approx(180.0)
+
+    def test_rotate(self, ellipse_obj: sp.Ellipse) -> None:
+        ellipse_obj.rotate(0.0, 0.0, 90.0)
+
+        assert ellipse_obj.x0 == pytest.approx(-2.0)
+        assert ellipse_obj.y0 == pytest.approx(1.0)
+        assert ellipse_obj.rot == pytest.approx(90.0)
+
+    def test_scale(self, ellipse_obj: sp.Ellipse) -> None:
+        ellipse_obj.scale(0.0, 0.0, 2.0, 3.0)
+
+        assert ellipse_obj.x0 == pytest.approx(2.0)
+        assert ellipse_obj.y0 == pytest.approx(6.0)
+        assert ellipse_obj.r == pytest.approx(6.0)
+        assert ellipse_obj.r1 == pytest.approx(6.0)
+
+    def test_mirror_x(self, ellipse_obj: sp.Ellipse) -> None:
+        ellipse_obj.rot = 30.0
+        ellipse_obj.mirrorX(0.0)
+
+        assert ellipse_obj.x0 == pytest.approx(-1.0)
+        assert ellipse_obj.y0 == pytest.approx(2.0)
+        assert ellipse_obj.rot == pytest.approx(150.0)
+
+    def test_mirror_y(self, ellipse_obj: sp.Ellipse) -> None:
+        ellipse_obj.rot = 30.0
+        ellipse_obj.mirrorY(0.0)
+
+        assert ellipse_obj.x0 == pytest.approx(1.0)
+        assert ellipse_obj.y0 == pytest.approx(-2.0)
+        assert ellipse_obj.rot == pytest.approx(-30.0)
+
+    def test_bounding_box(self, ellipse_obj: sp.Ellipse) -> None:
+        bb = ellipse_obj.bounding_box()
+
+        assert isinstance(bb, sp.Box)
+        assert bb.llx == pytest.approx(-2.0)
+        assert bb.lly == pytest.approx(0.0)
+        assert bb.width == pytest.approx(6.0)
+        assert bb.height == pytest.approx(4.0)
+
+    def test_area(self, ellipse_obj: sp.Ellipse) -> None:
+        assert ellipse_obj.area() == pytest.approx(np.pi * 3.0 * 2.0)
+
+    def test_perimeter(self, ellipse_obj: sp.Ellipse) -> None:
+        a = 3.0
+        b = 2.0
+        expected = np.pi * (3 * (a + b) - np.sqrt((3 * a + b) * (a + 3 * b)))
+
+        assert ellipse_obj.perimeter() == pytest.approx(expected)
+
+    def test_to_polygon(self, ellipse_obj: sp.Ellipse) -> None:
+        g = ellipse_obj.to_polygon(Npts=16)
+
+        assert isinstance(g, sp.GeomGroup)
+        assert len(g.group) == 1
+        assert isinstance(g.group[0], sp.Poly)
+        assert g.group[0].layer == ellipse_obj.layer
+
+
+class TestRing:
+    def test_init_ring(self, ring_obj: sp.Ring) -> None:
+        assert ring_obj.x0 == 1.0
+        assert ring_obj.y0 == 2.0
+        assert ring_obj.r == 3.0
+        assert ring_obj.r1 == 2.0
+        assert ring_obj.w == 1.0
+        assert ring_obj.rot == 0.0
+        assert ring_obj.layer == 4
+
+    def test_scale(self, ring_obj: sp.Ring) -> None:
+        ring_obj.scale(0.0, 0.0, 2.0, 3.0)
+
+        assert ring_obj.x0 == pytest.approx(2.0)
+        assert ring_obj.y0 == pytest.approx(6.0)
+        assert ring_obj.r == pytest.approx(6.0)
+        assert ring_obj.r1 == pytest.approx(6.0)
+        assert ring_obj.w == pytest.approx(2.0)
+
+    def test_bounding_box(self, ring_obj: sp.Ring) -> None:
+        bb = ring_obj.bounding_box()
+
+        assert isinstance(bb, sp.Box)
+        assert bb.llx == pytest.approx(-2.5)
+        assert bb.lly == pytest.approx(-0.5)
+        assert bb.width == pytest.approx(7.0)
+        assert bb.height == pytest.approx(5.0)
+
+    def test_area(self, ring_obj: sp.Ring) -> None:
+        outer = np.pi * (ring_obj.r + ring_obj.w / 2) * (ring_obj.r1 + ring_obj.w / 2)
+        inner = np.pi * (ring_obj.r - ring_obj.w / 2) * (ring_obj.r1 - ring_obj.w / 2)
+
+        assert ring_obj.area() == pytest.approx(outer - inner)
+
+    def test_perimeter(self, ring_obj: sp.Ring) -> None:
+        poly = ring_obj.to_polygon(12).group[0]
+
+        assert ring_obj.perimeter() == pytest.approx(poly.perimeter())
+
+    def test_to_polygon(self, ring_obj: sp.Ring) -> None:
+        g = ring_obj.to_polygon(Npts=12)
+
+        assert isinstance(g, sp.GeomGroup)
+        assert len(g.group) == 1
+
+        poly = g.group[0]
+
+        assert isinstance(poly, sp.Poly)
+        assert poly.layer == ring_obj.layer
+        assert poly.Npts == 27
+
+
+class TestArc:
+    def test_init_arc(self, arc_obj: sp.Arc) -> None:
+        assert arc_obj.x0 == 1.0
+        assert arc_obj.y0 == 2.0
+        assert arc_obj.r == 3.0
+        assert arc_obj.r1 == 2.0
+        assert arc_obj.w == 1.0
+        assert arc_obj.rot == 0.0
+        assert arc_obj.a1 == 0.0
+        assert arc_obj.a2 == 180.0
+        assert arc_obj.layer == 4
+
+    def test_bounding_box(self, arc_obj: sp.Arc) -> None:
+        bb = arc_obj.bounding_box()
+
+        assert isinstance(bb, sp.Box)
+        assert bb.width > 0
+        assert bb.height > 0
+
+    def test_area(self, arc_obj: sp.Arc) -> None:
+        ring_area = sp.Ring.area(arc_obj)
+        expected = (
+            ring_area * (np.radians(arc_obj.a2) - np.radians(arc_obj.a1)) / (2 * np.pi)
+        )
+        assert arc_obj.area() == pytest.approx(expected)
+
+    def test_centroid(self, arc_obj: sp.Arc) -> None:
+        poly = arc_obj.to_polygon(12).group[0]
+
+        assert arc_obj.centroid() == pytest.approx(poly.centroid())
+
+    def test_to_polygon(self, arc_obj: sp.Arc) -> None:
+        g = arc_obj.to_polygon(Npts=16, autosplit=False)
+
+        assert isinstance(g, sp.GeomGroup)
+        assert len(g.group) == 1
+        assert isinstance(g.group[0], sp.Poly)
+        assert g.group[0].layer == arc_obj.layer
+
+    def test_to_polygon_autosplit(self, arc_obj: sp.Arc) -> None:
+        n_segments = 8
+        g = arc_obj.to_polygon(Npts=n_segments, autosplit=True)
+
+        assert isinstance(g, sp.GeomGroup)
+        assert len(g.group) == n_segments
+        assert all(isinstance(poly, sp.Poly) for poly in g.group)
+        assert all(poly.layer == arc_obj.layer for poly in g.group)
+
+
+class TestGeomGroup:
+    def test_init_geomgroup(self) -> None:
+        g = sp.GeomGroup()
+        assert len(g.group) == 0
+
+    def test_add_to_geomgroup(self, circle_obj: sp.Circle) -> None:
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+
+        assert len(g.group) == 1
+        assert g.group[0] is circle_obj
+
+    def test_add_two_geomgroups(
+        self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
+    ) -> None:
+        g1 = sp.GeomGroup()
+        g1.add(circle_obj)
+
+        g2 = sp.GeomGroup()
+        g2.add(ellipse_obj)
+
+        g = g1 + g2
+        assert len(g.group) == 2
+        assert g.group[0] is circle_obj
+        assert g.group[1] is ellipse_obj
+
+    def test_copy_geomgroup(self, circle_obj: sp.Circle) -> None:
+        # Geometry copy creates a deep copy of the geometry, so that modifying the copy
+        # does not affect the original.
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+
+        gcopy = g.copy()
+        assert gcopy is not g
+        assert len(gcopy.group) == 1
+        assert isinstance(gcopy.group[0], sp.Circle)
+
+        circle_copy = gcopy.group[0]
+        assert circle_copy is not circle_obj
+        assert circle_copy.x0 == circle_obj.x0
+        assert circle_copy.y0 == circle_obj.y0
+        assert circle_copy.r == circle_obj.r
+        assert circle_copy.layer == circle_obj.layer
+
+    def test_flatten_geomgroup(self, circle_obj: sp.Circle, sref_obj: sp.SRef) -> None:
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+        g.add(sref_obj)
+
+        gflat = g.flatten()
+
+        assert len(gflat.group) == 2
+        assert isinstance(gflat.group[0], sp.Circle)
+        assert isinstance(gflat.group[1], sp.Poly)
+
+        circle_copy = gflat.group[0]
+        assert circle_copy is not circle_obj
+        assert circle_copy.x0 == circle_obj.x0
+        assert circle_copy.y0 == circle_obj.y0
+        assert circle_copy.r == circle_obj.r
+        assert circle_copy.layer == circle_obj.layer
+
+        poly_obj = sref_obj.group.group[0]
+        poly_copy = gflat.group[1]
+        placed_poly = sref_obj.place_group(sref_obj.group.copy()).group[0]
+
+        assert poly_copy is not poly_obj
+        assert poly_copy.layer == placed_poly.layer
+        assert poly_copy.Npts == placed_poly.Npts
+        assert poly_copy.data == pytest.approx(placed_poly.data)
+
+    def test_get_sref_list(self, circle_obj: sp.Circle, sref_obj: sp.SRef) -> None:
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+        g.add(sref_obj)
+
+        srefs = g.get_sref_list()
+
+        assert isinstance(srefs, set)
+        assert all(isinstance(s, str) for s in srefs)
+
+        assert len(srefs) == 1
+        assert sref_obj.cellname in srefs
+
+    def test_get_layer_list(
+        self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
+    ) -> None:
+        circle_obj.layer = 11
+        ellipse_obj.layer = 12
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+        g.add(ellipse_obj)
+
+        layers = g.get_layer_list()
+
+        assert isinstance(layers, set)
+        assert all(isinstance(layer, int) for layer in layers)
+
+        assert len(layers) == 2
+        assert 11 in layers
+        assert 12 in layers
+
+    def test_translate_rotate_scale_and_mirror_operations(
+        self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
+    ) -> None:
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+        g.add(ellipse_obj)
+
+        g.translate(1.0, -1.0)
+        assert circle_obj.x0 == pytest.approx(2.0)
+        assert circle_obj.y0 == pytest.approx(1.0)
+        assert ellipse_obj.x0 == pytest.approx(2.0)
+        assert ellipse_obj.y0 == pytest.approx(1.0)
+
+        g.rotate(0.0, 0.0, 90.0)
+        assert circle_obj.x0 == pytest.approx(-1.0)
+        assert circle_obj.y0 == pytest.approx(2.0)
+
+        g.scale(0.0, 0.0, 2.0, 2.0)
+        assert circle_obj.x0 == pytest.approx(-2.0)
+        assert circle_obj.y0 == pytest.approx(4.0)
+        assert circle_obj.r == pytest.approx(6.0)
+
+        g.mirrorX(0.0)
+        assert circle_obj.x0 == pytest.approx(2.0)
+        assert circle_obj.y0 == pytest.approx(4.0)
+
+        g.mirrorY(0.0)
+        assert circle_obj.x0 == pytest.approx(2.0)
+        assert circle_obj.y0 == pytest.approx(-4.0)
+
+    def test_rotate_translate_operation(
+        self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
+    ) -> None:
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+        g.add(ellipse_obj)
+
+        g.rotate_translate(2.0, 3.0, 180.0)
+
+        assert circle_obj.x0 == pytest.approx(1.0)
+        assert circle_obj.y0 == pytest.approx(1.0)
+        assert ellipse_obj.x0 == pytest.approx(1.0)
+        assert ellipse_obj.y0 == pytest.approx(1.0)
+
+    def test_str_contains_group_size_and_layers(
+        self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
+    ) -> None:
+        circle_obj.layer = 71
+        ellipse_obj.layer = 72
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+        g.add(ellipse_obj)
+
+        msg = str(g)
+
+        assert "GeomGroup" in msg
+        assert "Layers:" in msg
+
+    def test_info_contains_bounding_box_and_counts(
+        self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
+    ) -> None:
+        circle_obj.layer = 51
+        ellipse_obj.layer = 52
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+        g.add(ellipse_obj)
+
+        info = g.info()
+
+        assert "BoundingBox" in info
+        assert "LayerList" in info
+        assert "TotalCount" in info
+        assert set(info["LayerList"]) == {51, 52}
+        assert info["TotalCount"]["NCircle"] == 1
+        assert info["TotalCount"]["NEllipse"] == 1
+
+    def test_bounding_box_combines_shapes(
+        self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
+    ) -> None:
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+        g.add(ellipse_obj)
+
+        bb = g.bounding_box()
+        cbb = circle_obj.bounding_box()
+        ebb = ellipse_obj.bounding_box()
+
+        assert bb.llx == pytest.approx(min(cbb.llx, ebb.llx))
+        assert bb.lly == pytest.approx(min(cbb.lly, ebb.lly))
+        assert bb.urx() == pytest.approx(max(cbb.urx(), ebb.urx()))
+        assert bb.ury() == pytest.approx(max(cbb.ury(), ebb.ury()))
+
+    def test_to_boxes_and_set_layer(
+        self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
+    ) -> None:
+        circle_obj.layer = 21
+        ellipse_obj.layer = 22
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+        g.add(ellipse_obj)
+
+        boxes = g.to_boxes(layer=99)
+
+        assert isinstance(boxes, sp.GeomGroup)
+        assert len(boxes.group) == 0
+
+        g.set_layer(30)
+        assert all(geom.layer == 30 for geom in g.group)
+
+        boxes = g.to_boxes(layer=30)
+        assert len(boxes.group) == 2
+        assert all(isinstance(geom, sp.Poly) for geom in boxes.group)
+        assert all(geom.layer == 30 for geom in boxes.group)
+
+    def test_select_layers(
+        self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
+    ) -> None:
+        circle_obj.layer = 41
+        ellipse_obj.layer = 42
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+        g.add(ellipse_obj)
+
+        selected = g.select_layers([41, 99])
+
+        assert len(selected.group) == 1
+        assert selected.group[0].layer == 41
+
+    def test_layer_select_and_deselect(
+        self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
+    ) -> None:
+        circle_obj.layer = 11
+        ellipse_obj.layer = 12
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+        g.add(ellipse_obj)
+
+        sel = g.select_layer(11)
+        desel = g.deselect_layers([11])
+
+        assert len(sel.group) == 1
+        assert sel.group[0].layer == 11
+        assert len(desel.group) == 1
+        assert desel.group[0].layer == 12
+
+    def test_get_area_sums_non_ref_shapes(
+        self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
+    ) -> None:
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+        g.add(ellipse_obj)
+
+        expected_area = circle_obj.area() + ellipse_obj.area()
+
+        assert g.get_area() == pytest.approx(expected_area)
+
+    def test_path_to_poly_and_text_to_poly(self, text_obj: sp.Text) -> None:
+        path = sp.Path([0.0, 1.0], [0.0, 0.0], width=0.2, layer=60)
+        g = sp.GeomGroup()
+        g.add(path)
+        g.add(text_obj)
+
+        g.path_to_poly()
+        assert not any(isinstance(geom, sp.Path) for geom in g.group)
+        assert any(isinstance(geom, sp.Poly) for geom in g.group)
+
+        g.text_to_poly()
+        assert not any(isinstance(geom, sp.Text) for geom in g.group)
+        assert any(isinstance(geom, sp.Poly) for geom in g.group)
+
+    def test_all_to_poly_converts_circle_ellipse_ring_arc(
+        self,
+        circle_obj: sp.Circle,
+        ellipse_obj: sp.Ellipse,
+        ring_obj: sp.Ring,
+        arc_obj: sp.Arc,
+    ) -> None:
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+        g.add(ellipse_obj)
+        g.add(ring_obj)
+        g.add(arc_obj)
+
+        g.all_to_poly(Npts_circ=10, Npts_arc=12, split_arc=False)
+
+        assert len(g.group) == 4
+        assert all(isinstance(geom, sp.Poly) for geom in g.group)
+
+    def test_all_to_poly_keeps_sref_and_converts_others(
+        self, geomgroup_obj: sp.GeomGroup, circle_obj: sp.Circle
+    ) -> None:
+        ref = sp.SRef(
+            x0=0.0,
+            y0=0.0,
+            cellname="CellForAllToPoly",
+            group=geomgroup_obj,
+            mag=1.0,
+            angle=0.0,
+            mirror=False,
+        )
+        g = sp.GeomGroup()
+        g.add(ref)
+        g.add(circle_obj)
+
+        g.all_to_poly(Npts_circ=8)
+
+        assert any(isinstance(geom, sp.SRef) for geom in g.group)
+        assert any(isinstance(geom, sp.Poly) for geom in g.group)
+
+    def test_poly_to_circle_converts_round_poly_and_keeps_non_round(self) -> None:
+        circular_poly = sp.Circle(0.0, 0.0, 2.0, layer=5).to_polygon(Npts=64).group[0]
+        box_poly = sp.Box(0.0, 0.0, 2.0, 2.0).toPoly()
+        box_poly.layer = 5
+
+        g = sp.GeomGroup()
+        g.add(circular_poly)
+        g.add(box_poly)
+
+        g.poly_to_circle(thresh=0.98, vcount=10, include_refs=False)
+
+        assert any(isinstance(geom, sp.Circle) for geom in g.group)
+        assert any(isinstance(geom, sp.Poly) for geom in g.group)
+
+    def test_poly_to_circle_include_refs_updates_referenced_group(
+        self, geomgroup_obj: sp.GeomGroup
+    ) -> None:
+        ref_group = sp.GeomGroup()
+        ref_group.add(sp.Circle(0.0, 0.0, 2.0, layer=7).to_polygon(Npts=64).group[0])
+        ref = sp.SRef(
+            x0=1.0,
+            y0=2.0,
+            cellname="PolyToCircleRefCell",
+            group=ref_group,
+            mag=1.0,
+            angle=0.0,
+            mirror=False,
+        )
+        g = geomgroup_obj.copy()
+        g.add(ref)
+
+        g.poly_to_circle(thresh=0.98, vcount=10, include_refs=True)
+
+        assert any(isinstance(geom, sp.Circle) for geom in ref.group.group)
+
+    def test_keep_refs_only_removes_non_refs(
+        self, geomgroup_obj: sp.GeomGroup, circle_obj: sp.Circle
+    ) -> None:
+        ref = sp.SRef(
+            x0=0.0,
+            y0=0.0,
+            cellname="KeepRefsCell",
+            group=geomgroup_obj,
+            mag=1.0,
+            angle=0.0,
+            mirror=False,
+        )
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+        g.add(ref)
+
+        g.keep_refs_only()
+
+        assert len(g.group) == 1
+        assert isinstance(g.group[0], sp.SRef)
