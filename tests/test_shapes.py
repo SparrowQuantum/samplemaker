@@ -708,6 +708,13 @@ class TestSRef:
         assert sref_obj.y0 == pytest.approx(expected_y0)
         assert sref_obj.angle == pytest.approx(expected_angle)
 
+    def test_mirror_x_toggles_mirror_flag(self, sref_obj: sp.SRef) -> None:
+        assert sref_obj.mirror is False
+        sref_obj.mirrorX(0.0)
+        assert sref_obj.mirror is True
+        sref_obj.mirrorX(0.0)
+        assert sref_obj.mirror is False
+
     @pytest.mark.parametrize("yc", [0.0, 1.0, 2.0])
     def test_mirror_y(
         self, sref_obj: sp.SRef, sref_kwargs: _SREF_KWARG_TYPE, yc: float
@@ -719,6 +726,13 @@ class TestSRef:
         assert sref_obj.x0 == pytest.approx(expected_x0)
         assert sref_obj.y0 == pytest.approx(expected_y0)
         assert sref_obj.angle == pytest.approx(expected_angle)
+
+    def test_mirror_y_toggles_mirror_flag(self, sref_obj: sp.SRef) -> None:
+        assert sref_obj.mirror is False
+        sref_obj.mirrorY(0.0)
+        assert sref_obj.mirror is True
+        sref_obj.mirrorY(0.0)
+        assert sref_obj.mirror is False
 
     @pytest.mark.parametrize("xoff, yoff", [(1.0, 2.0), (-1.0, -2.0), (0.5, -0.5)])
     def test_centroid(
@@ -747,24 +761,51 @@ class TestSRef:
         assert bb.width == pytest.approx(expected_width)
         assert bb.height == pytest.approx(expected_height)
 
-    def test_place_group(self, sref_obj: sp.SRef, geomgroup_obj: sp.GeomGroup) -> None:
-        sref_obj.mag = 2.0
+    @pytest.mark.parametrize(
+        "mag, angle, mirror",
+        [(1.0, 0.0, False), (2.0, 90.0, False)],
+    )
+    def test_bounding_box_matches_placed_group(
+        self,
+        sref_obj: sp.SRef,
+        geomgroup_obj: sp.GeomGroup,
+        mag: float,
+        angle: float,
+        mirror: bool,
+    ) -> None:
+        sref_obj.mag = mag
+        sref_obj.angle = angle
+        sref_obj.mirror = mirror
+
         gflat = geomgroup_obj.flatten()
+        placed = sref_obj.place_group(gflat.copy())
 
-        ref_bb = gflat.bounding_box()
-        expected_cx = sref_obj.x0 + ref_bb.cx() * sref_obj.mag
-        expected_cy = sref_obj.y0 + ref_bb.cy() * sref_obj.mag
-        expected_width = ref_bb.width * sref_obj.mag
-        expected_height = ref_bb.height * sref_obj.mag
+        sref_bb = sref_obj.bounding_box()
+        placed_bb = placed.bounding_box()
 
-        g = sref_obj.place_group(gflat.copy())
-        assert isinstance(g, sp.GeomGroup)
-        assert len(g.group) == len(gflat.group)
+        assert sref_bb.cx() == pytest.approx(placed_bb.cx())
+        assert sref_bb.cy() == pytest.approx(placed_bb.cy())
+        assert sref_bb.width == pytest.approx(placed_bb.width)
+        assert sref_bb.height == pytest.approx(placed_bb.height)
 
-        bb = g.bounding_box()
-        assert bb.cx() == pytest.approx(expected_cx)
-        assert bb.cy() == pytest.approx(expected_cy)
-        assert bb.width == pytest.approx(expected_width)
-        assert bb.height == pytest.approx(expected_height)
+    def test_bounding_box_uses_cached_pool_box(
+        self, geomgroup_obj: sp.GeomGroup, sref_kwargs: _SREF_KWARG_TYPE
+    ) -> None:
+        cellname = sref_kwargs["cellname"]
+        pool_box = sp.Box(10.0, 20.0, 4.0, 6.0)
+        sp._BoundingBoxPool[cellname] = pool_box
+        sref = sp.SRef(
+            x0=sref_kwargs["x0"],
+            y0=sref_kwargs["y0"],
+            cellname=cellname,
+            group=geomgroup_obj,
+            mag=6.0,
+            angle=0.0,
+            mirror=False,
+        )
 
-
+        bb = sref.bounding_box()
+        assert bb.width == pytest.approx(pool_box.width * sref.mag)
+        assert bb.height == pytest.approx(pool_box.height * sref.mag)
+        assert bb.cx() == pytest.approx(sref.x0 + pool_box.cx() * sref.mag)
+        assert bb.cy() == pytest.approx(sref.y0 + pool_box.cy() * sref.mag)
