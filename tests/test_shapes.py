@@ -11,6 +11,7 @@ from samplemaker import shapes as sp
 _COORD = tuple[float, float]
 _TF = tuple[float, ...]
 _SREF_KWARG_TYPE = dict[str, str | float | bool]
+_AREF_KWARG_TYPE = dict[str, str | float | int | bool]
 
 
 @pytest.fixture
@@ -102,6 +103,43 @@ def sref_obj(geomgroup_obj: sp.GeomGroup, sref_kwargs: _SREF_KWARG_TYPE) -> sp.S
         mag=sref_kwargs["mag"],
         angle=sref_kwargs["angle"],
         mirror=sref_kwargs["mirror"],
+    )
+
+
+@pytest.fixture
+def aref_kwargs() -> _AREF_KWARG_TYPE:
+    return {
+        "x0": 1.0,
+        "y0": 2.0,
+        "cellname": "MyArrayCell",
+        "ncols": 2,
+        "nrows": 3,
+        "ax": 4.0,
+        "ay": 0.0,
+        "bx": 0.0,
+        "by": 5.0,
+        "mag": 1.0,
+        "angle": 0.0,
+        "mirror": False,
+    }
+
+
+@pytest.fixture
+def aref_obj(geomgroup_obj: sp.GeomGroup, aref_kwargs: _AREF_KWARG_TYPE) -> sp.ARef:
+    return sp.ARef(
+        x0=aref_kwargs["x0"],
+        y0=aref_kwargs["y0"],
+        cellname=aref_kwargs["cellname"],
+        group=geomgroup_obj,
+        ncols=aref_kwargs["ncols"],
+        nrows=aref_kwargs["nrows"],
+        ax=aref_kwargs["ax"],
+        ay=aref_kwargs["ay"],
+        bx=aref_kwargs["bx"],
+        by=aref_kwargs["by"],
+        mag=aref_kwargs["mag"],
+        angle=aref_kwargs["angle"],
+        mirror=aref_kwargs["mirror"],
     )
 
 
@@ -809,3 +847,182 @@ class TestSRef:
         assert bb.height == pytest.approx(pool_box.height * sref.mag)
         assert bb.cx() == pytest.approx(sref.x0 + pool_box.cx() * sref.mag)
         assert bb.cy() == pytest.approx(sref.y0 + pool_box.cy() * sref.mag)
+
+
+class TestAref:
+    def test_init_aref(
+        self,
+        aref_obj: sp.ARef,
+        geomgroup_obj: sp.GeomGroup,
+        aref_kwargs: _AREF_KWARG_TYPE,
+    ) -> None:
+        assert aref_obj.x0 == aref_kwargs["x0"]
+        assert aref_obj.y0 == aref_kwargs["y0"]
+        assert aref_obj.cellname == aref_kwargs["cellname"]
+        assert aref_obj.ncols == aref_kwargs["ncols"]
+        assert aref_obj.nrows == aref_kwargs["nrows"]
+        assert aref_obj.ax == aref_kwargs["ax"]
+        assert aref_obj.ay == aref_kwargs["ay"]
+        assert aref_obj.bx == aref_kwargs["bx"]
+        assert aref_obj.by == aref_kwargs["by"]
+        assert aref_obj.mag == aref_kwargs["mag"]
+        assert aref_obj.angle == aref_kwargs["angle"]
+        assert aref_obj.mirror == aref_kwargs["mirror"]
+
+        g = aref_obj.group
+        assert isinstance(g, sp.GeomGroup)
+        assert len(g.group) == 1
+        assert g is geomgroup_obj
+
+    @pytest.mark.parametrize("xoff, yoff", [(1.0, 2.0), (-1.0, -2.0), (0.5, -0.5)])
+    def test_translate(
+        self, aref_obj: sp.ARef, aref_kwargs: _AREF_KWARG_TYPE, xoff: float, yoff: float
+    ) -> None:
+        aref_obj.translate(xoff, yoff)
+        assert aref_obj.x0 == pytest.approx(aref_kwargs["x0"] + xoff)
+        assert aref_obj.y0 == pytest.approx(aref_kwargs["y0"] + yoff)
+
+    def test_rotate(self, aref_obj: sp.ARef, aref_kwargs: _AREF_KWARG_TYPE) -> None:
+        aref_obj.rotate(0.0, 0.0, 90.0)
+        assert aref_obj.x0 == pytest.approx(-aref_kwargs["y0"])
+        assert aref_obj.y0 == pytest.approx(aref_kwargs["x0"])
+        assert aref_obj.angle == pytest.approx((aref_kwargs["angle"] + 90.0) % 360)
+
+    def test_rotate_translate(
+        self, aref_obj: sp.ARef, aref_kwargs: _AREF_KWARG_TYPE
+    ) -> None:
+        aref_obj.rotate_translate(2.0, 3.0, 180.0)
+        assert aref_obj.x0 == pytest.approx(-aref_kwargs["x0"] + 2.0)
+        assert aref_obj.y0 == pytest.approx(-aref_kwargs["y0"] + 3.0)
+        assert aref_obj.angle == pytest.approx((aref_kwargs["angle"] + 180.0) % 360)
+
+    @pytest.mark.parametrize("sx, sy", [(2.0, 3.0), (0.5, 0.5), (1.0, 1.0)])
+    def test_scale(
+        self, aref_obj: sp.ARef, aref_kwargs: _AREF_KWARG_TYPE, sx: float, sy: float
+    ) -> None:
+        aref_obj.scale(0.0, 0.0, sx, sy)
+        assert aref_obj.x0 == pytest.approx(aref_kwargs["x0"] * sx)
+        assert aref_obj.y0 == pytest.approx(aref_kwargs["y0"] * sy)
+        assert aref_obj.mag == pytest.approx(aref_kwargs["mag"] * sx)
+
+    @pytest.mark.parametrize("xc", [0.0, 1.0, 2.0])
+    def test_mirror_x(
+        self, aref_obj: sp.ARef, aref_kwargs: _AREF_KWARG_TYPE, xc: float
+    ) -> None:
+        aref_obj.mirrorX(xc)
+        assert aref_obj.x0 == pytest.approx(2 * xc - aref_kwargs["x0"])
+        assert aref_obj.y0 == pytest.approx(aref_kwargs["y0"])
+        assert aref_obj.angle == pytest.approx((180.0 - aref_kwargs["angle"]) % 360)
+
+    def test_mirror_x_toggles_mirror_flag(self, aref_obj: sp.ARef) -> None:
+        assert aref_obj.mirror is False
+        aref_obj.mirrorX(0.0)
+        assert aref_obj.mirror is True
+        aref_obj.mirrorX(0.0)
+        assert aref_obj.mirror is False
+
+    @pytest.mark.parametrize("yc", [0.0, 1.0, 2.0])
+    def test_mirror_y(
+        self, aref_obj: sp.ARef, aref_kwargs: _AREF_KWARG_TYPE, yc: float
+    ) -> None:
+        aref_obj.mirrorY(yc)
+        assert aref_obj.x0 == pytest.approx(aref_kwargs["x0"])
+        assert aref_obj.y0 == pytest.approx(2 * yc - aref_kwargs["y0"])
+        assert aref_obj.angle == pytest.approx((-aref_kwargs["angle"]) % 360)
+
+    def test_mirror_y_toggles_mirror_flag(self, aref_obj: sp.ARef) -> None:
+        assert aref_obj.mirror is False
+        aref_obj.mirrorY(0.0)
+        assert aref_obj.mirror is True
+        aref_obj.mirrorY(0.0)
+        assert aref_obj.mirror is False
+
+    def test_centroid(self, aref_obj: sp.ARef, aref_kwargs: _AREF_KWARG_TYPE) -> None:
+        expected_centroid = (aref_kwargs["x0"], aref_kwargs["y0"])
+        assert aref_obj.centroid() == pytest.approx(expected_centroid)
+
+    def test_bounding_box(
+        self,
+        aref_obj: sp.ARef,
+        geomgroup_obj: sp.GeomGroup,
+        aref_kwargs: _AREF_KWARG_TYPE,
+    ) -> None:
+        bb = aref_obj.bounding_box()
+        ref_bb = geomgroup_obj.bounding_box()
+        llx = aref_kwargs["x0"] + ref_bb.llx
+        lly = aref_kwargs["y0"] + ref_bb.lly
+        urx = (
+            aref_kwargs["x0"]
+            + ref_bb.urx()
+            + (aref_kwargs["ncols"] - 1) * aref_kwargs["ax"]
+            + (aref_kwargs["nrows"] - 1) * aref_kwargs["bx"]
+        )
+        ury = (
+            aref_kwargs["y0"]
+            + ref_bb.ury()
+            + (aref_kwargs["ncols"] - 1) * aref_kwargs["ay"]
+            + (aref_kwargs["nrows"] - 1) * aref_kwargs["by"]
+        )
+
+        assert isinstance(bb, sp.Box)
+        assert bb.llx == pytest.approx(llx)
+        assert bb.lly == pytest.approx(lly)
+        assert bb.urx() == pytest.approx(urx)
+        assert bb.ury() == pytest.approx(ury)
+
+    @pytest.mark.parametrize(
+        "mag, angle, mirror",
+        [(1.0, 0.0, False), (2.0, 90.0, False)],
+    )
+    def test_bounding_box_matches_placed_group(
+        self,
+        aref_obj: sp.ARef,
+        geomgroup_obj: sp.GeomGroup,
+        mag: float,
+        angle: float,
+        mirror: bool,
+    ) -> None:
+        aref_obj.mag = mag
+        aref_obj.angle = angle
+        aref_obj.mirror = mirror
+
+        gflat = geomgroup_obj.flatten()
+        placed = aref_obj.place_group(gflat.copy())
+
+        aref_bb = aref_obj.bounding_box()
+        placed_bb = placed.bounding_box()
+
+        assert aref_bb.cx() == pytest.approx(placed_bb.cx())
+        assert aref_bb.cy() == pytest.approx(placed_bb.cy())
+        assert aref_bb.width == pytest.approx(placed_bb.width)
+        assert aref_bb.height == pytest.approx(placed_bb.height)
+
+    def test_place_group_makes_expected_number_of_copies(
+        self,
+        aref_obj: sp.ARef,
+        geomgroup_obj: sp.GeomGroup,
+        aref_kwargs: _AREF_KWARG_TYPE,
+    ) -> None:
+        placed = aref_obj.place_group(geomgroup_obj.flatten())
+        assert len(placed.group) == aref_kwargs["ncols"] * aref_kwargs["nrows"]
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason="Known mismatch: ARef.bounding_box does not match placed "
+        "mirrored/rotated array geometry.",
+    )
+    def test_bounding_box_mismatch_for_mirrored_rotated_array_is_documented(
+        self, aref_obj: sp.ARef, geomgroup_obj: sp.GeomGroup
+    ) -> None:
+        aref_obj.mag = 2.0
+        aref_obj.angle = 45.0
+        aref_obj.mirror = True
+
+        placed = aref_obj.place_group(geomgroup_obj.flatten())
+        aref_bb = aref_obj.bounding_box()
+        placed_bb = placed.bounding_box()
+
+        assert aref_bb.cx() == pytest.approx(placed_bb.cx())
+        assert aref_bb.cy() == pytest.approx(placed_bb.cy())
+        assert aref_bb.width == pytest.approx(placed_bb.width)
+        assert aref_bb.height == pytest.approx(placed_bb.height)
