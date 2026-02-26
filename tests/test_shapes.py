@@ -390,7 +390,9 @@ class TestPath:
         assert path_obj.xpts == pytest.approx(expected_xpts)
         assert path_obj.ypts == pytest.approx(expected_ypts)
 
-    def test_rotate_translate(self, path_obj: sp.Path, poly_pts: tuple[_TF, _TF]) -> None:
+    def test_rotate_translate(
+        self, path_obj: sp.Path, poly_pts: tuple[_TF, _TF]
+    ) -> None:
         xpts, ypts = poly_pts
         path_obj.rotate_translate(2.0, 3.0, 180.0)
         expected_xpts = [2.0 - x for x in xpts]
@@ -570,3 +572,31 @@ class TestText:
         assert text_obj.x0 == pytest.approx(1.0)
         assert text_obj.y0 == pytest.approx(0.0)
         assert text_obj.angle == pytest.approx(0.0)
+
+    def test_bounding_box(self, text_obj: sp.Text) -> None:
+        bb = text_obj.bounding_box()
+        assert isinstance(bb, sp.Box)
+        # Since text isn't a geometric shape, we define its bounding box to be a single
+        # point at the text origin (x0, y0).
+        assert bb.cx() == pytest.approx(text_obj.x0)
+        assert bb.cy() == pytest.approx(text_obj.y0)
+        assert bb.width == 0
+        assert bb.height == 0
+
+    def test_area(self, text_obj: sp.Text) -> None:
+        # Text doesn't have a well-defined area, so we return 0.
+        assert text_obj.area() == 0
+
+    def test_centroid(self, text_obj: sp.Text) -> None:
+        # The centroid of the text is defined to be its origin (x0, y0).
+        assert text_obj.centroid() == (text_obj.x0, text_obj.y0)
+
+    def test_perimeter(self, text_obj: sp.Text) -> None:
+        # Text doesn't have a well-defined perimeter, so we return 0.
+        assert text_obj.perimeter() == 0
+
+    def test_to_polygon(self, text_obj: sp.Text) -> None:
+        # Text cannot be converted to a polygon, so we return an empty geometry group.
+        g = text_obj.to_polygon()
+        assert isinstance(g, sp.GeomGroup)
+        assert all(isinstance(p, sp.Poly) for p in g.group)
