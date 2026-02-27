@@ -1,5 +1,7 @@
 """Unit tests for shapes module."""
 
+from dataclasses import dataclass
+
 import numpy as np
 import pytest
 
@@ -10,8 +12,6 @@ from samplemaker import shapes as sp
 
 _COORD = tuple[float, float]
 _TF = tuple[float, ...]
-_SREF_KWARG_TYPE = dict[str, str | float | bool]
-_AREF_KWARG_TYPE = dict[str, str | float | int | bool]
 
 
 @pytest.fixture
@@ -81,65 +81,91 @@ def geomgroup_obj(box_obj: sp.Box) -> sp.GeomGroup:
     return box_obj.toRect()
 
 
-@pytest.fixture
-def sref_kwargs() -> _SREF_KWARG_TYPE:
-    return {
-        "x0": 1.0,
-        "y0": 2.0,
-        "cellname": "MyCell",
-        "mag": 1.0,
-        "angle": 0.0,
-        "mirror": False,
-    }
+@dataclass(frozen=True)
+class SRefKwargs:
+    x0: float
+    y0: float
+    cellname: str
+    mag: float
+    angle: float
+    mirror: bool
 
 
 @pytest.fixture
-def sref_obj(geomgroup_obj: sp.GeomGroup, sref_kwargs: _SREF_KWARG_TYPE) -> sp.SRef:
-    return sp.SRef(
-        x0=sref_kwargs["x0"],
-        y0=sref_kwargs["y0"],
-        cellname=sref_kwargs["cellname"],
-        group=geomgroup_obj,
-        mag=sref_kwargs["mag"],
-        angle=sref_kwargs["angle"],
-        mirror=sref_kwargs["mirror"],
+def sref_kwargs() -> SRefKwargs:
+    return SRefKwargs(
+        x0=1.0,
+        y0=2.0,
+        cellname="MyCell",
+        mag=1.0,
+        angle=0.0,
+        mirror=False,
     )
 
 
 @pytest.fixture
-def aref_kwargs() -> _AREF_KWARG_TYPE:
-    return {
-        "x0": 1.0,
-        "y0": 2.0,
-        "cellname": "MyArrayCell",
-        "ncols": 2,
-        "nrows": 3,
-        "ax": 4.0,
-        "ay": 0.0,
-        "bx": 0.0,
-        "by": 5.0,
-        "mag": 1.0,
-        "angle": 0.0,
-        "mirror": False,
-    }
+def sref_obj(geomgroup_obj: sp.GeomGroup, sref_kwargs: SRefKwargs) -> sp.SRef:
+    return sp.SRef(
+        x0=sref_kwargs.x0,
+        y0=sref_kwargs.y0,
+        cellname=sref_kwargs.cellname,
+        group=geomgroup_obj,
+        mag=sref_kwargs.mag,
+        angle=sref_kwargs.angle,
+        mirror=sref_kwargs.mirror,
+    )
+
+
+@dataclass(frozen=True)
+class ARefKwargs:
+    x0: float
+    y0: float
+    cellname: str
+    ncols: int
+    nrows: int
+    ax: float
+    ay: float
+    bx: float
+    by: float
+    mag: float
+    angle: float
+    mirror: bool
 
 
 @pytest.fixture
-def aref_obj(geomgroup_obj: sp.GeomGroup, aref_kwargs: _AREF_KWARG_TYPE) -> sp.ARef:
+def aref_kwargs() -> ARefKwargs:
+    return ARefKwargs(
+        x0=1.0,
+        y0=2.0,
+        cellname="MyArrayCell",
+        ncols=2,
+        nrows=3,
+        ax=4.0,
+        ay=0.0,
+        bx=0.0,
+        by=5.0,
+        mag=1.0,
+        angle=0.0,
+        mirror=False,
+    )
+
+
+@pytest.fixture
+def aref_obj(geomgroup_obj: sp.GeomGroup, aref_kwargs: ARefKwargs) -> sp.ARef:
     return sp.ARef(
-        x0=aref_kwargs["x0"],
-        y0=aref_kwargs["y0"],
-        cellname=aref_kwargs["cellname"],
+        x0=aref_kwargs.x0,
+        y0=aref_kwargs.y0,
+        cellname=aref_kwargs.cellname,
         group=geomgroup_obj,
-        ncols=aref_kwargs["ncols"],
-        nrows=aref_kwargs["nrows"],
-        ax=aref_kwargs["ax"],
-        ay=aref_kwargs["ay"],
-        bx=aref_kwargs["bx"],
-        by=aref_kwargs["by"],
-        mag=aref_kwargs["mag"],
-        angle=aref_kwargs["angle"],
-        mirror=aref_kwargs["mirror"],
+        ncols=aref_kwargs.ncols,
+        nrows=aref_kwargs.nrows,
+        ax=aref_kwargs.ax,
+        ay=aref_kwargs.ay,
+        bx=aref_kwargs.bx,
+        by=aref_kwargs.by,
+        mag=aref_kwargs.mag,
+        angle=aref_kwargs.angle,
+        mirror=aref_kwargs.mirror,
     )
 
 
@@ -701,14 +727,14 @@ class TestSRef:
         self,
         sref_obj: sp.SRef,
         geomgroup_obj: sp.GeomGroup,
-        sref_kwargs: _SREF_KWARG_TYPE,
+        sref_kwargs: SRefKwargs,
     ) -> None:
-        assert sref_obj.x0 == sref_kwargs["x0"]
-        assert sref_obj.y0 == sref_kwargs["y0"]
-        assert sref_obj.cellname == sref_kwargs["cellname"]
-        assert sref_obj.mag == sref_kwargs["mag"]
-        assert sref_obj.angle == sref_kwargs["angle"]
-        assert sref_obj.mirror == sref_kwargs["mirror"]
+        assert sref_obj.x0 == sref_kwargs.x0
+        assert sref_obj.y0 == sref_kwargs.y0
+        assert sref_obj.cellname == sref_kwargs.cellname
+        assert sref_obj.mag == sref_kwargs.mag
+        assert sref_obj.angle == sref_kwargs.angle
+        assert sref_obj.mirror == sref_kwargs.mirror
 
         g = sref_obj.group
         assert isinstance(g, sp.GeomGroup)
@@ -717,53 +743,51 @@ class TestSRef:
 
     @pytest.mark.parametrize("xoff, yoff", [(1.0, 2.0), (-1.0, -2.0), (0.5, -0.5)])
     def test_translate(
-        self, sref_obj: sp.SRef, sref_kwargs: _SREF_KWARG_TYPE, xoff: float, yoff: float
+        self, sref_obj: sp.SRef, sref_kwargs: SRefKwargs, xoff: float, yoff: float
     ) -> None:
         sref_obj.translate(xoff, yoff)
-        expected_x0 = sref_kwargs["x0"] + xoff
-        expected_y0 = sref_kwargs["y0"] + yoff
+        expected_x0 = sref_kwargs.x0 + xoff
+        expected_y0 = sref_kwargs.y0 + yoff
         assert sref_obj.x0 == pytest.approx(expected_x0)
         assert sref_obj.y0 == pytest.approx(expected_y0)
 
-    def test_rotate(self, sref_obj: sp.SRef, sref_kwargs: _SREF_KWARG_TYPE) -> None:
+    def test_rotate(self, sref_obj: sp.SRef, sref_kwargs: SRefKwargs) -> None:
         sref_obj.rotate(0.0, 0.0, 90.0)
-        expected_x0 = -sref_kwargs["y0"]
-        expected_y0 = sref_kwargs["x0"]
-        expected_angle = (sref_kwargs["angle"] + 90.0) % 360
+        expected_x0 = -sref_kwargs.y0
+        expected_y0 = sref_kwargs.x0
+        expected_angle = (sref_kwargs.angle + 90.0) % 360
         assert sref_obj.x0 == pytest.approx(expected_x0)
         assert sref_obj.y0 == pytest.approx(expected_y0)
         assert sref_obj.angle == pytest.approx(expected_angle)
 
-    def test_rotate_translate(
-        self, sref_obj: sp.SRef, sref_kwargs: _SREF_KWARG_TYPE
-    ) -> None:
+    def test_rotate_translate(self, sref_obj: sp.SRef, sref_kwargs: SRefKwargs) -> None:
         sref_obj.rotate_translate(2.0, 3.0, 180.0)
-        expected_x0 = -sref_kwargs["x0"] + 2.0
-        expected_y0 = -sref_kwargs["y0"] + 3.0
-        expected_angle = (sref_kwargs["angle"] + 180.0) % 360
+        expected_x0 = -sref_kwargs.x0 + 2.0
+        expected_y0 = -sref_kwargs.y0 + 3.0
+        expected_angle = (sref_kwargs.angle + 180.0) % 360
         assert sref_obj.x0 == pytest.approx(expected_x0)
         assert sref_obj.y0 == pytest.approx(expected_y0)
         assert sref_obj.angle == pytest.approx(expected_angle)
 
     @pytest.mark.parametrize("sx, sy", [(2.0, 3.0), (0.5, 0.5), (1.0, 1.0)])
     def test_scale(
-        self, sref_obj: sp.SRef, sref_kwargs: _SREF_KWARG_TYPE, sx: float, sy: float
+        self, sref_obj: sp.SRef, sref_kwargs: SRefKwargs, sx: float, sy: float
     ) -> None:
         sref_obj.scale(0.0, 0.0, sx, sy)
-        expected_x0 = sref_kwargs["x0"] * sx
-        expected_y0 = sref_kwargs["y0"] * sy
+        expected_x0 = sref_kwargs.x0 * sx
+        expected_y0 = sref_kwargs.y0 * sy
         assert sref_obj.x0 == pytest.approx(expected_x0)
         assert sref_obj.y0 == pytest.approx(expected_y0)
-        assert sref_obj.mag == pytest.approx(sref_kwargs["mag"] * sx)
+        assert sref_obj.mag == pytest.approx(sref_kwargs.mag * sx)
 
     @pytest.mark.parametrize("xc", [0.0, 1.0, 2.0])
     def test_mirror_x(
-        self, sref_obj: sp.SRef, sref_kwargs: _SREF_KWARG_TYPE, xc: float
+        self, sref_obj: sp.SRef, sref_kwargs: SRefKwargs, xc: float
     ) -> None:
         sref_obj.mirrorX(xc)
-        expected_x0 = 2 * xc - sref_kwargs["x0"]
-        expected_y0 = sref_kwargs["y0"]
-        expected_angle = (180.0 - sref_kwargs["angle"]) % 360
+        expected_x0 = 2 * xc - sref_kwargs.x0
+        expected_y0 = sref_kwargs.y0
+        expected_angle = (180.0 - sref_kwargs.angle) % 360
         assert sref_obj.x0 == pytest.approx(expected_x0)
         assert sref_obj.y0 == pytest.approx(expected_y0)
         assert sref_obj.angle == pytest.approx(expected_angle)
@@ -777,12 +801,12 @@ class TestSRef:
 
     @pytest.mark.parametrize("yc", [0.0, 1.0, 2.0])
     def test_mirror_y(
-        self, sref_obj: sp.SRef, sref_kwargs: _SREF_KWARG_TYPE, yc: float
+        self, sref_obj: sp.SRef, sref_kwargs: SRefKwargs, yc: float
     ) -> None:
         sref_obj.mirrorY(yc)
-        expected_x0 = sref_kwargs["x0"]
-        expected_y0 = 2 * yc - sref_kwargs["y0"]
-        expected_angle = (-sref_kwargs["angle"]) % 360
+        expected_x0 = sref_kwargs.x0
+        expected_y0 = 2 * yc - sref_kwargs.y0
+        expected_angle = (-sref_kwargs.angle) % 360
         assert sref_obj.x0 == pytest.approx(expected_x0)
         assert sref_obj.y0 == pytest.approx(expected_y0)
         assert sref_obj.angle == pytest.approx(expected_angle)
@@ -849,14 +873,14 @@ class TestSRef:
         assert sref_bb.height == pytest.approx(placed_bb.height)
 
     def test_bounding_box_uses_cached_pool_box(
-        self, geomgroup_obj: sp.GeomGroup, sref_kwargs: _SREF_KWARG_TYPE
+        self, geomgroup_obj: sp.GeomGroup, sref_kwargs: SRefKwargs
     ) -> None:
-        cellname = sref_kwargs["cellname"]
+        cellname = sref_kwargs.cellname
         pool_box = sp.Box(10.0, 20.0, 4.0, 6.0)
         sp._BoundingBoxPool[cellname] = pool_box
         sref = sp.SRef(
-            x0=sref_kwargs["x0"],
-            y0=sref_kwargs["y0"],
+            x0=sref_kwargs.x0,
+            y0=sref_kwargs.y0,
             cellname=cellname,
             group=geomgroup_obj,
             mag=6.0,
@@ -897,20 +921,20 @@ class TestAref:
         self,
         aref_obj: sp.ARef,
         geomgroup_obj: sp.GeomGroup,
-        aref_kwargs: _AREF_KWARG_TYPE,
+        aref_kwargs: ARefKwargs,
     ) -> None:
-        assert aref_obj.x0 == aref_kwargs["x0"]
-        assert aref_obj.y0 == aref_kwargs["y0"]
-        assert aref_obj.cellname == aref_kwargs["cellname"]
-        assert aref_obj.ncols == aref_kwargs["ncols"]
-        assert aref_obj.nrows == aref_kwargs["nrows"]
-        assert aref_obj.ax == aref_kwargs["ax"]
-        assert aref_obj.ay == aref_kwargs["ay"]
-        assert aref_obj.bx == aref_kwargs["bx"]
-        assert aref_obj.by == aref_kwargs["by"]
-        assert aref_obj.mag == aref_kwargs["mag"]
-        assert aref_obj.angle == aref_kwargs["angle"]
-        assert aref_obj.mirror == aref_kwargs["mirror"]
+        assert aref_obj.x0 == aref_kwargs.x0
+        assert aref_obj.y0 == aref_kwargs.y0
+        assert aref_obj.cellname == aref_kwargs.cellname
+        assert aref_obj.ncols == aref_kwargs.ncols
+        assert aref_obj.nrows == aref_kwargs.nrows
+        assert aref_obj.ax == aref_kwargs.ax
+        assert aref_obj.ay == aref_kwargs.ay
+        assert aref_obj.bx == aref_kwargs.bx
+        assert aref_obj.by == aref_kwargs.by
+        assert aref_obj.mag == aref_kwargs.mag
+        assert aref_obj.angle == aref_kwargs.angle
+        assert aref_obj.mirror == aref_kwargs.mirror
 
         g = aref_obj.group
         assert isinstance(g, sp.GeomGroup)
@@ -919,43 +943,41 @@ class TestAref:
 
     @pytest.mark.parametrize("xoff, yoff", [(1.0, 2.0), (-1.0, -2.0), (0.5, -0.5)])
     def test_translate(
-        self, aref_obj: sp.ARef, aref_kwargs: _AREF_KWARG_TYPE, xoff: float, yoff: float
+        self, aref_obj: sp.ARef, aref_kwargs: ARefKwargs, xoff: float, yoff: float
     ) -> None:
         aref_obj.translate(xoff, yoff)
-        assert aref_obj.x0 == pytest.approx(aref_kwargs["x0"] + xoff)
-        assert aref_obj.y0 == pytest.approx(aref_kwargs["y0"] + yoff)
+        assert aref_obj.x0 == pytest.approx(aref_kwargs.x0 + xoff)
+        assert aref_obj.y0 == pytest.approx(aref_kwargs.y0 + yoff)
 
-    def test_rotate(self, aref_obj: sp.ARef, aref_kwargs: _AREF_KWARG_TYPE) -> None:
+    def test_rotate(self, aref_obj: sp.ARef, aref_kwargs: ARefKwargs) -> None:
         aref_obj.rotate(0.0, 0.0, 90.0)
-        assert aref_obj.x0 == pytest.approx(-aref_kwargs["y0"])
-        assert aref_obj.y0 == pytest.approx(aref_kwargs["x0"])
-        assert aref_obj.angle == pytest.approx((aref_kwargs["angle"] + 90.0) % 360)
+        assert aref_obj.x0 == pytest.approx(-aref_kwargs.y0)
+        assert aref_obj.y0 == pytest.approx(aref_kwargs.x0)
+        assert aref_obj.angle == pytest.approx((aref_kwargs.angle + 90.0) % 360)
 
-    def test_rotate_translate(
-        self, aref_obj: sp.ARef, aref_kwargs: _AREF_KWARG_TYPE
-    ) -> None:
+    def test_rotate_translate(self, aref_obj: sp.ARef, aref_kwargs: ARefKwargs) -> None:
         aref_obj.rotate_translate(2.0, 3.0, 180.0)
-        assert aref_obj.x0 == pytest.approx(-aref_kwargs["x0"] + 2.0)
-        assert aref_obj.y0 == pytest.approx(-aref_kwargs["y0"] + 3.0)
-        assert aref_obj.angle == pytest.approx((aref_kwargs["angle"] + 180.0) % 360)
+        assert aref_obj.x0 == pytest.approx(-aref_kwargs.x0 + 2.0)
+        assert aref_obj.y0 == pytest.approx(-aref_kwargs.y0 + 3.0)
+        assert aref_obj.angle == pytest.approx((aref_kwargs.angle + 180.0) % 360)
 
     @pytest.mark.parametrize("sx, sy", [(2.0, 3.0), (0.5, 0.5), (1.0, 1.0)])
     def test_scale(
-        self, aref_obj: sp.ARef, aref_kwargs: _AREF_KWARG_TYPE, sx: float, sy: float
+        self, aref_obj: sp.ARef, aref_kwargs: ARefKwargs, sx: float, sy: float
     ) -> None:
         aref_obj.scale(0.0, 0.0, sx, sy)
-        assert aref_obj.x0 == pytest.approx(aref_kwargs["x0"] * sx)
-        assert aref_obj.y0 == pytest.approx(aref_kwargs["y0"] * sy)
-        assert aref_obj.mag == pytest.approx(aref_kwargs["mag"] * sx)
+        assert aref_obj.x0 == pytest.approx(aref_kwargs.x0 * sx)
+        assert aref_obj.y0 == pytest.approx(aref_kwargs.y0 * sy)
+        assert aref_obj.mag == pytest.approx(aref_kwargs.mag * sx)
 
     @pytest.mark.parametrize("xc", [0.0, 1.0, 2.0])
     def test_mirror_x(
-        self, aref_obj: sp.ARef, aref_kwargs: _AREF_KWARG_TYPE, xc: float
+        self, aref_obj: sp.ARef, aref_kwargs: ARefKwargs, xc: float
     ) -> None:
         aref_obj.mirrorX(xc)
-        assert aref_obj.x0 == pytest.approx(2 * xc - aref_kwargs["x0"])
-        assert aref_obj.y0 == pytest.approx(aref_kwargs["y0"])
-        assert aref_obj.angle == pytest.approx((180.0 - aref_kwargs["angle"]) % 360)
+        assert aref_obj.x0 == pytest.approx(2 * xc - aref_kwargs.x0)
+        assert aref_obj.y0 == pytest.approx(aref_kwargs.y0)
+        assert aref_obj.angle == pytest.approx((180.0 - aref_kwargs.angle) % 360)
 
     def test_mirror_x_toggles_mirror_flag(self, aref_obj: sp.ARef) -> None:
         assert aref_obj.mirror is False
@@ -966,12 +988,12 @@ class TestAref:
 
     @pytest.mark.parametrize("yc", [0.0, 1.0, 2.0])
     def test_mirror_y(
-        self, aref_obj: sp.ARef, aref_kwargs: _AREF_KWARG_TYPE, yc: float
+        self, aref_obj: sp.ARef, aref_kwargs: ARefKwargs, yc: float
     ) -> None:
         aref_obj.mirrorY(yc)
-        assert aref_obj.x0 == pytest.approx(aref_kwargs["x0"])
-        assert aref_obj.y0 == pytest.approx(2 * yc - aref_kwargs["y0"])
-        assert aref_obj.angle == pytest.approx((-aref_kwargs["angle"]) % 360)
+        assert aref_obj.x0 == pytest.approx(aref_kwargs.x0)
+        assert aref_obj.y0 == pytest.approx(2 * yc - aref_kwargs.y0)
+        assert aref_obj.angle == pytest.approx((-aref_kwargs.angle) % 360)
 
     def test_mirror_y_toggles_mirror_flag(self, aref_obj: sp.ARef) -> None:
         assert aref_obj.mirror is False
@@ -980,31 +1002,31 @@ class TestAref:
         aref_obj.mirrorY(0.0)
         assert aref_obj.mirror is False
 
-    def test_centroid(self, aref_obj: sp.ARef, aref_kwargs: _AREF_KWARG_TYPE) -> None:
-        expected_centroid = (aref_kwargs["x0"], aref_kwargs["y0"])
+    def test_centroid(self, aref_obj: sp.ARef, aref_kwargs: ARefKwargs) -> None:
+        expected_centroid = (aref_kwargs.x0, aref_kwargs.y0)
         assert aref_obj.centroid() == pytest.approx(expected_centroid)
 
     def test_bounding_box(
         self,
         aref_obj: sp.ARef,
         geomgroup_obj: sp.GeomGroup,
-        aref_kwargs: _AREF_KWARG_TYPE,
+        aref_kwargs: ARefKwargs,
     ) -> None:
         bb = aref_obj.bounding_box()
         ref_bb = geomgroup_obj.bounding_box()
-        llx = aref_kwargs["x0"] + ref_bb.llx
-        lly = aref_kwargs["y0"] + ref_bb.lly
+        llx = aref_kwargs.x0 + ref_bb.llx
+        lly = aref_kwargs.y0 + ref_bb.lly
         urx = (
-            aref_kwargs["x0"]
+            aref_kwargs.x0
             + ref_bb.urx()
-            + (aref_kwargs["ncols"] - 1) * aref_kwargs["ax"]
-            + (aref_kwargs["nrows"] - 1) * aref_kwargs["bx"]
+            + (aref_kwargs.ncols - 1) * aref_kwargs.ax
+            + (aref_kwargs.nrows - 1) * aref_kwargs.bx
         )
         ury = (
-            aref_kwargs["y0"]
+            aref_kwargs.y0
             + ref_bb.ury()
-            + (aref_kwargs["ncols"] - 1) * aref_kwargs["ay"]
-            + (aref_kwargs["nrows"] - 1) * aref_kwargs["by"]
+            + (aref_kwargs.ncols - 1) * aref_kwargs.ay
+            + (aref_kwargs.nrows - 1) * aref_kwargs.by
         )
 
         assert isinstance(bb, sp.Box)
@@ -1044,10 +1066,10 @@ class TestAref:
         self,
         aref_obj: sp.ARef,
         geomgroup_obj: sp.GeomGroup,
-        aref_kwargs: _AREF_KWARG_TYPE,
+        aref_kwargs: ARefKwargs,
     ) -> None:
         placed = aref_obj.place_group(geomgroup_obj.flatten())
-        assert len(placed.group) == aref_kwargs["ncols"] * aref_kwargs["nrows"]
+        assert len(placed.group) == aref_kwargs.ncols * aref_kwargs.nrows
 
     @pytest.mark.xfail(
         strict=True,
@@ -1518,38 +1540,38 @@ class TestGeomGroup:
     def test_to_boxes_and_set_layer(
         self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
     ) -> None:
-        circle_obj.layer = 21
-        ellipse_obj.layer = 22
+        circle_obj.layer = 4
+        ellipse_obj.layer = 5
         g = sp.GeomGroup()
         g.add(circle_obj)
         g.add(ellipse_obj)
 
-        boxes = g.to_boxes(layer=99)
+        boxes = g.to_boxes(layer=6)
 
         assert isinstance(boxes, sp.GeomGroup)
         assert len(boxes.group) == 0
 
-        g.set_layer(30)
-        assert all(geom.layer == 30 for geom in g.group)
+        g.set_layer(3)
+        assert all(geom.layer == 3 for geom in g.group)
 
-        boxes = g.to_boxes(layer=30)
+        boxes = g.to_boxes(layer=3)
         assert len(boxes.group) == 2
         assert all(isinstance(geom, sp.Poly) for geom in boxes.group)
-        assert all(geom.layer == 30 for geom in boxes.group)
+        assert all(geom.layer == 3 for geom in boxes.group)
 
     def test_select_layers(
         self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
     ) -> None:
-        circle_obj.layer = 41
-        ellipse_obj.layer = 42
+        circle_obj.layer = 4
+        ellipse_obj.layer = 5
         g = sp.GeomGroup()
         g.add(circle_obj)
         g.add(ellipse_obj)
 
-        selected = g.select_layers([41, 99])
+        selected = g.select_layers([4, 8])
 
         assert len(selected.group) == 1
-        assert selected.group[0].layer == 41
+        assert selected.group[0].layer == 4
 
     def test_layer_select_and_deselect(
         self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
@@ -1687,3 +1709,297 @@ class TestGeomGroup:
 
         assert len(g.group) == 1
         assert isinstance(g.group[0], sp.SRef)
+
+    def test_select_filters_by_layer_and_type(
+        self, circle_obj: sp.Circle, poly_obj: sp.Poly
+    ) -> None:
+        poly_obj.layer = 2
+
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+        g.add(poly_obj)
+
+        selected = g.select("(L==2) & (T=='Poly')")
+
+        assert len(selected.group) == 1
+        assert isinstance(selected.group[0], sp.Poly)
+        assert selected.group[0].layer == 2
+
+    @pytest.mark.parametrize(
+        "disallowed_query", ["__import__('os')", "open('file.txt')", "os.system('ls')"]
+    )
+    def test_select_raises_for_disallowed_names(
+        self, disallowed_query: str, poly_obj: sp.Poly
+    ) -> None:
+        g = sp.GeomGroup()
+        g.add(poly_obj)
+
+        with pytest.raises(NameError, match=r"Use of expression .+ not allowed"):
+            g.select(disallowed_query)
+
+    def test_find_matching_patterns_returns_expected_centers(self) -> None:
+        layer = 7
+        pattern = sp.Box(0.0, 0.0, 1.0, 1.0).toRect()
+        pattern.set_layer(layer)
+
+        poly1 = sp.Box(0.0, 0.0, 1.0, 1.0).toRect()
+        poly2 = sp.Box(3.0, 4.0, 1.0, 1.0).toRect()
+        poly1.set_layer(layer)
+        poly2.set_layer(layer)
+        g = poly1 + poly2
+
+        matches = g.find_matching_patterns(pattern, layer)
+
+        assert len(matches) == 2
+        assert any(np.allclose(m, [0.5, 0.5]) for m in matches)
+        assert any(np.allclose(m, [3.5, 4.5]) for m in matches)
+
+    def test_find_matching_patterns_raises_for_disjoint_pattern(self) -> None:
+        layer = 8
+        g1 = sp.Box(0.0, 0.0, 1.0, 1.0).toRect()
+        g2 = sp.Box(3.0, 0.0, 1.0, 1.0).toRect()
+        g1.set_layer(layer)
+        g2.set_layer(layer)
+        pattern = g1 + g2
+
+        g = sp.Box(0.0, 0.0, 1.0, 1.0).toRect()
+        g.set_layer(layer)
+
+        with pytest.raises(ValueError):
+            g.find_matching_patterns(pattern, layer)
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason="in_polygons erronously checks for SRefs "
+        "in the geometry group instead of Poly objects.",
+    )
+    def test_in_polygons_returns_true_for_point_in_polygon(self) -> None:
+        layer = 9
+        g = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
+        g.set_layer(layer)
+
+        assert g.in_polygons(1.0, 1.0) is True
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason="in_polygons erronously checks for SRefs "
+        "in the geometry group instead of Poly objects.",
+    )
+    def test_in_polygons_sref_raises_attribute_error(self, sref_obj: sp.SRef) -> None:
+        g = sp.GeomGroup()
+        g.add(sref_obj)
+
+        assert g.in_polygons(0.0, 0.0) is False
+
+    def test_in_polygons_returns_false_for_empty_group(self) -> None:
+        g = sp.GeomGroup()
+        assert g.in_polygons(0.0, 0.0) is False
+
+    def test_boolean_union_merges_overlapping_polygons(self) -> None:
+        layer = 6
+        g1 = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
+        g2 = sp.Box(1.0, 0.0, 2.0, 2.0).toRect()
+        g1.set_layer(layer)
+        g2.set_layer(layer)
+
+        g = g1 + g2
+        g.boolean_union(layer)
+
+        assert g.get_area() == pytest.approx(6.0)
+        assert len(g.group) == 1
+        res_poly = g.group[0]
+        assert isinstance(res_poly, sp.Poly)
+        assert res_poly.Npts == 9
+        assert res_poly.layer == layer
+        assert res_poly.perimeter() == pytest.approx(10.0)
+        assert res_poly.centroid() == pytest.approx((1.5, 1.0))
+
+    def test_boolean_difference_subtracts_polygon_set(self) -> None:
+        layer_a = 1
+        layer_b = 2
+        ga = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
+        gb = sp.Box(1.0, 0.0, 2.0, 2.0).toRect()
+        ga.set_layer(layer_a)
+        gb.set_layer(layer_b)
+
+        ga.boolean_difference(gb, layerA=layer_a, layerB=layer_b)
+        out = ga.select_layer(layer_a)
+
+        assert out.get_area() == pytest.approx(2.0)
+        assert len(out.group) == 1
+        res_poly = out.group[0]
+        assert isinstance(res_poly, sp.Poly)
+        assert res_poly.Npts == 5
+        assert res_poly.layer == layer_a
+        assert res_poly.perimeter() == pytest.approx(6.0)
+        assert res_poly.centroid() == pytest.approx((0.5, 1.0))
+
+    def test_boolean_xor_computes_exclusive_or(self) -> None:
+        layer_a = 1
+        layer_b = 2
+        ga = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
+        gb = sp.Box(1.0, 0.0, 2.0, 2.0).toRect()
+        ga.set_layer(layer_a)
+        gb.set_layer(layer_b)
+
+        ga.boolean_xor(gb, layerA=layer_a, layerB=layer_b)
+        out = ga.select_layer(layer_a)
+
+        assert out.get_area() == pytest.approx(4.0)
+        assert len(out.group) == 2
+        for res_poly in out.group:
+            assert isinstance(res_poly, sp.Poly)
+            assert res_poly.Npts == 5
+            assert res_poly.layer == layer_a
+            assert res_poly.perimeter() == pytest.approx(6.0)
+
+    def test_boolean_intersection_keeps_overlap_only(self) -> None:
+        layer_a = 4
+        layer_b = 5
+        ga = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
+        gb = sp.Box(1.0, 0.0, 2.0, 2.0).toRect()
+        ga.set_layer(layer_a)
+        gb.set_layer(layer_b)
+
+        ga.boolean_intersection(gb, layerA=layer_a, layerB=layer_b)
+        out = ga.select_layer(layer_a)
+
+        assert out.get_area() == pytest.approx(2.0)
+        assert len(out.group) == 1
+        res_poly = out.group[0]
+        assert isinstance(res_poly, sp.Poly)
+        assert res_poly.Npts == 5
+        assert res_poly.layer == layer_a
+        assert res_poly.perimeter() == pytest.approx(6.0)
+        assert res_poly.centroid() == pytest.approx((1.5, 1.0))
+
+    @pytest.mark.parametrize("offset", [-0.5, 0.5])
+    def test_poly_resize_changes_polygon_extent(self, offset: float) -> None:
+        layer = 2
+        g = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
+        g.set_layer(layer)
+
+        bb_before = g.bounding_box()
+        g.poly_resize(offset, layer)
+        bb_after = g.bounding_box()
+
+        assert bb_after.width == pytest.approx((1 + offset) * bb_before.width)
+        assert bb_after.height == pytest.approx((1 + offset) * bb_before.height)
+
+    @pytest.mark.parametrize("delta", [-1, 0.5, 0.9, 1.0, 2.0])
+    def test_poly_anisotropic_resize_updates_polygons_on_layer(
+        self, delta: float
+    ) -> None:
+        target_layer = 4
+        other_layer = 7
+        g_target = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
+        g_other = sp.Box(10.0, 10.0, 2.0, 2.0).toRect()
+        g_target.set_layer(target_layer)
+        g_other.set_layer(other_layer)
+
+        g = g_target + g_other
+
+        bb_target_before = g.select_layer(target_layer).bounding_box()
+        bb_other_before = g.select_layer(other_layer).bounding_box()
+
+        g.poly_anisotropic_resize([-90, 0, 90], [delta] * 3, target_layer)
+
+        bb_target_after = g.select_layer(target_layer).bounding_box()
+        bb_other_after = g.select_layer(other_layer).bounding_box()
+
+        mult = delta - 1 if delta >= 1 else 1 - delta
+        assert bb_target_after.width == pytest.approx(mult * bb_target_before.width)
+        assert bb_target_after.height == pytest.approx(mult * bb_target_before.height)
+        assert bb_other_after.width == pytest.approx(bb_other_before.width)
+        assert bb_other_after.height == pytest.approx(bb_other_before.height)
+
+    def test_poly_outlining_creates_nonzero_outline_polygon(self) -> None:
+        layer = 8
+        g = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
+        g.set_layer(layer)
+
+        g.poly_outlining(offset=0.5, layer=layer)
+
+        assert len(g.group) == 1
+        res_poly = g.group[0]
+        assert isinstance(res_poly, sp.Poly)
+        assert res_poly.layer == layer
+        res_bb = res_poly.bounding_box()
+        assert res_bb.width == pytest.approx(3.0)
+        assert res_bb.height == pytest.approx(3.0)
+        assert res_bb.cx() == pytest.approx(1.0)
+        assert res_bb.cy() == pytest.approx(1.0)
+        assert res_poly.point_inside(-0.1, -0.1)
+        assert res_poly.point_inside(2.1, 2.1)
+        assert not res_poly.point_inside(0.1, 0.1)
+
+    def test_poly_outlining_converts_circles_to_arcs(
+        self, circle_obj: sp.Circle
+    ) -> None:
+        g = sp.GeomGroup()
+        g.add(circle_obj)
+
+        g.poly_outlining(offset=0.5, layer=1)
+
+        assert any(type(geom) is sp.Arc for geom in g.group)
+        assert not any(type(geom) is sp.Circle for geom in g.group)
+
+    def test_invert_empty_layer_returns_unchanged(self) -> None:
+        layer = 3
+        g = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
+        g.set_layer(layer)
+
+        before_area = g.get_area()
+        g.invert(layer + 1)
+        after_area = g.get_area()
+
+        assert after_area == pytest.approx(before_area)
+
+    def test_invert_on_single_box_in_layer_results_in_empty_layer(self) -> None:
+        layer = 5
+        g = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
+        g.set_layer(layer)
+
+        g.invert(layer)
+
+        assert len(g.group) == 0
+
+    def test_invert_on_circle_results_in_hole_in_polygon(
+        self, circle_obj: sp.Circle
+    ) -> None:
+        layer = 4
+        circle_obj.layer = layer
+        g = circle_obj.to_polygon(Npts=16)
+
+        bb_before = g.bounding_box()
+        bb_before_area = bb_before.width * bb_before.height
+        before_area = g.get_area()
+        expected_after_area = bb_before_area - before_area
+
+        g.invert(layer)
+        after_area = g.get_area()
+        assert after_area == pytest.approx(expected_after_area, rel=1e-2)
+
+    def test_trapezoids_preserves_layer_area(self) -> None:
+        layer = 5
+        g = sp.Box(0.0, 0.0, 3.0, 2.0).toRect()
+        g.set_layer(layer)
+
+        before_area = g.get_area()
+        g.trapezoids(layer)
+
+        assert len(g.group) >= 1
+        assert g.get_area() == pytest.approx(before_area)
+        assert all(isinstance(geom, sp.Poly) for geom in g.group)
+
+    @pytest.mark.parametrize("keep_str", ["x>1", "y<0.5", "x+y>2.5", "A>0"])
+    def test_poly_filter(self, keep_str: str) -> None:
+        poly = sp.Poly([0.0, 2.0, 2.0, 1.0, 0.0], [0.0, 0.0, 2.0, 2.0, 2.0], layer=2)
+        g = sp.GeomGroup()
+        g.add(poly)
+
+        before_npts = poly.Npts
+        ndisc = g.poly_filter(keep_str)
+
+        assert ndisc >= 1
+        assert g.group[0].Npts == before_npts - ndisc + 1
