@@ -1,5 +1,5 @@
 name: Fault
-description: Report a bug or unexpected behaviour
+description: Report a bug or unexpected behavior
 title: "Fault: "
 labels: ["fault", "needs-triage"]
 body:
