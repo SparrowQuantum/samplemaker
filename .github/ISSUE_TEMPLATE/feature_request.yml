@@ -1,0 +1,42 @@
+name: Feature request
+description: Suggest an idea for this project
+title: "Feature: "
+labels: ["feature", "needs-triage"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What problem does this solve?
+      description: Focus on the need, not the solution.
+      placeholder: "e.g. We have to manually copy files after every run, which takes time and is easy to forget"
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like it to do?
+      placeholder: "e.g. Automatically save results to a shared folder at the end of each run"
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Any requirements or limitations?
+      placeholder: "e.g. Must work without an internet connection; needs to support existing file formats"
+    validations:
+      required: false
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: How will we know it is done?
+      placeholder: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+    validations:
+      required: false

@@ -1,0 +1,34 @@
+name: Improvement
+description: Suggest an improvement to this project
+title: "Improvement: "
+labels: ["improvement", "needs-triage"]
+body:
+  - type: textarea
+    id: current
+    attributes:
+      label: What is the problem with how it works today?
+      placeholder: "e.g. The search only matches exact words, so it is easy to miss results with slightly different names"
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: What would better look like?
+      placeholder: "e.g. Search should still find results when words are partially typed or spelled differently"
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: How will we know it is done?
+      placeholder: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+    validations:
+      required: false
