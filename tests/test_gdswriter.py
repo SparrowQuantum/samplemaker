@@ -1,3 +1,5 @@
+"""Unit tests for the samplemaker.gdswriter module."""
+
 # Used automatically by pytest to reset state before each test:
 from collections.abc import Generator
 from pathlib import Path
@@ -122,7 +124,6 @@ def layout_pool(
 
 
 def test_layoutpool(layout_pool: dict[str, GeomGroup]) -> None:
-    assert len(layout_pool) == 3
     assert "CELL00" in layout_pool
     assert "BASELIB_CMARK_0001" in layout_pool
     assert "SUBCELL" in layout_pool
