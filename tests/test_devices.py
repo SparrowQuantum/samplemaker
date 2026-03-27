@@ -4,6 +4,7 @@ from pathlib import Path
 
 from samplemaker.baselib.waveguides import BaseWaveguidePort, BaseWaveguideSequencer
 import samplemaker.devices as smdev
+import samplemaker.shapes as sp
 import pytest
 from fixtures import reset_samplemaker  # noqa: F401
 
@@ -132,6 +133,19 @@ def test_incompatible_port_error_subclass():
 
 
 class TestDevicePort:
+    def test_initialize(self) -> None:
+        port = smdev.DevicePort(1.0, 2.0, True, False)
+        assert port.x0 == pytest.approx(1.0)
+        assert port.y0 == pytest.approx(2.0)
+        assert port.hv is True
+        assert port.bf is False
+        assert port.name == ""
+
+    def test_set_name(self) -> None:
+        port = smdev.DevicePort(0, 0, True, True)
+        port.set_name("world")
+        assert port.name == "world"
+
     def test_angles(self) -> None:
         east = smdev.DevicePort(0, 0, True, True)
         west = smdev.DevicePort(0, 0, True, False)
@@ -272,10 +286,39 @@ class TestDevice:
         h3 = hash(dev)
         assert h1 != h2 != h3
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="set_angle() currently accepts radians while angle() "
+        "returns degrees, causing inconsistency.",
+    )
+    def test_get_set_angle(self) -> None:
+        dev = DummyDevice.build()
+        dev.set_angle(90)
+        assert dev._hv is False
+        assert dev._bf is True
+        assert dev.angle() == pytest.approx(90.0)
+
+    def test_set_position(self) -> None:
+        dev = DummyDevice.build()
+        dev.set_position(10.0, 20.0)
+        assert dev._x0 == pytest.approx(10.0)
+        assert dev._y0 == pytest.approx(20.0)
+
+        g = dev.run()
+        bb = g.bounding_box()
+        assert bb.llx == pytest.approx(10.0)
+        assert bb.cy() == pytest.approx(20.0)
+
+
     def test_addparameter_rejects_colon(self) -> None:
         dev = DummyDevice.build()
         with pytest.raises(ValueError, match="containing ':'"):
             dev.addparameter("bad:name", 1.0, "invalid")
+
+    def test_addlocalparameter_rejects_colon(self) -> None:
+        dev = DummyDevice.build()
+        with pytest.raises(ValueError, match="containing ':'"):
+            dev.addlocalparameter("bad:name", 1.0, "invalid")
 
     def test_set_param_unknown_raises(self) -> None:
         dev = DummyDevice.build()
@@ -305,6 +348,28 @@ class TestDevice:
         with pytest.raises(ValueError, match="Could not find port"):
             dev.get_localport("missing")
 
+    def test_remove_localport(self) -> None:
+        dev = DummyDevice.build()
+        port = BaseWaveguidePort(0, 0, name="test")
+        dev.addlocalport(port)
+        assert "test" in dev._localp["_ports_"]
+        dev.remove_localport("test")
+        assert "test" not in dev._localp["_ports_"]
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason="remove_localport should raise for missing port but currently does not",
+    )
+    def test_remove_localport_unknown_raises(self) -> None:
+        dev = DummyDevice.build()
+        with pytest.raises(ValueError, match="Could not find local port"):
+            dev.remove_localport("missing")
+
+    def test_get_port_raises_for_missing_port(self) -> None:
+        dev = DummyDevice.build()
+        with pytest.raises(ValueError, match="Could not find port"):
+            dev.get_port("missing")
+
     def test_build_registered_returns_named_device(
         self, device_list: dict[str, type[smdev.Device]]
     ) -> None:
@@ -319,9 +384,9 @@ class TestDevice:
         with pytest.raises(ValueError, match="No device named"):
             smdev.Device.build_registered("UNKNOWN")
 
-    def test_run_populates_ports_from_localports(self) -> None:
+    def test_run_use_reference(self) -> None:
         dev = DummyDevice.build()
-        dev.run()
+        g = dev.run()
         assert "in" in dev._ports
 
         lport = dev.get_localport("in")
@@ -335,6 +400,30 @@ class TestDevice:
         assert lport.bf == port.bf
         assert lport.width == port.width
         assert lport.name == port.name
+
+        assert len(g.group) == 1
+        assert isinstance(g.group[0], sp.SRef)
+
+    def test_run_no_reference(self) -> None:
+        dev = DummyDevice.build()
+        dev.use_references = False
+        g = dev.run()
+        assert "in" in dev._ports
+
+        lport = dev.get_localport("in")
+        port = dev._ports["in"]
+        assert isinstance(lport, BaseWaveguidePort)
+        assert isinstance(port, BaseWaveguidePort)
+        assert lport is not port  # deepcopy
+        assert lport.x0 == port.x0
+        assert lport.y0 == port.y0
+        assert lport.hv == port.hv
+        assert lport.bf == port.bf
+        assert lport.width == port.width
+        assert lport.name == port.name
+
+        assert len(g.group) == 1
+        assert isinstance(g.group[0], sp.Poly)
 
 
 class TestNetListEntry:
