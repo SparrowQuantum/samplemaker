@@ -118,15 +118,11 @@ def simple_netlist(
     connector_device_list: dict[str, type[smdev.Device]],
 ) -> smdev.NetList:
     _ = connector_device_list
-    return smdev.NetList(
-        "simple",
-        [
-            smdev.NetListEntry("TESTLIB_CONNECTOR", 0.0, 0.0, "E", {"io": "wire1"}, {}),
-            smdev.NetListEntry(
-                "TESTLIB_CONNECTOR", 20.0, 0.0, "W", {"io": "wire1"}, {}
-            ),
-        ],
-    )
+    netlist_entries = [
+        smdev.NetListEntry("TESTLIB_CONNECTOR", 0.0, 0.0, "E", {"io": "wire1"}, {}),
+        smdev.NetListEntry("TESTLIB_CONNECTOR", 20.0, 0.0, "W", {"io": "wire1"}, {}),
+    ]
+    return smdev.NetList("simple", netlist_entries)
 
 
 def test_incompatible_port_error_subclass():
@@ -452,19 +448,15 @@ class TestNetList:
 
     def test_import_circuit_parses_subcircuits(self, tmp_path: Path) -> None:
         circuit_file = tmp_path / "test_circuit.txt"
-        circuit_file.write_text(
-            "\n".join(
-                [
-                    ".CIRCUIT CHILD out",
-                    "TESTLIB_CONNECTOR 0 0 E io out .",
-                    ".END",
-                    ".CIRCUIT TOP ext",
-                    "X CHILD 10 0 E io ext .",
-                    ".END",
-                ]
-            )
-        )
-
+        lines = [
+            ".CIRCUIT CHILD out",
+            "TESTLIB_CONNECTOR 0 0 E io out .",
+            ".END",
+            ".CIRCUIT TOP ext",
+            "X CHILD 10 0 E io ext .",
+            ".END",
+        ]
+        circuit_file.write_text("\n".join(lines))
         all_circuits = smdev.NetList.ImportCircuit(str(circuit_file))
 
         assert set(all_circuits.keys()) == {"CHILD", "TOP"}
@@ -474,17 +466,14 @@ class TestNetList:
 
     def test_import_circuit_returns_named_circuit(self, tmp_path: Path) -> None:
         circuit_file = tmp_path / "single_circuit.txt"
-        circuit_file.write_text(
-            "\n".join(
-                [
-                    ".CIRCUIT MAIN wire",
-                    "TESTLIB_CONNECTOR 0 0 E io wire .",
-                    ".END",
-                ]
-            )
-        )
-
+        lines = [
+            ".CIRCUIT MAIN wire",
+            "TESTLIB_CONNECTOR 0 0 E io wire .",
+            ".END",
+        ]
+        circuit_file.write_text("\n".join(lines))
         netlist = smdev.NetList.ImportCircuit(str(circuit_file), "MAIN")
+
         assert isinstance(netlist, smdev.NetList)
         assert netlist.name == "MAIN"
 
@@ -492,18 +481,14 @@ class TestNetList:
         self, tmp_path: Path
     ) -> None:
         circuit_file = tmp_path / "align_path_circuit.txt"
-        circuit_file.write_text(
-            "\n".join(
-                [
-                    ".CIRCUIT MAIN ext",
-                    ".ALIGN wire1 wire2",
-                    ".PATH wire1 0 0 E 5 5 N 10 5 W",
-                    "TESTLIB_CONNECTOR 0 0 E io wire1 .",
-                    ".END",
-                ]
-            )
-        )
-
+        lines = [
+            ".CIRCUIT MAIN ext",
+            ".ALIGN wire1 wire2",
+            ".PATH wire1 0 0 E 5 5 N 10 5 W",
+            "TESTLIB_CONNECTOR 0 0 E io wire1 .",
+            ".END",
+        ]
+        circuit_file.write_text("\n".join(lines))
         netlist = smdev.NetList.ImportCircuit(str(circuit_file), "MAIN")
 
         assert netlist.aligned_ports == ["wire1", "wire2"]
@@ -541,14 +526,10 @@ class TestCircuit:
         connector_device_list: dict[str, type[smdev.Device]],
     ) -> None:
         _ = connector_device_list
-        netlist = smdev.NetList(
-            "warn",
-            [
-                smdev.NetListEntry(
-                    "TESTLIB_CONNECTOR", 0, 0, "E", {"io": "dangling"}, {}
-                )
-            ],
-        )
+        netlist_entries = [
+            smdev.NetListEntry("TESTLIB_CONNECTOR", 0, 0, "E", {"io": "dangling"}, {})
+        ]
+        netlist = smdev.NetList("warn", netlist_entries)
         circuit = smdev.Circuit.build()
         circuit.set_param("NETLIST", netlist)
 
