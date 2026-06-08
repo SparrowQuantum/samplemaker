@@ -309,7 +309,6 @@ class TestDevice:
         assert bb.llx == pytest.approx(10.0)
         assert bb.cy() == pytest.approx(20.0)
 
-
     def test_addparameter_rejects_colon(self) -> None:
         dev = DummyDevice.build()
         with pytest.raises(ValueError, match="containing ':'"):
@@ -487,6 +486,28 @@ class TestNetList:
         net = smdev.NetList.ImportCircuit(str(circuit_file), "MAIN")
         assert isinstance(net, smdev.NetList)
         assert net.name == "MAIN"
+
+    def test_import_circuit_parses_align_and_path_directives(
+        self, tmp_path: Path
+    ) -> None:
+        circuit_file = tmp_path / "align_path_circuit.txt"
+        circuit_file.write_text(
+            "\n".join(
+                [
+                    ".CIRCUIT MAIN ext",
+                    ".ALIGN wire1 wire2",
+                    ".PATH wire1 0 0 E 5 5 N 10 5 W",
+                    "TESTLIB_CONNECTOR 0 0 E io wire1 .",
+                    ".END",
+                ]
+            )
+        )
+
+        net = smdev.NetList.ImportCircuit(str(circuit_file), "MAIN")
+
+        assert net.aligned_ports == ["wire1", "wire2"]
+        assert net.paths["wire1"] == [0.0, 0.0, 0, 5.0, 5.0, 90, 10.0, 5.0, 180]
+        assert len(net.entry_list) == 1
 
 
 class TestCircuit:
