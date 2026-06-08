@@ -280,13 +280,18 @@ class TestDevice:
         h3 = hash(dev)
         assert h1 != h2 != h3
 
-    @pytest.mark.parametrize("angle, expected_hv, expected_bf", [
-        (0, True, True),
-        (math.pi / 2, False, True),
-        (math.pi, True, False),
-        (3 * math.pi / 2, False, False)
-    ])
-    def test_get_set_angle(self, angle: float, expected_hv: bool, expected_bf: bool) -> None:
+    @pytest.mark.parametrize(
+        "angle, expected_hv, expected_bf",
+        [
+            (0, True, True),
+            (math.pi / 2, False, True),
+            (math.pi, True, False),
+            (3 * math.pi / 2, False, False),
+        ],
+    )
+    def test_get_set_angle(
+        self, angle: float, expected_hv: bool, expected_bf: bool
+    ) -> None:
         dev = DummyDevice.build()
         dev.set_angle(angle)
         dev._hv = expected_hv
