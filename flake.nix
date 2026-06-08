@@ -36,7 +36,7 @@
           ];
 
           buildInputs = [
-            pkgs.boost
+            pkgs.boost.dev
           ];
 
           dependencies = [
@@ -83,7 +83,7 @@
               uv
               cmake
               ninja
-              boost
+              boost.dev
               alejandra
               deadnix
             ];
