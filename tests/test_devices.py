@@ -176,14 +176,11 @@ class TestDevicePort:
         assert port.dx() == 0
         assert port.dy() == 1
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Radian/degree inconsistency between angle() and set_angle()",
-    )
-    def test_set_angle_and_get_angle_consistent() -> None:
+    @pytest.mark.parametrize("angle", [0, math.pi / 2, math.pi, 3 * math.pi / 2])
+    def test_set_angle_and_get_angle_consistent(self, angle: float) -> None:
         port = smdev.DevicePort(0, 0, True, True)
-        port.set_angle(math.pi / 4)  # set_angle expects degrees
-        assert port.angle() == pytest.approx(math.pi / 4)  # angle() returns radians
+        port.set_angle(angle)  # set_angle expects degrees
+        assert port.angle() == pytest.approx(angle)  # angle() returns radians
 
     def test_rotate_and_reset(self) -> None:
         port = smdev.DevicePort(1.0, 1.0, True, True)
@@ -283,17 +280,18 @@ class TestDevice:
         h3 = hash(dev)
         assert h1 != h2 != h3
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="set_angle() currently accepts radians while angle() "
-        "returns degrees, causing inconsistency.",
-    )
-    def test_get_set_angle(self) -> None:
+    @pytest.mark.parametrize("angle, expected_hv, expected_bf", [
+        (0, True, True),
+        (math.pi / 2, False, True),
+        (math.pi, True, False),
+        (3 * math.pi / 2, False, False)
+    ])
+    def test_get_set_angle(self, angle: float, expected_hv: bool, expected_bf: bool) -> None:
         dev = DummyDevice.build()
-        dev.set_angle(90)
-        assert dev._hv is False
-        assert dev._bf is True
-        assert dev.angle() == pytest.approx(90.0)
+        dev.set_angle(angle)
+        dev._hv = expected_hv
+        dev._bf = expected_bf
+        assert dev.angle() == pytest.approx(angle)
 
     def test_set_position(self) -> None:
         dev = DummyDevice.build()
