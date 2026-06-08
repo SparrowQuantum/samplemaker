@@ -57,6 +57,7 @@
         devEnv = python.withPackages (ps: [
           samplemaker
           ps.pytest
+          ps.pytest-cov
         ]);
 
         fmtPackage = pkgs.writeShellScriptBin "fmt" ''
