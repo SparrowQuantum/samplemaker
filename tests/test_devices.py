@@ -441,14 +441,14 @@ class TestNetListEntry:
 
 class TestNetList:
     def test_setters_update_internal_state(self) -> None:
-        net = smdev.NetList("n", [])
-        net.set_external_ports(["wire_out"])
-        net.set_aligned_ports(["wire_aligned"])
-        net.set_path("wire_out", [0, 0, 0, 10, 0, 0])
+        netlist = smdev.NetList("n", [])
+        netlist.set_external_ports(["wire_out"])
+        netlist.set_aligned_ports(["wire_aligned"])
+        netlist.set_path("wire_out", [0, 0, 0, 10, 0, 0])
 
-        assert net.external_ports == ["wire_out"]
-        assert net.aligned_ports == ["wire_aligned"]
-        assert net.paths["wire_out"] == [0, 0, 0, 10, 0, 0]
+        assert netlist.external_ports == ["wire_out"]
+        assert netlist.aligned_ports == ["wire_aligned"]
+        assert netlist.paths["wire_out"] == [0, 0, 0, 10, 0, 0]
 
     def test_import_circuit_parses_subcircuits(self, tmp_path: Path) -> None:
         circuit_file = tmp_path / "test_circuit.txt"
@@ -484,9 +484,9 @@ class TestNetList:
             )
         )
 
-        net = smdev.NetList.ImportCircuit(str(circuit_file), "MAIN")
-        assert isinstance(net, smdev.NetList)
-        assert net.name == "MAIN"
+        netlist = smdev.NetList.ImportCircuit(str(circuit_file), "MAIN")
+        assert isinstance(netlist, smdev.NetList)
+        assert netlist.name == "MAIN"
 
     def test_import_circuit_parses_align_and_path_directives(
         self, tmp_path: Path
@@ -504,11 +504,11 @@ class TestNetList:
             )
         )
 
-        net = smdev.NetList.ImportCircuit(str(circuit_file), "MAIN")
+        netlist = smdev.NetList.ImportCircuit(str(circuit_file), "MAIN")
 
-        assert net.aligned_ports == ["wire1", "wire2"]
-        assert net.paths["wire1"] == [0.0, 0.0, 0, 5.0, 5.0, 90, 10.0, 5.0, 180]
-        assert len(net.entry_list) == 1
+        assert netlist.aligned_ports == ["wire1", "wire2"]
+        assert netlist.paths["wire1"] == [0.0, 0.0, 0, 5.0, 5.0, 90, 10.0, 5.0, 180]
+        assert len(netlist.entry_list) == 1
 
 
 class TestCircuit:
@@ -541,7 +541,7 @@ class TestCircuit:
         connector_device_list: dict[str, type[smdev.Device]],
     ) -> None:
         _ = connector_device_list
-        net = smdev.NetList(
+        netlist = smdev.NetList(
             "warn",
             [
                 smdev.NetListEntry(
@@ -550,7 +550,7 @@ class TestCircuit:
             ],
         )
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", net)
+        circuit.set_param("NETLIST", netlist)
 
         with pytest.warns(UserWarning, match="unconnected"):
             _ = circuit.run()
@@ -625,15 +625,51 @@ class TestCircuit:
             smdev.NetListEntry("TESTLIB_CONNECTOR", 0.0, 0.0, "N", {"io": "w1"}, {}),
             smdev.NetListEntry("TESTLIB_CONNECTOR", 5.0, 20.0, "S", {"io": "w1"}, {}),
         ]
-        net = smdev.NetList("align_x", netlist_entries)
-        net.set_aligned_ports(["w1"])
+        netlist = smdev.NetList("align_x", netlist_entries)
+        netlist.set_aligned_ports(["w1"])
 
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", net)
+        circuit.set_param("NETLIST", netlist)
         circuit.run()
 
         assert captured
         assert captured[-1][0] == pytest.approx(captured[-1][2])
+
+    def test_run_routes_connector_through_virtual_path_points(
+        self,
+        connector_device_list: dict[str, type[smdev.Device]],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _ = connector_device_list
+        captured: list[tuple[float, float, float, float]] = []
+
+        def _capture_connector(
+            port1: smdev.DevicePort, port2: smdev.DevicePort
+        ) -> GeomGroup:
+            captured.append((port1.x0, port1.y0, port2.x0, port2.y0))
+            return GeomGroup()
+
+        monkeypatch.setattr(
+            sys.modules[__name__], "_dummy_connector", _capture_connector
+        )
+
+        netlist_entries = [
+            smdev.NetListEntry("TESTLIB_CONNECTOR", 0.0, 0.0, "E", {"io": "w1"}, {}),
+            smdev.NetListEntry("TESTLIB_CONNECTOR", 20.0, 0.0, "W", {"io": "w1"}, {}),
+        ]
+        netlist = smdev.NetList("path_route", netlist_entries)
+        netlist.set_path("w1", [10.0, 0.0, 0.0])
+
+        circuit = smdev.Circuit.build()
+        circuit.set_param("NETLIST", netlist)
+        _ = circuit.run()
+
+        # One call for the virtual point, one final call to the destination port.
+        assert len(captured) == 2
+        assert captured[0][2] == pytest.approx(10.0)
+        assert captured[0][3] == pytest.approx(0.0)
+        assert captured[1][0] == pytest.approx(10.0)
+        assert captured[1][1] == pytest.approx(0.0)
 
 
 class TestDeviceLibraryExports:
