@@ -1,6 +1,7 @@
 from collections.abc import Generator
 import math
 from pathlib import Path
+import sys
 
 from samplemaker.baselib.waveguides import BaseWaveguidePort, BaseWaveguideSequencer
 import samplemaker.devices as smdev
@@ -574,6 +575,69 @@ class TestCircuit:
         _ = circuit.run()
 
         assert "wire_out" in circuit._ports
+
+    def test_run_aligns_ports_on_y_when_aligned_wire_exists(
+        self,
+        connector_device_list: dict[str, type[smdev.Device]],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _ = connector_device_list
+        captured: list[tuple[float, float, float, float]] = []
+
+        def _capture_connector(
+            port1: smdev.DevicePort, port2: smdev.DevicePort
+        ) -> GeomGroup:
+            captured.append((port1.x0, port1.y0, port2.x0, port2.y0))
+            return GeomGroup()
+
+        monkeypatch.setattr(
+            sys.modules[__name__], "_dummy_connector", _capture_connector
+        )
+        netlist_entries = [
+            smdev.NetListEntry("TESTLIB_CONNECTOR", 0.0, 0.0, "E", {"io": "w1"}, {}),
+            smdev.NetListEntry("TESTLIB_CONNECTOR", 20.0, 5.0, "W", {"io": "w1"}, {}),
+        ]
+        netlist = smdev.NetList("align_y", netlist_entries)
+        netlist.set_aligned_ports(["w1"])
+
+        circuit = smdev.Circuit.build()
+        circuit.set_param("NETLIST", netlist)
+        _ = circuit.run()
+
+        assert captured
+        assert captured[-1][1] == pytest.approx(captured[-1][3])
+
+    def test_run_aligns_ports_on_x_for_vertical_ports(
+        self,
+        connector_device_list: dict[str, type[smdev.Device]],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _ = connector_device_list
+        captured: list[tuple[float, float, float, float]] = []
+
+        def _capture_connector(
+            port1: smdev.DevicePort, port2: smdev.DevicePort
+        ) -> GeomGroup:
+            captured.append((port1.x0, port1.y0, port2.x0, port2.y0))
+            return GeomGroup()
+
+        monkeypatch.setattr(
+            sys.modules[__name__], "_dummy_connector", _capture_connector
+        )
+
+        netlist_entries = [
+            smdev.NetListEntry("TESTLIB_CONNECTOR", 0.0, 0.0, "N", {"io": "w1"}, {}),
+            smdev.NetListEntry("TESTLIB_CONNECTOR", 5.0, 20.0, "S", {"io": "w1"}, {}),
+        ]
+        net = smdev.NetList("align_x", netlist_entries)
+        net.set_aligned_ports(["w1"])
+
+        circuit = smdev.Circuit.build()
+        circuit.set_param("NETLIST", net)
+        _ = circuit.run()
+
+        assert captured
+        assert captured[-1][0] == pytest.approx(captured[-1][2])
 
 
 class TestDeviceRegistration:
