@@ -9,6 +9,7 @@ from samplemaker.devices import DevicePort
 
 CONNECTABLE_FACING = getattr(rt, "__connectable_facing")
 CONNECTABLE_BEND = getattr(rt, "__connectable_bend")
+CONNECT_STEP = getattr(rt, "__connect_step")
 
 
 def _make_port(x0: float, y0: float, direction: str) -> DevicePort:
@@ -68,6 +69,15 @@ class TestConnectableFacing:
         assert ok is True
         assert seq == [["S", 2.0], ["C", -2.0, 3], ["S", 2.0]]
 
+    def test_vertical_c_bend_without_straights_when_tight(self) -> None:
+        p1 = _make_port(0.0, 0.0, "N")
+        p2 = _make_port(2.0, 4.0, "S")
+
+        ok, seq = CONNECTABLE_FACING(p1, p2, rad=3)
+
+        assert ok is True
+        assert seq == [["C", -2.0, 2.0]]
+
     def test_not_connectable_when_not_facing(self) -> None:
         p1 = _make_port(0.0, 0.0, "E")
         p2 = _make_port(10.0, 0.0, "E")
@@ -105,6 +115,48 @@ class TestConnectableBend:
 
         assert ok is False
         assert seq == []
+
+
+class TestConnectStep:
+    def test_connect_step_returns_true_from_left_bend_path(self) -> None:
+        p1 = _make_port(0.0, 0.0, "E")
+        p2 = _make_port(-14.0, 4.0, "E")
+
+        ok, seq = CONNECT_STEP(p1, p2, rad=3)
+
+        assert ok is True
+        assert seq == [
+            ["B", 90, 3],
+            ["S", 2.0],
+            ["B", 90, 3],
+            ["S", 4.0],
+            ["C", 4.0, 3],
+            ["S", 4.0],
+        ]
+
+    def test_connect_step_returns_true_from_right_bend_path(self) -> None:
+        p1 = _make_port(0.0, 0.0, "E")
+        p2 = _make_port(-12.0, -12.0, "E")
+
+        ok, seq = CONNECT_STEP(p1, p2, rad=3)
+
+        assert ok is True
+        assert seq == [
+            ["B", -90, 3],
+            ["S", 6.0],
+            ["B", -90, 3],
+            ["S", 12.0],
+        ]
+
+    def test_connect_step_returns_false_and_chooses_left_fallback(self) -> None:
+        p1 = _make_port(0.0, 0.0, "E")
+        p2 = _make_port(-12.0, 2.0, "E")
+
+        ok, seq = CONNECT_STEP(p1, p2, rad=3)
+
+        assert ok is False
+        assert seq == [["B", 90, 3]]
+        assert p1.angle_to_text() == "N"
 
 
 class TestWaveguideConnect:
