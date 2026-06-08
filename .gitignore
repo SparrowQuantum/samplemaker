@@ -65,6 +65,7 @@ wheelhouse/
 *.so
 *.pyd
 *.dll
+result
 
 # CMake artifacts
 CMakeFiles/
