@@ -72,3 +72,6 @@ CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 Makefile
+
+# Pytest coverage reports
+.coverage
