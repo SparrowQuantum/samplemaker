@@ -13,9 +13,10 @@
         python = pkgs.python313;
         pyPkgs = python.pkgs;
 
+        pyProj = pkgs.lib.trivial.importTOML ./pyproject.toml;
         samplemaker = pyPkgs.buildPythonPackage {
           pname = "samplemaker-sparrow";
-          version = "5.4.8";
+          version = pyProj.project.version;
           pyproject = true;
 
           src = ./.;
@@ -48,6 +49,11 @@
             license = licenses.bsd3;
           };
         };
+
+        devEnv = python.withPackages (ps: [
+                  samplemaker
+                  ps.pytest
+        ]);
       in
       {
         packages = {
@@ -59,10 +65,8 @@
           default = pkgs.mkShell {
             packages = [
               pkgs.ruff
-              python.withPackages (ps: [
-                samplemaker
-                ps.pytest
-              ])
+              devEnv
+              
             ];
           };
           uv = pkgs.mkShell {
