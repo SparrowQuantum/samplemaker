@@ -100,7 +100,7 @@ def device_list(
     dev = DummyDevice()
     dev.initialize()
     default_device_list[dev._name] = DummyDevice
-    yield default_device_list
+    return default_device_list
 
 
 @pytest.fixture
@@ -110,7 +110,7 @@ def connector_device_list(
     dev = ConnectorDevice()
     dev.initialize()
     default_device_list[dev._name] = ConnectorDevice
-    yield default_device_list
+    return default_device_list
 
 
 @pytest.fixture
@@ -560,19 +560,15 @@ class TestCircuit:
         connector_device_list: dict[str, type[smdev.Device]],
     ) -> None:
         _ = connector_device_list
-        net = smdev.NetList(
-            "ext",
-            [
-                smdev.NetListEntry(
-                    "TESTLIB_CONNECTOR", 0, 0, "E", {"io": "wire_out"}, {}
-                )
-            ],
-        )
-        net.set_external_ports(["wire_out"])
+        netlist_entries = [
+            smdev.NetListEntry("TESTLIB_CONNECTOR", 0, 0, "E", {"io": "wire_out"}, {})
+        ]
+        netlist = smdev.NetList("ext", netlist_entries)
+        netlist.set_external_ports(["wire_out"])
 
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", net)
-        _ = circuit.run()
+        circuit.set_param("NETLIST", netlist)
+        circuit.run()
 
         assert "wire_out" in circuit._ports
 
@@ -602,7 +598,7 @@ class TestCircuit:
 
         circuit = smdev.Circuit.build()
         circuit.set_param("NETLIST", netlist)
-        _ = circuit.run()
+        circuit.run()
 
         assert captured
         assert captured[-1][1] == pytest.approx(captured[-1][3])
@@ -634,10 +630,75 @@ class TestCircuit:
 
         circuit = smdev.Circuit.build()
         circuit.set_param("NETLIST", net)
-        _ = circuit.run()
+        circuit.run()
 
         assert captured
         assert captured[-1][0] == pytest.approx(captured[-1][2])
+
+
+class TestDeviceLibraryExports:
+    def test_create_device_library(
+        self,
+        connector_device_list: dict[str, type[smdev.Device]],
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _ = connector_device_list
+        output_file = tmp_path / "library.gds"
+
+        calls: dict[str, object] = {}
+
+        class FakeGDSWriter:
+            def open_library(self, filename: str) -> None:
+                calls["open"] = filename
+
+            def write_structure(self, devname: str, geom: GeomGroup) -> None:
+                calls["devname"] = devname
+                calls["geom"] = geom
+
+            def close_library(self) -> None:
+                calls["closed"] = True
+
+        monkeypatch.setattr(smdev, "GDSWriter", FakeGDSWriter)
+
+        smdev.CreateDeviceLibrary(
+            "TESTLIB_CONNECTOR", {"length": 7.0}, str(output_file)
+        )
+
+        geom = calls["geom"]
+
+        assert calls["open"] == str(output_file)
+        assert calls["devname"] == "TESTLIB_CONNECTOR"
+        assert calls["closed"] is True
+        assert isinstance(geom, GeomGroup)
+        assert isinstance(geom.group[-1], sp.Text)
+
+        txt = geom.group[-1]
+        assert txt.x0 == pytest.approx(0)
+        assert txt.y0 == pytest.approx(0)
+        assert "__PORT__ io E" in txt.text
+        assert "ConnectorPort" in txt.text
+
+    def test_export_device_schematics(
+        self,
+        device_list: dict[str, type[smdev.Device]],
+        connector_device_list: dict[str, type[smdev.Device]],
+        tmp_path: Path,
+    ) -> None:
+        _ = (device_list, connector_device_list)
+        output_file = tmp_path / "SampleMakerLibrary.lel"
+
+        smdev.ExportDeviceSchematics(str(output_file))
+        content = output_file.read_text()
+
+        assert "<Component DummyDevice>" in content
+        assert "<Component ConnectorDevice>" in content
+        assert "<Description>" in content
+        assert "<Parameter>" in content
+        assert "<Prefix TESTLIB_DUMMY>" in content
+        assert "<Prefix TESTLIB_CONNECTOR>" in content
+        assert "<Netlist spice>" in content
+        assert "<Prefix X>" not in content
 
 
 class TestDeviceRegistration:
