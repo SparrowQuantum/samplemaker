@@ -6,9 +6,13 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
+  outputs = {
+    nixpkgs,
+    flake-utils,
+    ...
+  }:
+    flake-utils.lib.eachDefaultSystem (
+      system: let
         pkgs = nixpkgs.legacyPackages.${system};
         python = pkgs.python313;
         pyPkgs = python.pkgs;
@@ -51,11 +55,14 @@
         };
 
         devEnv = python.withPackages (ps: [
-                  samplemaker
-                  ps.pytest
+          samplemaker
+          ps.pytest
         ]);
-      in
-      {
+
+        fmtPackage = pkgs.writeShellScriptBin "fmt" ''
+          ${pkgs.alejandra}/bin/alejandra . --quiet
+        '';
+      in {
         packages = {
           default = samplemaker;
           samplemaker = samplemaker;
@@ -65,8 +72,9 @@
           default = pkgs.mkShell {
             packages = [
               pkgs.ruff
+              pkgs.alejandra
+              pkgs.deadnix
               devEnv
-              
             ];
           };
           uv = pkgs.mkShell {
@@ -75,9 +83,13 @@
               cmake
               ninja
               boost
+              alejandra
+              deadnix
             ];
           };
         };
+
+        formatter = fmtPackage;
       }
     );
 }
