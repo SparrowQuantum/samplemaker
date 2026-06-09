@@ -1,3 +1,5 @@
+"""Dummy devices for testing purposes."""
+
 import samplemaker.devices as smdev
 from samplemaker.baselib.waveguides import BaseWaveguidePort
 from samplemaker.makers import make_rect
@@ -47,7 +49,7 @@ def _dummy_connector(_port1: smdev.DevicePort, _port2: smdev.DevicePort) -> Geom
     return GeomGroup()
 
 
-class ConnectorPort(smdev.DevicePort):
+class DummyConnectorPort(smdev.DevicePort):
     def __init__(
         self, x0: float, y0: float, horizontal: bool, forward: bool, name: str
     ) -> None:
@@ -72,5 +74,5 @@ class DummyConnectorDevice(smdev.Device):
     def geom(self) -> GeomGroup:
         p = self.get_params()
         rect = make_rect(0, 0, p["length"], 1, numkey=4)
-        self.addlocalport(ConnectorPort(0, 0, True, True, name="io"))
+        self.addlocalport(DummyConnectorPort(0, 0, True, True, name="io"))
         return rect

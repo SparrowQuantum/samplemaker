@@ -594,7 +594,7 @@ class TestDeviceLibraryExports:
         assert txt.x0 == pytest.approx(0)
         assert txt.y0 == pytest.approx(0)
         assert "__PORT__ io E" in txt.text
-        assert "ConnectorPort" in txt.text
+        assert "DummyConnectorPort" in txt.text
 
     def test_export_device_schematics(
         self,
