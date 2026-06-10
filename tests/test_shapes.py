@@ -5,9 +5,6 @@ from dataclasses import dataclass
 import numpy as np
 import pytest
 
-# Used automatically by pytest to reset state before each test:
-from fixtures import reset_samplemaker  # noqa: F401
-
 from samplemaker import shapes as sp
 
 _COORD = tuple[float, float]

@@ -5,7 +5,6 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
-from fixtures import reset_samplemaker  # noqa: F401
 
 import samplemaker.makers as sm
 from samplemaker import LayoutPool
