@@ -6,7 +6,7 @@ import pytest
 
 import samplemaker
 import samplemaker.devices as smdev
-import dummy as dm
+from tests import dummy as dm
 
 
 @pytest.fixture(autouse=True)

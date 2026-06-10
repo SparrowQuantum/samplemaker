@@ -7,7 +7,7 @@ import samplemaker.shapes as sp
 import pytest
 
 from samplemaker.shapes import GeomGroup
-import dummy as dm
+from tests import dummy as dm
 
 
 @pytest.fixture
