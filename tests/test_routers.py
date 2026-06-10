@@ -2,8 +2,6 @@
 
 import pytest
 
-from fixtures import reset_samplemaker  # noqa: F401
-
 import samplemaker.routers as rt
 from samplemaker.devices import DevicePort
 
