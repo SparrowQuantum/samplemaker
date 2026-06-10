@@ -1,11 +1,11 @@
 import math
 from pathlib import Path
 
-from samplemaker.baselib.waveguides import BaseWaveguidePort, BaseWaveguideSequencer
-import samplemaker.devices as smdev
-import samplemaker.shapes as sp
 import pytest
 
+import samplemaker.devices as smdev
+import samplemaker.shapes as sp
+from samplemaker.baselib.waveguides import BaseWaveguidePort, BaseWaveguideSequencer
 from samplemaker.shapes import GeomGroup
 from tests import dummy as dm
 from tests.fakes import FakeGDSWriter

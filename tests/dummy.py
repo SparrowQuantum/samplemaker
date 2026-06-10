@@ -1,5 +1,5 @@
-from samplemaker.baselib.waveguides import BaseWaveguidePort
 import samplemaker.devices as smdev
+from samplemaker.baselib.waveguides import BaseWaveguidePort
 from samplemaker.makers import make_rect
 from samplemaker.shapes import GeomGroup
 
