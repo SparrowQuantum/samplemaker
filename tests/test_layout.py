@@ -14,6 +14,7 @@ from samplemaker import (
 from samplemaker.baselib.devices import CrossMark
 from samplemaker.makers import make_rect
 from samplemaker.shapes import ARef, GeomGroup, Poly, SRef, Text
+from tests import dummy as dm
 
 
 @pytest.fixture
@@ -203,6 +204,199 @@ class TestDeviceTableAnnotations:
         ann.below = False
         top_right_above_only = ann.render(2, 2, 3, 3, 0, 0, rowdict, coldict)
         assert len(top_right_above_only.group) == 1
+
+
+class TestDeviceTable:
+    @pytest.fixture
+    def table_device(
+        self,
+        dummy_device_list: dict[str, type[smdev.Device]],
+    ) -> smdev.Device:
+        _ = dummy_device_list
+        return smdev.Device.build_registered("TESTLIB_DUMMY")
+
+    @pytest.fixture
+    def connector_table_device(
+        self,
+        dummy_device_list: dict[str, type[smdev.Device]],
+    ) -> smdev.Device:
+        _ = dummy_device_list
+        return smdev.Device.build_registered("TESTLIB_DUMMY_CONNECTOR")
+
+    def test_mutators_update_state_and_invalidate_cached_arrays(self, table_device):
+        dt = smlay.DeviceTable(table_device, 2, 2, {"height": [2.0, 4.0]}, {})
+        dt._geometries = [[GeomGroup()]]
+        dt._portmap = [[{"in": object()}]]
+
+        positions = (((1.0, 2.0), (3.0, 4.0)), ((5.0, 6.0), (7.0, 8.0)))
+        dt.set_table_positions(positions)
+        assert dt.pos_xy == positions
+        assert dt._geometries == []
+        assert dt._portmap == []
+
+        dt._geometries = [[GeomGroup()]]
+        dt._portmap = [[{"in": object()}]]
+        dt.set_device_rotation(90)
+        assert dt.device_rotation == 90
+        assert dt._geometries == []
+        assert dt._portmap == []
+
+        dt.set_linked_ports(row_linkports=(("a", "b"),), col_linkports=(("c", "d"),))
+        assert dt.row_linkports == (("a", "b"),)
+        assert dt.col_linkports == (("c", "d"),)
+
+        dt.set_aligned_ports(align_rows=True, align_columns=True)
+        assert dt.row_alignports is True
+        assert dt.col_alignports is True
+
+        ann = smlay.DeviceTableAnnotations("r", "c", 1, 1, (), ())
+        dt.set_annotations(ann)
+        assert dt.annotations is ann
+
+    def test_shift_table_origin_offsets_all_positions(self, table_device):
+        dt = smlay.DeviceTable(table_device, 2, 2, {}, {})
+        dt.set_table_positions((((0.0, 0.0), (1.0, 1.0)), ((2.0, 2.0), (3.0, 3.0))))
+        dt.shift_table_origin(10.0, -5.0)
+        assert dt.pos_xy == (
+            ((10.0, -5.0), (11.0, -4.0)),
+            ((12.0, -3.0), (13.0, -2.0)),
+        )
+
+    def test_regular_returns_expected_coordinate_grid(self):
+        reg = smlay.DeviceTable.Regular(2, 3, 5.0, 1.0, -2.0, 7.0, x0=100.0, y0=200.0)
+        assert reg == (
+            ((100.0, 200.0), (105.0, 201.0), (110.0, 202.0)),
+            ((98.0, 207.0), (103.0, 208.0), (108.0, 209.0)),
+        )
+
+    def test_get_geometries_builds_table_with_param_sweep_and_fallback_lists(
+        self, table_device
+    ):
+        dt = smlay.DeviceTable(
+            table_device,
+            2,
+            2,
+            rowvars={"height": [2.0, 4.0]},
+            colvars={"width": [3.0]},
+        )
+        dt.use_references = False
+        dt.set_table_positions((((0.0, 0.0), (20.0, 0.0)), ((0.0, 20.0), (20.0, 20.0))))
+
+        g = dt.get_geometries()
+        assert isinstance(g, GeomGroup)
+        assert len(g.group) == 4
+        assert dt._getgeom_ran is True
+        assert all(isinstance(elem, Poly) for elem in g.group)
+
+        ports = dt.get_external_ports()
+        assert set(ports.keys()) == {"in_0_0", "in_0_1", "in_1_0", "in_1_1"}
+
+    def test_get_geometries_repeated_call_resets_and_returns_stable_output(
+        self, table_device
+    ):
+        dt = smlay.DeviceTable(table_device, 1, 2, {}, {"width": [5.0, 7.0]})
+        dt.use_references = False
+        dt.set_table_positions((((0.0, 0.0), (12.0, 0.0)),))
+
+        g1 = dt.get_geometries()
+        g2 = dt.get_geometries()
+
+        assert isinstance(g1, GeomGroup)
+        assert isinstance(g2, GeomGroup)
+        assert len(g1.group) == len(g2.group) == 2
+
+    def test_get_external_ports_returns_copy_with_indexed_names(self, table_device):
+        dt = smlay.DeviceTable(table_device, 2, 2, {}, {})
+        dt.use_references = False
+        _ = dt.get_geometries()
+
+        ports1 = dt.get_external_ports()
+        ports2 = dt.get_external_ports()
+
+        assert set(ports1.keys()) == {"in_0_0", "in_0_1", "in_1_0", "in_1_1"}
+        assert ports1["in_0_0"] is not ports2["in_0_0"]
+
+    def test_get_geometries_calls_connectors_for_row_and_column_links(
+        self,
+        connector_table_device,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        captured: list[tuple[float, float, float, float]] = []
+
+        def _capture_connector(
+            port1: smdev.DevicePort, port2: smdev.DevicePort
+        ) -> GeomGroup:
+            captured.append((port1.x0, port1.y0, port2.x0, port2.y0))
+            return GeomGroup()
+
+        monkeypatch.setattr(dm, "_dummy_connector", _capture_connector)
+        dt = smlay.DeviceTable(connector_table_device, 2, 2, {}, {})
+        dt.use_references = False
+        dt.set_table_positions((((0.0, 0.0), (20.0, 0.0)), ((0.0, 20.0), (20.0, 20.0))))
+        dt.set_linked_ports(row_linkports=(("io", "io"),), col_linkports=(("io", "io"),))
+
+        _ = dt.get_geometries()
+        assert len(captured) == 4
+
+    def test_get_geometries_raises_on_incompatible_connector_functions(
+        self,
+        table_device,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        dt = smlay.DeviceTable(table_device, 1, 2, {}, {})
+        dt.use_references = False
+
+        original_build = getattr(dt, "_DeviceTable__build_geomarray")
+
+        def _build_with_incompatible_ports() -> None:
+            original_build()
+            dt._portmap[0][0]["in"].connector_function = lambda p1, p2: GeomGroup()
+            dt._portmap[0][1]["in"].connector_function = lambda p1, p2: GeomGroup()
+
+        monkeypatch.setattr(dt, "_DeviceTable__build_geomarray", _build_with_incompatible_ports)
+        dt.set_linked_ports(col_linkports=(("in", "in"),))
+
+        with pytest.raises(smdev.IncompatiblePortError, match="Incompatible ports"):
+            dt.get_geometries()
+
+    @pytest.mark.xfail(reason="Row alignment uses p2.yx typo", strict=True)
+    def test_get_geometries_row_alignment_bug_path(
+        self,
+        connector_table_device,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        dt = smlay.DeviceTable(connector_table_device, 2, 1, {}, {})
+        dt.use_references = False
+        dt.set_table_positions((((0.0, 0.0),), ((10.0, 20.0),)))
+        dt.set_linked_ports(row_linkports=(("io", "io"),))
+        dt.set_aligned_ports(align_rows=True, align_columns=False)
+
+        original_build = getattr(dt, "_DeviceTable__build_geomarray")
+
+        def _build_with_vertical_ports() -> None:
+            original_build()
+            for row in dt._portmap:
+                for pmap in row:
+                    pmap["io"].hv = False
+                    pmap["io"].bf = True
+
+        monkeypatch.setattr(dt, "_DeviceTable__build_geomarray", _build_with_vertical_ports)
+
+        _ = dt.get_geometries()
+
+    def test_auto_align_produces_non_overlapping_positions(self, table_device):
+        dt = smlay.DeviceTable(
+            table_device,
+            2,
+            2,
+            rowvars={"height": [2.0, 6.0]},
+            colvars={"width": [3.0, 9.0]},
+        )
+        dt.use_references = False
+        dt.auto_align(min_dist_x=5.0, min_dist_y=7.0)
+
+        assert dt.pos_xy[0][1][0] > dt.pos_xy[0][0][0]
+        assert dt.pos_xy[1][0][1] > dt.pos_xy[0][0][1]
 
 
 class TestMarker:
