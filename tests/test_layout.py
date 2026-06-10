@@ -15,6 +15,7 @@ from samplemaker.baselib.devices import CrossMark
 from samplemaker.makers import make_rect, make_sref
 from samplemaker.shapes import ARef, GeomGroup, Poly, SRef, Text
 from tests import dummy as dm
+from tests.fakes import FakeGDSReader, FakeGDSWriter
 
 
 @pytest.fixture
@@ -30,51 +31,6 @@ def dummy_connector_device(
     """Build a connector-compatible device from the shared dummy registry."""
     _ = dummy_device_list
     return smdev.Device.build_registered("TESTLIB_DUMMY_CONNECTOR")
-
-
-class FakeGDSWriter:
-    """Simple writer double used to assert Mask export call sequencing."""
-
-    def __init__(self):
-        self.calls: list[tuple[object, ...]] = []
-
-    def open_library(self, filename: str) -> None:
-        self.calls.append(("open_library", filename))
-
-    def write_pool(self, pool: dict[str, GeomGroup]) -> None:
-        self.calls.append(("write_pool", sorted(pool.keys())))
-
-    def write_pool_use_cache(
-        self, pool: dict[str, GeomGroup], celldata: dict[str, bytes]
-    ) -> None:
-        self.calls.append(
-            ("write_pool_use_cache", sorted(pool.keys()), sorted(celldata.keys()))
-        )
-
-    def close_library(self) -> None:
-        self.calls.append(("close_library", None))
-
-
-class FakeGDSReader:
-    """Simple reader double used to control Mask cache import/export paths."""
-
-    def __init__(
-        self,
-        celldata: dict[str, bytes] | None = None,
-        quick_read_exception: Exception | None = None,
-    ):
-        self.celldata = {} if celldata is None else dict(celldata)
-        self.quick_read_exception = quick_read_exception
-        self.quick_read_calls: list[str] = []
-        self.cell_geometries: dict[str, GeomGroup] = {}
-
-    def quick_read(self, filename: str) -> None:
-        self.quick_read_calls.append(filename)
-        if self.quick_read_exception is not None:
-            raise self.quick_read_exception
-
-    def get_cell(self, cellname: str) -> GeomGroup:
-        return self.cell_geometries[cellname]
 
 
 @pytest.fixture
@@ -169,7 +125,9 @@ class TestDeviceTableAnnotations:
         texts = [elem for elem in geom.group if isinstance(elem, Text)]
         assert len(texts) == 2
 
-        left = [t for t in texts if t.x0 == pytest.approx(9) and t.y0 == pytest.approx(20)]
+        left = [
+            t for t in texts if t.x0 == pytest.approx(9) and t.y0 == pytest.approx(20)
+        ]
         below = [
             t for t in texts if t.x0 == pytest.approx(10) and t.y0 == pytest.approx(18)
         ]
@@ -333,7 +291,9 @@ class TestDeviceTable:
         dt = smlay.DeviceTable(connector_table_device, 2, 2, {}, {})
         dt.use_references = False
         dt.set_table_positions((((0.0, 0.0), (20.0, 0.0)), ((0.0, 20.0), (20.0, 20.0))))
-        dt.set_linked_ports(row_linkports=(("io", "io"),), col_linkports=(("io", "io"),))
+        dt.set_linked_ports(
+            row_linkports=(("io", "io"),), col_linkports=(("io", "io"),)
+        )
 
         _ = dt.get_geometries()
         assert len(captured) == 4
@@ -353,7 +313,9 @@ class TestDeviceTable:
             dt._portmap[0][0]["in"].connector_function = lambda p1, p2: GeomGroup()
             dt._portmap[0][1]["in"].connector_function = lambda p1, p2: GeomGroup()
 
-        monkeypatch.setattr(dt, "_DeviceTable__build_geomarray", _build_with_incompatible_ports)
+        monkeypatch.setattr(
+            dt, "_DeviceTable__build_geomarray", _build_with_incompatible_ports
+        )
         dt.set_linked_ports(col_linkports=(("in", "in"),))
 
         with pytest.raises(smdev.IncompatiblePortError, match="Incompatible ports"):
@@ -380,7 +342,9 @@ class TestDeviceTable:
                     pmap["io"].hv = False
                     pmap["io"].bf = True
 
-        monkeypatch.setattr(dt, "_DeviceTable__build_geomarray", _build_with_vertical_ports)
+        monkeypatch.setattr(
+            dt, "_DeviceTable__build_geomarray", _build_with_vertical_ports
+        )
 
         _ = dt.get_geometries()
 
@@ -615,9 +579,9 @@ class TestMask:
         fake_reader.cell_geometries["B"] = make_rect(0, 0, 1, 1)
         fake_reader.cell_geometries["C"] = make_rect(0, 0, 1, 1)
         fake_reader.cell_geometries["E"] = make_rect(0, 0, 1, 1)
-        fake_reader.cell_geometries["A"] = make_sref(0, 0, "B", GeomGroup()) + make_sref(
-            0, 0, "C", GeomGroup()
-        )
+        fake_reader.cell_geometries["A"] = make_sref(
+            0, 0, "B", GeomGroup()
+        ) + make_sref(0, 0, "C", GeomGroup())
         fake_reader.cell_geometries["D"] = make_sref(0, 0, "E", GeomGroup())
 
         monkeypatch.setattr(smlay, "GDSReader", lambda: fake_reader)

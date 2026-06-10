@@ -8,6 +8,7 @@ import pytest
 
 from samplemaker.shapes import GeomGroup
 from tests import dummy as dm
+from tests.fakes import FakeGDSWriter
 
 
 @pytest.fixture
@@ -577,30 +578,26 @@ class TestDeviceLibraryExports:
         _ = dummy_device_list
         output_file = tmp_path / "library.gds"
 
-        calls: dict[str, object] = {}
+        created_writers: list[FakeGDSWriter] = []
 
-        class FakeGDSWriter:
-            def open_library(self, filename: str) -> None:
-                calls["open"] = filename
+        def _writer_factory() -> FakeGDSWriter:
+            writer = FakeGDSWriter()
+            created_writers.append(writer)
+            return writer
 
-            def write_structure(self, devname: str, geom: GeomGroup) -> None:
-                calls["devname"] = devname
-                calls["geom"] = geom
-
-            def close_library(self) -> None:
-                calls["closed"] = True
-
-        monkeypatch.setattr(smdev, "GDSWriter", FakeGDSWriter)
+        monkeypatch.setattr(smdev, "GDSWriter", _writer_factory)
 
         smdev.CreateDeviceLibrary(
             "TESTLIB_DUMMY_CONNECTOR", {"length": 7.0}, str(output_file)
         )
 
-        geom = calls["geom"]
+        writer = created_writers[0]
+        geom = writer.calls[1][2]
 
-        assert calls["open"] == str(output_file)
-        assert calls["devname"] == "TESTLIB_DUMMY_CONNECTOR"
-        assert calls["closed"] is True
+        assert writer.calls[0] == ("open_library", str(output_file))
+        assert writer.calls[1][0] == "write_structure"
+        assert writer.calls[1][1] == "TESTLIB_DUMMY_CONNECTOR"
+        assert writer.calls[2] == ("close_library", None)
         assert isinstance(geom, GeomGroup)
         assert isinstance(geom.group[-1], sp.Text)
 
