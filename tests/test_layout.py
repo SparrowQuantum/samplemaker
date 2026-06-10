@@ -13,7 +13,7 @@ from samplemaker import (
 )
 from samplemaker.baselib.devices import CrossMark
 from samplemaker.makers import make_rect
-from samplemaker.shapes import ARef, GeomGroup, SRef
+from samplemaker.shapes import ARef, GeomGroup, Poly, SRef, Text
 
 
 @pytest.fixture
@@ -102,6 +102,107 @@ def assert_cache_pools(
 def assert_pool_references(cellname: str, expected: set[str]) -> None:
     assert cellname in LayoutPool
     assert LayoutPool[cellname].get_sref_list() == expected
+
+
+class TestDeviceTableAnnotations:
+    def test_annotations_init_defaults(self):
+        ann = smlay.DeviceTableAnnotations(
+            rowfmt="row %I %J",
+            colfmt="col %I %J",
+            xoff=11,
+            yoff=22,
+            rowvars=("rv",),
+            colvars=("cv",),
+        )
+
+        assert ann.rowfmt == "row %I %J"
+        assert ann.colfmt == "col %I %J"
+        assert ann.xoff == 11
+        assert ann.yoff == 22
+        assert ann.rowvars == ("rv",)
+        assert ann.colvars == ("cv",)
+        assert ann.text_width == 1
+        assert ann.text_height == 10
+        assert ann.left is True
+        assert ann.right is True
+        assert ann.above is True
+        assert ann.below is True
+        assert ann.to_poly is True
+
+    def test_set_poly_text_toggles_output_type(self):
+        ann = smlay.DeviceTableAnnotations(
+            rowfmt="R",
+            colfmt="C",
+            xoff=2,
+            yoff=3,
+            rowvars=("rv",),
+            colvars=("cv",),
+        )
+        rowdict = {"rv": [1.0]}
+        coldict = {"cv": [2.0]}
+
+        geom_poly = ann.render(0, 0, 1, 1, 0, 0, rowdict, coldict)
+        assert not any(isinstance(elem, Text) for elem in geom_poly.group)
+        assert any(isinstance(elem, Poly) for elem in geom_poly.group)
+
+        ann.set_poly_text(False)
+        geom_text = ann.render(0, 0, 1, 1, 0, 0, rowdict, coldict)
+        assert all(isinstance(elem, Text) for elem in geom_text.group)
+
+    def test_render_replaces_tokens_rounds_values_and_places_expected_edges(self):
+        ann = smlay.DeviceTableAnnotations(
+            rowfmt="ROW i=%I j=%J c=%C0 r=%R0",
+            colfmt="COL i=%I j=%J c=%C0 r=%R0",
+            xoff=1,
+            yoff=2,
+            rowvars=("rv",),
+            colvars=("cv",),
+        )
+        ann.set_poly_text(False)
+
+        rowdict = {"rv": [1.23456, 5.0]}
+        coldict = {"cv": [9.87654, 8.0]}
+        geom = ann.render(0, 0, 2, 2, 10, 20, rowdict, coldict)
+
+        assert len(geom.group) == 2
+        texts = [elem for elem in geom.group if isinstance(elem, Text)]
+        assert len(texts) == 2
+
+        left = [t for t in texts if t.x0 == pytest.approx(9) and t.y0 == pytest.approx(20)]
+        below = [
+            t for t in texts if t.x0 == pytest.approx(10) and t.y0 == pytest.approx(18)
+        ]
+        assert len(left) == 1
+        assert len(below) == 1
+
+        assert left[0].text == "ROW i=0 j=0 c=9.877 r=1.235"
+        assert below[0].text == "COL i=0 j=0 c=9.877 r=1.235"
+
+    def test_render_only_emits_annotations_on_configured_edges(self):
+        ann = smlay.DeviceTableAnnotations(
+            rowfmt="R",
+            colfmt="C",
+            xoff=1,
+            yoff=1,
+            rowvars=("rv",),
+            colvars=("cv",),
+        )
+        ann.set_poly_text(False)
+        rowdict = {"rv": [1.0, 2.0, 3.0]}
+        coldict = {"cv": [10.0, 20.0, 30.0]}
+
+        interior = ann.render(1, 1, 3, 3, 0, 0, rowdict, coldict)
+        assert len(interior.group) == 0
+
+        top_right = ann.render(2, 2, 3, 3, 0, 0, rowdict, coldict)
+        assert len(top_right.group) == 2
+
+        ann.left = False
+        ann.right = False
+        ann.above = True
+        ann.below = False
+        top_right_above_only = ann.render(2, 2, 3, 3, 0, 0, rowdict, coldict)
+        assert len(top_right_above_only.group) == 1
 
 
 class TestMarker:
