@@ -2,9 +2,106 @@
 
 import pytest
 
+import samplemaker.devices as smdev
 import samplemaker.layout as smlay
+from samplemaker import (
+    LayoutPool,
+    _BoundingBoxPool,
+    _DeviceCountPool,
+    _DeviceLocalParamPool,
+    _DevicePool,
+)
 from samplemaker.baselib.devices import CrossMark
+from samplemaker.makers import make_rect
 from samplemaker.shapes import ARef, GeomGroup, SRef
+
+
+@pytest.fixture
+def simple_rect_geometry() -> GeomGroup:
+    """Small helper geometry used by several layout tests."""
+    return make_rect(0, 0, 10, 6, numkey=5)
+
+
+@pytest.fixture
+def dummy_connector_device(
+    dummy_device_list: dict[str, type[smdev.Device]],
+) -> smdev.Device:
+    """Build a connector-compatible device from the shared dummy registry."""
+    _ = dummy_device_list
+    return smdev.Device.build_registered("TESTLIB_DUMMY_CONNECTOR")
+
+
+class FakeGDSWriter:
+    """Simple writer double used to assert Mask export call sequencing."""
+
+    def __init__(self):
+        self.calls: list[tuple[object, ...]] = []
+
+    def open_library(self, filename: str) -> None:
+        self.calls.append(("open_library", filename))
+
+    def write_pool(self, pool: dict[str, GeomGroup]) -> None:
+        self.calls.append(("write_pool", sorted(pool.keys())))
+
+    def write_pool_use_cache(
+        self, pool: dict[str, GeomGroup], celldata: dict[str, bytes]
+    ) -> None:
+        self.calls.append(
+            ("write_pool_use_cache", sorted(pool.keys()), sorted(celldata.keys()))
+        )
+
+    def close_library(self) -> None:
+        self.calls.append(("close_library", None))
+
+
+class FakeGDSReader:
+    """Simple reader double used to control Mask cache import/export paths."""
+
+    def __init__(
+        self,
+        celldata: dict[str, bytes] | None = None,
+        quick_read_exception: Exception | None = None,
+    ):
+        self.celldata = {} if celldata is None else dict(celldata)
+        self.quick_read_exception = quick_read_exception
+        self.quick_read_calls: list[str] = []
+        self.cell_geometries: dict[str, GeomGroup] = {}
+
+    def quick_read(self, filename: str) -> None:
+        self.quick_read_calls.append(filename)
+        if self.quick_read_exception is not None:
+            raise self.quick_read_exception
+
+    def get_cell(self, cellname: str) -> GeomGroup:
+        return self.cell_geometries[cellname]
+
+
+@pytest.fixture
+def layout_pool_snapshot() -> dict[str, GeomGroup]:
+    """Return a shallow copy of the current LayoutPool for comparison assertions."""
+    return LayoutPool.copy()
+
+
+def assert_pool_keys(expected_keys: set[str]) -> None:
+    assert set(LayoutPool.keys()) == expected_keys
+
+
+def assert_cache_pools(
+    *,
+    device_pool_keys: set[str],
+    local_param_pool_keys: set[str],
+    device_count_pool_keys: set[str],
+    bbox_pool_keys: set[str],
+) -> None:
+    assert set(_DevicePool.keys()) == device_pool_keys
+    assert set(_DeviceLocalParamPool.keys()) == local_param_pool_keys
+    assert set(_DeviceCountPool.keys()) == device_count_pool_keys
+    assert set(_BoundingBoxPool.keys()) == bbox_pool_keys
+
+
+def assert_pool_references(cellname: str, expected: set[str]) -> None:
+    assert cellname in LayoutPool
+    assert LayoutPool[cellname].get_sref_list() == expected
 
 
 class TestMarker:
