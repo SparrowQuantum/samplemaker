@@ -12,7 +12,7 @@ from samplemaker import (
     _DevicePool,
 )
 from samplemaker.baselib.devices import CrossMark
-from samplemaker.makers import make_rect
+from samplemaker.makers import make_rect, make_sref
 from samplemaker.shapes import ARef, GeomGroup, Poly, SRef, Text
 from tests import dummy as dm
 
@@ -397,6 +397,235 @@ class TestDeviceTable:
 
         assert dt.pos_xy[0][1][0] > dt.pos_xy[0][0][0]
         assert dt.pos_xy[1][0][1] > dt.pos_xy[0][0][1]
+
+
+class TestMask:
+    @pytest.fixture
+    def table_device(
+        self,
+        dummy_device_list: dict[str, type[smdev.Device]],
+    ) -> smdev.Device:
+        _ = dummy_device_list
+        return smdev.Device.build_registered("TESTLIB_DUMMY")
+
+    def test_mask_init_and_clear_reset_pools_and_basic_elements(self):
+        LayoutPool["JUNK"] = GeomGroup()
+        _DevicePool["hash"] = "JUNK"
+        _DeviceLocalParamPool["hash"] = {}
+        _DeviceCountPool["JUNK"] = 1
+        _BoundingBoxPool["JUNK"] = object()
+
+        mask = smlay.Mask("phase4")
+        assert mask.name == "phase4"
+        assert mask.mainsymbol == "CELL00"
+        assert mask.cache is False
+        assert mask.writefields == []
+        assert "_CIRCLE" in LayoutPool
+
+        mask.writefields.append((10, 0, 0, 1, 0))
+        LayoutPool["ANOTHER"] = GeomGroup()
+        mask.clear()
+
+        assert "_CIRCLE" in LayoutPool
+        assert "ANOTHER" not in LayoutPool
+        assert mask.writefields == []
+        assert_cache_pools(
+            device_pool_keys=set(),
+            local_param_pool_keys=set(),
+            device_count_pool_keys=set(),
+            bbox_pool_keys={"_CIRCLE"},
+        )
+
+    def test_add_to_main_cell_add_cell_and_get_cell(self, simple_rect_geometry):
+        mask = smlay.Mask("phase4_cells")
+        g1 = simple_rect_geometry.copy()
+        g2 = simple_rect_geometry.copy()
+
+        mask.addToMainCell(g1)
+        mask.addToMainCell(g2)
+        assert mask.mainsymbol in LayoutPool
+        assert len(LayoutPool[mask.mainsymbol].group) == 2
+
+        mask.addCell("EXTRA", simple_rect_geometry.copy())
+        got = mask.getCell("EXTRA")
+        assert isinstance(got, GeomGroup)
+        assert got is LayoutPool["EXTRA"]
+
+        with pytest.raises(ValueError, match="does not exist"):
+            mask.getCell("MISSING")
+
+    def test_add_markers_add_writefield_and_writefield_grid(self):
+        mask = smlay.Mask("phase4_wf")
+        marker = smlay.MarkerSet("M1", CrossMark.build(), x0=2, y0=3, mset=2)
+        mask.addMarkers(marker)
+        assert mask.mainsymbol in LayoutPool
+        assert len(LayoutPool[mask.mainsymbol].group) == 1
+        assert isinstance(LayoutPool[mask.mainsymbol].group[0], ARef)
+
+        mask.addWriteField(100, 10, 20, passes=2, shift=0.5)
+        assert mask.writefields[-1] == (100, 10, 20, 2, 0.5)
+
+        mask2 = smlay.Mask("phase4_wf_grid")
+        mask2.addWriteFieldGrid(50, 0, 0, 2, 3, passes=3, shift=1.5)
+        assert len(mask2.writefields) == 6
+        assert mask2.mainsymbol in LayoutPool
+        assert len(LayoutPool[mask2.mainsymbol].group) == 6
+
+    def test_add_device_table_centers_geometry_in_main_and_named_cell(
+        self,
+        table_device,
+    ):
+        dt = smlay.DeviceTable(table_device, 1, 1, {}, {})
+        dt.use_references = False
+        mask = smlay.Mask("phase4_table")
+
+        mask.addDeviceTable(dt, x0=100, y0=200)
+        bb_main = LayoutPool[mask.mainsymbol].bounding_box()
+        assert bb_main.cx() == pytest.approx(100)
+        assert bb_main.cy() == pytest.approx(200)
+
+        dt2 = smlay.DeviceTable(table_device, 1, 1, {}, {})
+        dt2.use_references = False
+        mask.addDeviceTable(dt2, x0=10, y0=20, cell="TABLE_CELL")
+        assert "TABLE_CELL" in LayoutPool
+        bb_cell = LayoutPool["TABLE_CELL"].bounding_box()
+        assert bb_cell.cx() == pytest.approx(10)
+        assert bb_cell.cy() == pytest.approx(20)
+
+    def test_set_cache_triggers_import_only_when_true(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        mask = smlay.Mask("phase4_cache")
+        calls: list[bool] = []
+
+        def _capture_import() -> None:
+            calls.append(True)
+
+        monkeypatch.setattr(mask, "_Mask__import_cache", _capture_import)
+
+        mask.set_cache(False)
+        assert mask.cache is False
+        assert calls == []
+
+        mask.set_cache(True)
+        assert mask.cache is True
+        assert calls == [True]
+
+    def test_export_gds_non_cache_cleans_unreferenced_and_writes_pool(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        created_writers: list[FakeGDSWriter] = []
+
+        def _writer_factory() -> FakeGDSWriter:
+            w = FakeGDSWriter()
+            created_writers.append(w)
+            return w
+
+        monkeypatch.setattr(smlay, "GDSWriter", _writer_factory)
+
+        mask = smlay.Mask("phase4_export")
+        child = make_rect(0, 0, 5, 5)
+        unref = make_rect(0, 0, 1, 1)
+        mask.addCell("CHILD", child)
+        mask.addCell("UNREF", unref)
+        main = make_sref(0, 0, "CHILD", LayoutPool["CHILD"])
+        mask.addToMainCell(main)
+
+        _DevicePool["h_keep"] = "CHILD"
+        _DevicePool["h_drop"] = "UNREF"
+        _DeviceLocalParamPool["h_keep"] = {}
+        _DeviceLocalParamPool["h_drop"] = {}
+
+        mask.exportGDS()
+
+        assert "UNREF" not in LayoutPool
+        assert "CHILD" in LayoutPool
+        assert "h_drop" not in _DevicePool
+        assert "h_drop" not in _DeviceLocalParamPool
+        assert "h_keep" in _DevicePool
+
+        writer = created_writers[0]
+        assert writer.calls[0] == ("open_library", "phase4_export.gds")
+        assert writer.calls[1][0] == "write_pool"
+        assert writer.calls[2] == ("close_library", None)
+
+    def test_export_gds_cache_success_uses_reader_cache_and_exports_cache(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        created_writers: list[FakeGDSWriter] = []
+        fake_reader = FakeGDSReader(celldata={"CELL00": b"x", "OLD": b"y"})
+        export_cache_calls: list[bool] = []
+
+        def _writer_factory() -> FakeGDSWriter:
+            w = FakeGDSWriter()
+            created_writers.append(w)
+            return w
+
+        monkeypatch.setattr(smlay, "GDSWriter", _writer_factory)
+        monkeypatch.setattr(smlay, "GDSReader", lambda: fake_reader)
+
+        mask = smlay.Mask("phase4_cache_export")
+        mask.addToMainCell(make_rect(0, 0, 2, 2))
+        mask.cache = True
+
+        def _capture_export_cache() -> None:
+            export_cache_calls.append(True)
+
+        monkeypatch.setattr(mask, "_Mask__export_cache", _capture_export_cache)
+
+        mask.exportGDS()
+
+        assert fake_reader.quick_read_calls == ["phase4_cache_export.gds"]
+        writer = created_writers[0]
+        assert writer.calls[1][0] == "write_pool_use_cache"
+        cached_cells = writer.calls[1][2]
+        assert isinstance(cached_cells, list)
+        assert "CELL00" not in cached_cells
+        assert export_cache_calls == [True]
+
+    def test_import_gds_single_top_candidate_sets_mainsymbol_and_sref_groups(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        fake_reader = FakeGDSReader(celldata={"TOP": b"", "SUB": b""})
+        sub = make_rect(0, 0, 5, 5)
+        top = make_sref(0, 0, "SUB", GeomGroup())
+        fake_reader.cell_geometries["TOP"] = top
+        fake_reader.cell_geometries["SUB"] = sub
+        monkeypatch.setattr(smlay, "GDSReader", lambda: fake_reader)
+
+        mask = smlay.Mask("phase4_import_single")
+        mask.importGDS("fake.gds")
+
+        assert mask.mainsymbol == "TOP"
+        sref = LayoutPool["TOP"].group[0]
+        assert isinstance(sref, SRef)
+        assert sref.group is LayoutPool["SUB"]
+
+    def test_import_gds_multiple_candidates_selects_one_with_most_subrefs(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        fake_reader = FakeGDSReader(
+            celldata={"A": b"", "B": b"", "C": b"", "D": b"", "E": b""}
+        )
+        fake_reader.cell_geometries["B"] = make_rect(0, 0, 1, 1)
+        fake_reader.cell_geometries["C"] = make_rect(0, 0, 1, 1)
+        fake_reader.cell_geometries["E"] = make_rect(0, 0, 1, 1)
+        fake_reader.cell_geometries["A"] = make_sref(0, 0, "B", GeomGroup()) + make_sref(
+            0, 0, "C", GeomGroup()
+        )
+        fake_reader.cell_geometries["D"] = make_sref(0, 0, "E", GeomGroup())
+
+        monkeypatch.setattr(smlay, "GDSReader", lambda: fake_reader)
+
+        mask = smlay.Mask("phase4_import_multi")
+        mask.importGDS("fake.gds")
+
+        assert mask.mainsymbol == "A"
 
 
 class TestMarker:
