@@ -1,7 +1,7 @@
 """Dummy devices for testing purposes."""
 
 import samplemaker.devices as smdev
-from samplemaker.baselib.waveguides import BaseWaveguidePort
+from samplemaker.baselib.waveguides import BaseWaveguidePort, BaseWaveguideSequencer
 from samplemaker.makers import make_rect
 from samplemaker.shapes import GeomGroup
 
@@ -75,4 +75,33 @@ class DummyConnectorDevice(smdev.Device):
         p = self.get_params()
         rect = make_rect(0, 0, p["length"], 1, numkey=4)
         self.addlocalport(DummyConnectorPort(0, 0, True, True, name="io"))
+        return rect
+
+
+class DummyTwoPortDevice(smdev.Device):
+    def initialize(self) -> None:
+        self.set_name("TESTLIB_TWO_PORT")
+        self.set_description("Simple test device with two ports")
+
+        # Special attribute _seq. Read/modified by Device.run()
+        # as well as sequencers calling this device.
+        self._seq = BaseWaveguideSequencer([])
+
+    def parameters(self) -> None:
+        self.addparameter(
+            param_name="length",
+            default_value=10.0,
+            param_description="Length of test geometry",
+            param_type=float,
+        )
+
+    def geom(self) -> GeomGroup:
+        p = self.get_params()
+        rect = make_rect(0, 0, p["length"], p["length"], numkey=1)
+
+        # p1: West facing, p2: North facing
+        p1 = DummyConnectorPort(0, 0, True, False, name="p1")
+        p2 = DummyConnectorPort(p["length"], p["length"], False, True, name="p2")
+        self.addlocalport(p1)
+        self.addlocalport(p2)
         return rect

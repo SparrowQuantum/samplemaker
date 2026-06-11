@@ -53,4 +53,8 @@ def dummy_device_list(
     dev.initialize()
     default_device_list[dev._name] = dm.DummyConnectorDevice
 
+    dummy_two_port_dev = dm.DummyTwoPortDevice()
+    dummy_two_port_dev.initialize()
+    default_device_list[dummy_two_port_dev._name] = dm.DummyTwoPortDevice
+
     return default_device_list
