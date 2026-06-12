@@ -1,5 +1,8 @@
 """Unit tests for the samplemaker.layout module."""
 
+import os
+from typing import Generator
+
 import pytest
 
 import samplemaker.devices as smdev
@@ -13,15 +16,27 @@ from samplemaker import (
 )
 from samplemaker.baselib.devices import CrossMark
 from samplemaker.makers import make_rect, make_sref
-from samplemaker.shapes import ARef, GeomGroup, Poly, SRef, Text
+from samplemaker.shapes import ARef, Box, GeomGroup, Poly, SRef, Text
 from tests import dummy as dm
 from tests.fakes import FakeGDSReader, FakeGDSWriter
+from pathlib import Path
 
 
 @pytest.fixture
 def simple_rect_geometry() -> GeomGroup:
     """Small helper geometry used by several layout tests."""
     return make_rect(0, 0, 10, 6, numkey=5)
+
+
+@pytest.fixture
+def tmp_cwd_dir(tmp_path: Path) -> Generator[Path, None, None]:
+    """Temporarily change the current working directory to a temporary path."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+        yield tmp_path
+    finally:
+        os.chdir(original_cwd)
 
 
 class TestMarker:
@@ -72,28 +87,28 @@ class TestMarkerSet:
         mset = 2
         xdist = 200
         ydist = 300
-        marker_set = smlay.MarkerSet(name, dev, x0, y0, mset, xdist, ydist)
+        markerset = smlay.MarkerSet(name, dev, x0, y0, mset, xdist, ydist)
         assert issubclass(smlay.MarkerSet, smlay.Marker)
-        assert marker_set.name == name
-        assert marker_set.dev == dev
-        assert marker_set.x0 == x0
-        assert marker_set.y0 == y0
-        assert marker_set.mset == mset
-        assert marker_set.xdist == xdist
-        assert marker_set.ydist == ydist
+        assert markerset.name == name
+        assert markerset.dev == dev
+        assert markerset.x0 == x0
+        assert markerset.y0 == y0
+        assert markerset.mset == mset
+        assert markerset.xdist == xdist
+        assert markerset.ydist == ydist
 
     def test_markerset_inits_default_attributes(self):
         name = "TestMarkerSet"
         dev = CrossMark.build()
 
-        marker_set = smlay.MarkerSet(name, dev)
-        assert marker_set.name == name
-        assert marker_set.dev == dev
-        assert marker_set.y0 == 0
-        assert marker_set.x0 == 0
-        assert marker_set.mset == 4
-        assert marker_set.xdist == 1000
-        assert marker_set.ydist == 1000
+        markerset = smlay.MarkerSet(name, dev)
+        assert markerset.name == name
+        assert markerset.dev == dev
+        assert markerset.y0 == 0
+        assert markerset.x0 == 0
+        assert markerset.mset == 4
+        assert markerset.xdist == 1000
+        assert markerset.ydist == 1000
 
     @pytest.mark.xfail(reason="Invalid mset silently ignored", strict=True)
     def test_markerset_init_raises_on_invalid_mset(self):
@@ -114,8 +129,8 @@ class TestMarkerSet:
         mset = 1
         xdist = 200
         ydist = 300
-        marker_set = smlay.MarkerSet(name, dev, x0, y0, mset, xdist, ydist)
-        g = marker_set.get_geom()
+        markerset = smlay.MarkerSet(name, dev, x0, y0, mset, xdist, ydist)
+        g = markerset.get_geom()
         assert dev.use_references is True
         assert isinstance(g, GeomGroup)
         assert len(g.group) == 1
@@ -135,8 +150,8 @@ class TestMarkerSet:
         mset = 2
         xdist = 200
         ydist = 300
-        marker_set = smlay.MarkerSet(name, dev, x0, y0, mset, xdist, ydist)
-        g = marker_set.get_geom()
+        markerset = smlay.MarkerSet(name, dev, x0, y0, mset, xdist, ydist)
+        g = markerset.get_geom()
         assert dev.use_references is True
         assert isinstance(g, GeomGroup)
         assert len(g.group) == 1
@@ -161,8 +176,8 @@ class TestMarkerSet:
         mset = 4
         xdist = 200
         ydist = 300
-        marker_set = smlay.MarkerSet(name, dev, x0, y0, mset, xdist, ydist)
-        g = marker_set.get_geom()
+        markerset = smlay.MarkerSet(name, dev, x0, y0, mset, xdist, ydist)
+        g = markerset.get_geom()
         assert dev.use_references is True
         assert isinstance(g, GeomGroup)
         assert len(g.group) == 1
@@ -578,33 +593,39 @@ class TestMask:
         assert set(_BoundingBoxPool.keys()) == {"_CIRCLE"}
 
     def test_add_to_main_cell_add_cell_and_get_cell(self, simple_rect_geometry):
-        mask = smlay.Mask("test_cells")
+        themask = smlay.Mask("test_cells")
         g1 = simple_rect_geometry.copy()
         g2 = simple_rect_geometry.copy()
 
-        mask.addToMainCell(g1)
-        mask.addToMainCell(g2)
-        assert mask.mainsymbol in LayoutPool
-        assert len(LayoutPool[mask.mainsymbol].group) == 2
+        themask.addToMainCell(g1)
+        themask.addToMainCell(g2)
+        assert themask.mainsymbol in LayoutPool
+        assert len(LayoutPool[themask.mainsymbol].group) == 2
 
-        mask.addCell("EXTRA", simple_rect_geometry.copy())
-        cell = mask.getCell("EXTRA")
+        themask.addCell("EXTRA", simple_rect_geometry.copy())
+        cell = themask.getCell("EXTRA")
         assert isinstance(cell, GeomGroup)
         assert cell is LayoutPool["EXTRA"]
 
         with pytest.raises(ValueError, match="does not exist"):
-            mask.getCell("MISSING")
+            themask.getCell("MISSING")
 
     def test_add_markers_add_writefield_and_writefield_grid(self):
-        mask = smlay.Mask("test_wf")
-        marker = smlay.MarkerSet("M1", CrossMark.build(), x0=2, y0=3, mset=2)
-        mask.addMarkers(marker)
-        assert mask.mainsymbol in LayoutPool
-        assert len(LayoutPool[mask.mainsymbol].group) == 1
-        assert isinstance(LayoutPool[mask.mainsymbol].group[0], ARef)
+        mask1 = smlay.Mask("test_wf")
+        markerset1 = smlay.MarkerSet("M1", CrossMark.build(), x0=2, y0=3, mset=2)
+        mask1.addMarkers(markerset1)
+        assert mask1.mainsymbol in LayoutPool
+        assert len(LayoutPool[mask1.mainsymbol].group) == 1
+        assert isinstance(LayoutPool[mask1.mainsymbol].group[0], ARef)
 
-        mask.addWriteField(500, 10, 20, passes=2, shift=0.5)
-        assert mask.writefields[-1] == (500, 10, 20, 2, 0.5)
+        markerset2 = smlay.MarkerSet("M2", CrossMark.build(), x0=5, y0=6, mset=4)
+        mask1.addMarkers(markerset2)
+        assert mask1.mainsymbol in LayoutPool
+        assert len(LayoutPool[mask1.mainsymbol].group) == 2
+        assert isinstance(LayoutPool[mask1.mainsymbol].group[1], ARef)
+
+        mask1.addWriteField(500, 10, 20, passes=2, shift=0.5)
+        assert mask1.writefields[-1] == (500, 10, 20, 2, 0.5)
 
         mask2 = smlay.Mask("test_wf_grid")
         mask2.addWriteFieldGrid(50, 0, 0, 2, 3, passes=3, shift=1.5)
@@ -616,15 +637,15 @@ class TestMask:
         self, dummy_device
     ):
         tab1 = smlay.DeviceTable(dummy_device, 1, 1, {}, {})
-        mask = smlay.Mask("test_table")
+        themask = smlay.Mask("test_table")
 
-        mask.addDeviceTable(tab1, x0=100, y0=200)
-        bb_main = LayoutPool[mask.mainsymbol].bounding_box()
+        themask.addDeviceTable(tab1, x0=100, y0=200)
+        bb_main = LayoutPool[themask.mainsymbol].bounding_box()
         assert bb_main.cx() == pytest.approx(100)
         assert bb_main.cy() == pytest.approx(200)
 
         tab2 = smlay.DeviceTable(dummy_device, 1, 1, {}, {})
-        mask.addDeviceTable(tab2, x0=10, y0=20, cell="TABLE_CELL")
+        themask.addDeviceTable(tab2, x0=10, y0=20, cell="TABLE_CELL")
         assert "TABLE_CELL" in LayoutPool
         bb_cell = LayoutPool["TABLE_CELL"].bounding_box()
         assert bb_cell.cx() == pytest.approx(10)
@@ -633,20 +654,20 @@ class TestMask:
     def test_set_cache_triggers_import_only_when_true(
         self, monkeypatch: pytest.MonkeyPatch
     ):
-        mask = smlay.Mask("test_cache")
+        themask = smlay.Mask("test_cache")
         calls: list[bool] = []
 
         def _capture_import() -> None:
             calls.append(True)
 
-        monkeypatch.setattr(mask, "_Mask__import_cache", _capture_import)
+        monkeypatch.setattr(themask, "_Mask__import_cache", _capture_import)
 
-        mask.set_cache(False)
-        assert mask.cache is False
+        themask.set_cache(False)
+        assert themask.cache is False
         assert calls == []
 
-        mask.set_cache(True)
-        assert mask.cache is True
+        themask.set_cache(True)
+        assert themask.cache is True
         assert calls == [True]
 
     def test_export_gds_non_cache_cleans_unreferenced_and_writes_pool(
@@ -661,20 +682,20 @@ class TestMask:
 
         monkeypatch.setattr(smlay, "GDSWriter", _writer_factory)
 
-        mask = smlay.Mask("test_export")
+        themask = smlay.Mask("test_export")
         child = make_rect(0, 0, 5, 5)
         unref = make_rect(0, 0, 1, 1)
-        mask.addCell("CHILD", child)
-        mask.addCell("UNREF", unref)
+        themask.addCell("CHILD", child)
+        themask.addCell("UNREF", unref)
         main = make_sref(0, 0, "CHILD", LayoutPool["CHILD"])
-        mask.addToMainCell(main)
+        themask.addToMainCell(main)
 
         _DevicePool["h_keep"] = "CHILD"
         _DevicePool["h_drop"] = "UNREF"
         _DeviceLocalParamPool["h_keep"] = {}
         _DeviceLocalParamPool["h_drop"] = {}
 
-        mask.exportGDS()
+        themask.exportGDS()
 
         assert "UNREF" not in LayoutPool
         assert "CHILD" in LayoutPool
@@ -702,16 +723,16 @@ class TestMask:
         monkeypatch.setattr(smlay, "GDSWriter", _writer_factory)
         monkeypatch.setattr(smlay, "GDSReader", lambda: fake_reader)
 
-        mask = smlay.Mask("test_cache_export")
-        mask.addToMainCell(make_rect(0, 0, 2, 2))
-        mask.cache = True
+        themask = smlay.Mask("test_cache_export")
+        themask.addToMainCell(make_rect(0, 0, 2, 2))
+        themask.cache = True
 
         def _capture_export_cache() -> None:
             export_cache_calls.append(True)
 
-        monkeypatch.setattr(mask, "_Mask__export_cache", _capture_export_cache)
+        monkeypatch.setattr(themask, "_Mask__export_cache", _capture_export_cache)
 
-        mask.exportGDS()
+        themask.exportGDS()
 
         assert fake_reader.quick_read_calls == ["test_cache_export.gds"]
         writer = created_writers[0]
@@ -731,10 +752,10 @@ class TestMask:
         fake_reader.cell_geometries["SUB"] = sub
         monkeypatch.setattr(smlay, "GDSReader", lambda: fake_reader)
 
-        mask = smlay.Mask("test_import_single")
-        mask.importGDS("fake.gds")
+        themask = smlay.Mask("test_import_single")
+        themask.importGDS("fake.gds")
 
-        assert mask.mainsymbol == "TOP"
+        assert themask.mainsymbol == "TOP"
         sref = LayoutPool["TOP"].group[0]
         assert isinstance(sref, SRef)
         assert sref.group is LayoutPool["SUB"]
@@ -755,7 +776,44 @@ class TestMask:
 
         monkeypatch.setattr(smlay, "GDSReader", lambda: fake_reader)
 
-        mask = smlay.Mask("test_import_multi")
-        mask.importGDS("fake.gds")
+        themask = smlay.Mask("test_import_multi")
+        themask.importGDS("fake.gds")
 
-        assert mask.mainsymbol == "A"
+        assert themask.mainsymbol == "A"
+
+    def test_export_import_cache_restores_state(self, tmp_cwd_dir: Path) -> None:
+        _ = tmp_cwd_dir
+        name = "test_cache_restore"
+        themask = smlay.Mask(name)
+        themask.addToMainCell(make_rect(0, 0, 5, 5))
+        themask.addCell("EXTRA", make_rect(0, 0, 1, 1))
+        _DevicePool["h_extra"] = "EXTRA"
+        _DeviceLocalParamPool["h_extra"] = {"param": 42}
+        _DeviceCountPool["EXTRA"] = 1
+        _BoundingBoxPool["EXTRA"] = Box(0, 0, 1, 1)
+
+        themask._Mask__export_cache()
+        expected_filepath = tmp_cwd_dir / f"{name}.cache"
+        assert os.path.isfile(expected_filepath)
+
+        themask.clear()
+        assert "EXTRA" not in LayoutPool
+        assert "h_extra" not in _DevicePool
+        assert "h_extra" not in _DeviceLocalParamPool
+        assert "EXTRA" not in _DeviceCountPool
+        assert "EXTRA" not in _BoundingBoxPool
+
+        themask._Mask__import_cache()
+        assert "EXTRA" in LayoutPool
+        assert "_CIRCLE" in LayoutPool
+        assert _DevicePool["h_extra"] == "EXTRA"
+        assert _DeviceLocalParamPool["h_extra"] == {"param": 42}
+        assert _DeviceCountPool["EXTRA"] == 1
+        assert isinstance(_BoundingBoxPool["EXTRA"], Box)
+        bbox = _BoundingBoxPool["EXTRA"]
+        assert bbox.llx == 0
+        assert bbox.lly == 0
+        assert bbox.width == 1
+        assert bbox.height == 1
+
+        os.remove(expected_filepath)
