@@ -168,7 +168,7 @@ def test_open_structure_and_close_structure_emit_structure_name(
 
 
 def test_write_structure_supports_all_written_shape_types(
-    gds_writer: GDSWriter, layout_pool, tmp_path: Path
+    gds_writer: GDSWriter, layout_pool: dict[str, GeomGroup], tmp_path: Path
 ) -> None:
     output_file = tmp_path / "mixed.gds"
 

@@ -27,7 +27,7 @@ def simple_netlist(
     return smdev.NetList("simple", netlist_entries)
 
 
-def test_incompatible_port_error_subclass():
+def test_incompatible_port_error_subclass() -> None:
     assert issubclass(smdev.IncompatiblePortError, RuntimeError)
 
 

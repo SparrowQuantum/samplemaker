@@ -6,7 +6,7 @@ from samplemaker.shapes import GeomGroup
 class FakeGDSWriter:
     """Flexible GDS writer fake used by multiple test modules."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.calls: list[tuple[object, ...]] = []
 
     def open_library(self, filename: str) -> None:
@@ -36,7 +36,7 @@ class FakeGDSReader:
         self,
         celldata: dict[str, bytes] | None = None,
         quick_read_exception: Exception | None = None,
-    ):
+    ) -> None:
         self.celldata = {} if celldata is None else dict(celldata)
         self.quick_read_exception = quick_read_exception
         self.quick_read_calls: list[str] = []

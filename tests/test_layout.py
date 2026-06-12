@@ -40,7 +40,7 @@ def tmp_cwd_dir(tmp_path: Path) -> Generator[Path, None, None]:
 
 
 class TestMarker:
-    def test_marker_inits_correct_attributes(self):
+    def test_marker_inits_correct_attributes(self) -> None:
         name = "TestMarker"
         dev = CrossMark.build()
         x0 = 10
@@ -51,7 +51,7 @@ class TestMarker:
         assert marker.x0 == x0
         assert marker.y0 == y0
 
-    def test_marker_inits_default_attributes(self):
+    def test_marker_inits_default_attributes(self) -> None:
         name = "TestMarker"
         dev = CrossMark.build()
         marker = smlay.Marker(name, dev)
@@ -60,7 +60,7 @@ class TestMarker:
         assert marker.x0 == 0
         assert marker.y0 == 0
 
-    def test_marker_get_geom(self):
+    def test_marker_get_geom(self) -> None:
         name = "TestMarker"
         dev = CrossMark.build()
         dev.use_references = False
@@ -79,7 +79,7 @@ class TestMarker:
 
 
 class TestMarkerSet:
-    def test_markerset_inits_correct_attributes(self):
+    def test_markerset_inits_correct_attributes(self) -> None:
         name = "TestMarkerSet"
         dev = CrossMark.build()
         x0 = 10
@@ -97,7 +97,7 @@ class TestMarkerSet:
         assert markerset.xdist == xdist
         assert markerset.ydist == ydist
 
-    def test_markerset_inits_default_attributes(self):
+    def test_markerset_inits_default_attributes(self) -> None:
         name = "TestMarkerSet"
         dev = CrossMark.build()
 
@@ -111,7 +111,7 @@ class TestMarkerSet:
         assert markerset.ydist == 1000
 
     @pytest.mark.xfail(reason="Invalid mset silently ignored", strict=True)
-    def test_markerset_init_raises_on_invalid_mset(self):
+    def test_markerset_init_raises_on_invalid_mset(self) -> None:
         name = "TestMarkerSet"
         dev = CrossMark.build()
         with pytest.raises(ValueError):
@@ -120,7 +120,7 @@ class TestMarkerSet:
     @pytest.mark.xfail(
         reason="Geometry is not translated correctly for mset==1", strict=True
     )
-    def test_markerset_get_geom_mset1(self):
+    def test_markerset_get_geom_mset1(self) -> None:
         name = "TestMarkerSet"
         dev = CrossMark.build()
         dev.use_references = False
@@ -141,7 +141,7 @@ class TestMarkerSet:
         assert bb.cx() == pytest.approx(x0)
         assert bb.cy() == pytest.approx(y0)
 
-    def test_markerset_get_geom_mset2(self):
+    def test_markerset_get_geom_mset2(self) -> None:
         name = "TestMarkerSet"
         dev = CrossMark.build()
         dev.use_references = False
@@ -167,7 +167,7 @@ class TestMarkerSet:
         assert aref.bx == 0
         assert aref.by == pytest.approx(ydist)
 
-    def test_markerset_get_geom_mset4(self):
+    def test_markerset_get_geom_mset4(self) -> None:
         name = "TestMarkerSet"
         dev = CrossMark.build()
         dev.use_references = False
@@ -195,7 +195,7 @@ class TestMarkerSet:
 
 
 class TestDeviceTableAnnotations:
-    def test_annotations_init_defaults(self):
+    def test_annotations_init_defaults(self) -> None:
         ann = smlay.DeviceTableAnnotations(
             rowfmt="row %I %J",
             colfmt="col %I %J",
@@ -219,7 +219,7 @@ class TestDeviceTableAnnotations:
         assert ann.below is True
         assert ann.to_poly is True
 
-    def test_annotations_init_sets_all_attributes(self):
+    def test_annotations_init_sets_all_attributes(self) -> None:
         ann = smlay.DeviceTableAnnotations(
             rowfmt="row %I %J",
             colfmt="col %I %J",
@@ -249,7 +249,7 @@ class TestDeviceTableAnnotations:
         assert ann.below is False
         assert ann.to_poly is True
 
-    def test_set_poly_text_toggles_output_type(self):
+    def test_set_poly_text_toggles_output_type(self) -> None:
         ann = smlay.DeviceTableAnnotations(
             rowfmt="R",
             colfmt="C",
@@ -272,7 +272,7 @@ class TestDeviceTableAnnotations:
         assert isinstance(geom_text, GeomGroup)
         assert all(isinstance(elem, Text) for elem in geom_text.group)
 
-    def test_render_correctly_formats_and_places_text(self):
+    def test_render_correctly_formats_and_places_text(self) -> None:
         ann = smlay.DeviceTableAnnotations(
             rowfmt="ROW i=%I j=%J c=%C0 r=%R0",
             colfmt="COL i=%I j=%J c=%C0 r=%R0",
@@ -303,7 +303,7 @@ class TestDeviceTableAnnotations:
         assert left[0].text == "ROW i=0 j=0 c=9.877 r=1.235"
         assert below[0].text == "COL i=0 j=0 c=9.877 r=1.235"
 
-    def test_render_returns_annotations_on_configured_edges(self):
+    def test_render_returns_annotations_on_configured_edges(self) -> None:
         ann = smlay.DeviceTableAnnotations(
             rowfmt="R",
             colfmt="C",
@@ -336,7 +336,7 @@ class TestDeviceTableAnnotations:
 class TestDeviceTable:
     def test_mutators_update_state_and_invalidate_cached_arrays(
         self, dummy_device: smdev.Device
-    ):
+    ) -> None:
         rowvars = {"height": [2.0, 4.0]}
         colvars = {}
         tab = smlay.DeviceTable(dummy_device, 2, 2, rowvars, colvars)
@@ -368,7 +368,9 @@ class TestDeviceTable:
         tab.set_annotations(ann)
         assert tab.annotations is ann
 
-    def test_shift_table_origin_offsets_all_positions(self, dummy_device: smdev.Device):
+    def test_shift_table_origin_offsets_all_positions(
+        self, dummy_device: smdev.Device
+    ) -> None:
         tab = smlay.DeviceTable(dummy_device, 2, 2, {}, {})
         tab.set_table_positions((((0.0, 0.0), (1.0, 1.0)), ((2.0, 2.0), (3.0, 3.0))))
         tab.shift_table_origin(10.0, -5.0)
@@ -377,7 +379,7 @@ class TestDeviceTable:
             ((12.0, -3.0), (13.0, -2.0)),
         )
 
-    def test_regular_returns_expected_coordinate_grid(self):
+    def test_regular_returns_expected_coordinate_grid(self) -> None:
         reg = smlay.DeviceTable.Regular(2, 3, 5.0, 1.0, -2.0, 7.0, x0=100.0, y0=200.0)
         assert reg == (
             ((100.0, 200.0), (105.0, 201.0), (110.0, 202.0)),
@@ -386,7 +388,7 @@ class TestDeviceTable:
 
     def test_get_geometries_builds_table_with_param_sweep(
         self, dummy_device: smdev.Device
-    ):
+    ) -> None:
         rowvars = {"height": [2.0, 4.0]}
         colvars = {"width": [3.0]}
         tab = smlay.DeviceTable(dummy_device, 2, 2, rowvars, colvars)
@@ -406,10 +408,10 @@ class TestDeviceTable:
 
     def test_get_geometries_sets_device_parameters(
         self, dummy_device: smdev.Device, monkeypatch: pytest.MonkeyPatch
-    ):
+    ) -> None:
         captured_params: dict[str, list[float]] = {}
 
-        def _capture_set_param(self, param: str, value: float) -> None:
+        def _capture_set_param(self: smdev.Device, param: str, value: float) -> None:
             if param not in captured_params:
                 captured_params[param] = []
             captured_params[param].append(value)
@@ -427,7 +429,7 @@ class TestDeviceTable:
 
     def test_get_geometries_repeated_call_resets_and_returns_stable_output(
         self, dummy_device: smdev.Device
-    ):
+    ) -> None:
         tab = smlay.DeviceTable(dummy_device, 1, 2, {}, {"width": [5.0, 7.0]})
         tab.set_table_positions((((0.0, 0.0), (12.0, 0.0)),))
 
@@ -440,7 +442,7 @@ class TestDeviceTable:
 
     def test_get_external_ports_returns_copy_with_indexed_names(
         self, dummy_device: smdev.Device
-    ):
+    ) -> None:
         tab = smlay.DeviceTable(dummy_device, 2, 2, {}, {})
         tab.get_geometries()
 
@@ -454,7 +456,7 @@ class TestDeviceTable:
         self,
         dummy_connector_device: smdev.Device,
         monkeypatch: pytest.MonkeyPatch,
-    ):
+    ) -> None:
         captured: list[tuple[float, float, float, float]] = []
 
         def _capture_connector(
@@ -477,9 +479,9 @@ class TestDeviceTable:
 
     def test_get_geometries_raises_on_incompatible_connector_functions(
         self,
-        dummy_device,
+        dummy_device: smdev.Device,
         monkeypatch: pytest.MonkeyPatch,
-    ):
+    ) -> None:
         tab = smlay.DeviceTable(dummy_device, 1, 2, {}, {})
 
         original_build = getattr(tab, "_DeviceTable__build_geomarray")
@@ -500,9 +502,9 @@ class TestDeviceTable:
     @pytest.mark.xfail(reason="Row alignment uses p2.yx typo", strict=True)
     def test_get_geometries_row_alignment_bug_path(
         self,
-        dummy_connector_device,
+        dummy_connector_device: smdev.Device,
         monkeypatch: pytest.MonkeyPatch,
-    ):
+    ) -> None:
         tab = smlay.DeviceTable(dummy_connector_device, 2, 1, {}, {})
         tab.set_table_positions((((0.0, 0.0),), ((10.0, 20.0),)))
         tab.set_linked_ports(row_linkports=(("io", "io"),))
@@ -524,20 +526,20 @@ class TestDeviceTable:
 
     def test_get_geometries_renders_annotations(
         self, dummy_device: smdev.Device, monkeypatch: pytest.MonkeyPatch
-    ):
+    ) -> None:
         indices = []
         coords = []
 
         def _capture_render(
-            self,
+            self: smlay.DeviceTableAnnotations,
             i: int,
             j: int,
             rows: int,
             cols: int,
             x0: int,
             y0: int,
-            rowdict: dict,
-            coldict: dict,
+            rowdict: dict[str, list[float]],
+            coldict: dict[str, list[float]],
         ) -> GeomGroup:
             indices.append((i, j))
             coords.append((x0, y0))
@@ -555,7 +557,7 @@ class TestDeviceTable:
 
     def test_auto_align_produces_non_overlapping_positions(
         self, dummy_device: smdev.Device
-    ):
+    ) -> None:
         rowvars = {"height": [2.0, 6.0]}
         colvars = {"width": [3.0, 9.0]}
         tab = smlay.DeviceTable(dummy_device, 2, 2, rowvars=rowvars, colvars=colvars)
@@ -566,7 +568,7 @@ class TestDeviceTable:
 
 
 class TestMask:
-    def test_mask_init_and_clear_reset_pools_and_basic_elements(self):
+    def test_mask_init_and_clear_reset_pools_and_basic_elements(self) -> None:
         LayoutPool["JUNK"] = GeomGroup()
         _DevicePool["hash"] = "JUNK"
         _DeviceLocalParamPool["hash"] = {}
@@ -592,7 +594,9 @@ class TestMask:
         assert set(_DeviceCountPool.keys()) == set()
         assert set(_BoundingBoxPool.keys()) == {"_CIRCLE"}
 
-    def test_add_to_main_cell_add_cell_and_get_cell(self, simple_rect_geometry):
+    def test_add_to_main_cell_add_cell_and_get_cell(
+        self, simple_rect_geometry: GeomGroup
+    ) -> None:
         themask = smlay.Mask("test_cells")
         g1 = simple_rect_geometry.copy()
         g2 = simple_rect_geometry.copy()
@@ -610,7 +614,7 @@ class TestMask:
         with pytest.raises(ValueError, match="does not exist"):
             themask.getCell("MISSING")
 
-    def test_add_markers_add_writefield_and_writefield_grid(self):
+    def test_add_markers_add_writefield_and_writefield_grid(self) -> None:
         mask1 = smlay.Mask("test_wf")
         markerset1 = smlay.MarkerSet("M1", CrossMark.build(), x0=2, y0=3, mset=2)
         mask1.addMarkers(markerset1)
@@ -634,8 +638,8 @@ class TestMask:
         assert len(LayoutPool[mask2.mainsymbol].group) == 6
 
     def test_add_device_table_centers_geometry_in_main_and_named_cell(
-        self, dummy_device
-    ):
+        self, dummy_device: smdev.Device
+    ) -> None:
         tab1 = smlay.DeviceTable(dummy_device, 1, 1, {}, {})
         themask = smlay.Mask("test_table")
 
@@ -653,7 +657,7 @@ class TestMask:
 
     def test_set_cache_triggers_import_only_when_true(
         self, monkeypatch: pytest.MonkeyPatch
-    ):
+    ) -> None:
         themask = smlay.Mask("test_cache")
         calls: list[bool] = []
 
@@ -672,7 +676,7 @@ class TestMask:
 
     def test_export_gds_non_cache_cleans_unreferenced_and_writes_pool(
         self, monkeypatch: pytest.MonkeyPatch
-    ):
+    ) -> None:
         created_writers: list[FakeGDSWriter] = []
 
         def _writer_factory() -> FakeGDSWriter:
@@ -710,7 +714,7 @@ class TestMask:
 
     def test_export_gds_cache_success_uses_reader_cache_and_exports_cache(
         self, monkeypatch: pytest.MonkeyPatch
-    ):
+    ) -> None:
         created_writers: list[FakeGDSWriter] = []
         fake_reader = FakeGDSReader(celldata={"CELL00": b"x", "OLD": b"y"})
         export_cache_calls: list[bool] = []
@@ -744,7 +748,7 @@ class TestMask:
 
     def test_import_gds_single_top_candidate_sets_mainsymbol_and_sref_groups(
         self, monkeypatch: pytest.MonkeyPatch
-    ):
+    ) -> None:
         fake_reader = FakeGDSReader(celldata={"TOP": b"", "SUB": b""})
         sub = make_rect(0, 0, 5, 5)
         top = make_sref(0, 0, "SUB", GeomGroup())
@@ -762,7 +766,7 @@ class TestMask:
 
     def test_import_gds_multiple_candidates_selects_one_with_most_subrefs(
         self, monkeypatch: pytest.MonkeyPatch
-    ):
+    ) -> None:
         fake_reader = FakeGDSReader(
             celldata={"A": b"", "B": b"", "C": b"", "D": b"", "E": b""}
         )
