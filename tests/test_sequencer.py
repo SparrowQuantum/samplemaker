@@ -214,3 +214,107 @@ class TestDefaultCommandList:
         assert len(res.group) == 1
         assert isinstance(res.group[0], SRef)
         assert devname in res.group[0].cellname
+
+    def test_dev_command_rotates_translates_geometry_correctly(
+        self,
+        dummy_device_list: dict[str, type[smdev.Device]],
+        default_command_list: _DCMD,
+        sequencer_test_state: dict,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _ = dummy_device_list
+        _, fun = default_command_list["DEV"]
+
+        # Rotate around input port (0, 0)
+        expected_x0 = 0
+        expected_y0 = 0
+
+        # Translate input port to state (x, y)
+        expected_dx = sequencer_test_state["x"]
+        expected_dy = sequencer_test_state["y"]
+        expected_angle = sequencer_test_state["a"] - 360
+
+        rotations = []
+        translations = []
+
+        def capture_rotate(self: GeomGroup, x: float, y: float, angle: float) -> None:
+            rotations.append((x, y, angle))
+
+        def capture_translate(self: GeomGroup, dx: float, dy: float) -> None:
+            translations.append((dx, dy))
+
+        monkeypatch.setattr(GeomGroup, "rotate", capture_rotate)
+        monkeypatch.setattr(GeomGroup, "translate", capture_translate)
+
+        devname = "TESTLIB_TWO_PORT"
+        args = [devname, "p1", "p2"]
+        options = {f"dev_{devname}": {"length": 5}}
+        fun(args, sequencer_test_state, options)
+
+        rx, ry, rangle = rotations[-1]
+        tx, ty = translations[-1]
+        assert rx == pytest.approx(expected_x0)
+        assert ry == pytest.approx(expected_y0)
+        assert rangle == pytest.approx(expected_angle)
+        assert tx == pytest.approx(expected_dx)
+        assert ty == pytest.approx(expected_dy)
+
+    def test_dev_command_raises_for_invalid_device(
+        self, default_command_list: _DCMD, sequencer_test_state: dict
+    ) -> None:
+        _, fun = default_command_list["DEV"]
+        devname = "NONEXISTENT_DEVICE"
+        args = [devname, "p1", "p2"]
+        options = {}
+        with pytest.raises(ValueError, match=f"No device found with name {devname}."):
+            fun(args, sequencer_test_state, options)
+
+    def test_dev_command_raises_for_invalid_ports(
+        self,
+        dummy_device_list: dict[str, type[smdev.Device]],
+        default_command_list: _DCMD,
+        sequencer_test_state: dict,
+    ) -> None:
+        _ = dummy_device_list
+        _, fun = default_command_list["DEV"]
+        devname = "TESTLIB_TWO_PORT"
+        args = [devname, "invalid_inport", "invalid_outport"]
+        options = {f"dev_{devname}": {"length": 5}}
+        match = (
+            f"Device {devname} has no port called invalid_inport or invalid_outport."
+        )
+        with pytest.raises(ValueError, match=match):
+            fun(args, sequencer_test_state.copy(), options)
+
+
+def test_default_options_configuration(
+    dummy_device_list: dict[str, type[smdev.Device]],
+) -> None:
+    expected_device_params = {}
+    for devname, devclass in dummy_device_list.items():
+        dev = devclass()
+        dev.parameters()
+        expected_device_params[f"dev_{devname}"] = dev._p
+
+    expected_keys = set(expected_device_params) | {"__no_init__"}
+    options = smseq.default_options()
+    assert set(options) == expected_keys
+    assert options["__no_init__"] is False
+    for key, expected_params in expected_device_params.items():
+        assert options[key] == expected_params
+
+
+def test_init_sequencer_state() -> None:
+    state_obj = smseq.SequencerState()
+    expected_state = {
+        "x": 0,
+        "y": 0,
+        "a": 0,
+        "__OL__": 0,
+        "__XC__": 0,
+        "__YC__": 0,
+        "STORED": [],
+    }
+    assert hasattr(state_obj, "state")
+    assert isinstance(state_obj.state, dict)
+    assert state_obj.state == expected_state
