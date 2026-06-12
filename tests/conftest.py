@@ -25,13 +25,11 @@ def reset_samplemaker() -> None:
 
 @pytest.fixture
 def dummy_device() -> smdev.Device:
-    _ = dummy_device_list
     return dm.DummyDevice.build()
 
 
 @pytest.fixture
 def dummy_connector_device() -> smdev.Device:
-    _ = dummy_device_list
     return dm.DummyConnectorDevice.build()
 
 
