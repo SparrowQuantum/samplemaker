@@ -24,6 +24,16 @@ def reset_samplemaker() -> None:
 
 
 @pytest.fixture
+def dummy_device() -> smdev.Device:
+    return dm.DummyDevice.build()
+
+
+@pytest.fixture
+def dummy_connector_device() -> smdev.Device:
+    return dm.DummyConnectorDevice.build()
+
+
+@pytest.fixture
 def default_device_list() -> Generator[dict[str, type[smdev.Device]], None, None]:
     old_devlist = smdev._DeviceList.copy()
     yield smdev._DeviceList

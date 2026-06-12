@@ -14,7 +14,7 @@ def test_make_dot(x0: float, y0: float) -> None:
     assert dot.y == y0
 
 
-def test_make_poly():
+def test_make_poly() -> None:
     xpts = [0.0, 1.0, 1.0, 0.0]
     ypts = [0.0, 0.0, 1.0, 1.0]
     poly_geom = sm.make_poly(xpts, ypts)
@@ -35,7 +35,7 @@ def test_make_poly():
     assert poly_ypts == pytest.approx(expected_ypts)
 
 
-def test_make_poly_nondefault_layer():
+def test_make_poly_nondefault_layer() -> None:
     xpts = [0.0, 1.0, 1.0, 0.0]
     ypts = [0.0, 0.0, 1.0, 1.0]
     layer = 2
@@ -49,7 +49,7 @@ def test_make_poly_nondefault_layer():
     assert poly.layer == layer
 
 
-def test_make_path():
+def test_make_path() -> None:
     xpts = [0.0, 1.0, 1.0]
     ypts = [0.0, 0.0, 1.0]
     width = 0.5
@@ -67,7 +67,7 @@ def test_make_path():
     assert path.Npts == 3
 
 
-def test_make_path_nondefault_layer():
+def test_make_path_nondefault_layer() -> None:
     xpts = [0.0, 1.0, 1.0]
     ypts = [0.0, 0.0, 1.0]
     width = 0.5
@@ -82,7 +82,7 @@ def test_make_path_nondefault_layer():
     assert path.layer == layer
 
 
-def test_make_path_to_poly():
+def test_make_path_to_poly() -> None:
     xpts = [0.0, 1.0, 1.0]
     ypts = [0.0, 0.0, 1.0]
     width = 0.5
@@ -96,7 +96,7 @@ def test_make_path_to_poly():
     assert poly.layer == 1
 
 
-def test_make_path_to_poly_nondefault_layer():
+def test_make_path_to_poly_nondefault_layer() -> None:
     xpts = [0.0, 1.0, 1.0]
     ypts = [0.0, 0.0, 1.0]
     width = 0.5
@@ -157,7 +157,7 @@ def test_make_text_invalid_numkey_raises() -> None:
         )
 
 
-def test_make_text_to_poly():
+def test_make_text_to_poly() -> None:
     x0 = 0.0
     y0 = 0.0
     text_str = "Hello, World!"
@@ -184,7 +184,7 @@ def test_make_text_to_poly():
     assert bb.lly == pytest.approx(y0 - width / 2)
 
 
-def test_make_sref():
+def test_make_sref() -> None:
     x0 = 1.0
     y0 = -2.0
     cellname = "MY_CELL"
@@ -205,7 +205,7 @@ def test_make_sref():
     assert sref.group == base_geom
 
 
-def test_make_sref_transformed():
+def test_make_sref_transformed() -> None:
     x0 = 1.0
     y0 = -2.0
     cellname = "MY_CELL"

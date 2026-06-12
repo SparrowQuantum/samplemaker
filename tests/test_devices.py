@@ -8,6 +8,7 @@ import pytest
 
 from samplemaker.shapes import GeomGroup
 from tests import dummy as dm
+from tests.fakes import FakeGDSWriter
 
 
 @pytest.fixture
@@ -26,7 +27,7 @@ def simple_netlist(
     return smdev.NetList("simple", netlist_entries)
 
 
-def test_incompatible_port_error_subclass():
+def test_incompatible_port_error_subclass() -> None:
     assert issubclass(smdev.IncompatiblePortError, RuntimeError)
 
 
@@ -153,32 +154,27 @@ class TestDevice:
         assert dev._description == "No description yet"
         assert dev.use_references is True
 
-    def test_build_initializes_device(
-        self, dummy_device_list: dict[str, type[smdev.Device]]
-    ) -> None:
-        _ = dummy_device_list
+    def test_build_initializes_device(self) -> None:
         dev = dm.DummyDevice.build()
 
         assert dev._name == "TESTLIB_DUMMY"
         assert dev._description == "A dummy device for testing purposes."
         assert set(dev._p.keys()) == {"width", "height"}
 
-    def test_name_and_params_affect_hash(self) -> None:
-        dev = dm.DummyDevice.build()
-        h1 = hash(dev)
-        dev.set_param("width", 20.0)
-        h2 = hash(dev)
-        dev.set_name("TESTLIB_DUMMY_MODIFIED")
-        h3 = hash(dev)
+    def test_name_and_params_affect_hash(self, dummy_device: smdev.Device) -> None:
+        h1 = hash(dummy_device)
+        dummy_device.set_param("width", 20.0)
+        h2 = hash(dummy_device)
+        dummy_device.set_name("TESTLIB_DUMMY_MODIFIED")
+        h3 = hash(dummy_device)
         assert h1 != h2 != h3
 
-    def test_sequencer_options_affect_hash(self) -> None:
-        dev = dm.DummyDevice.build()
-        h1 = hash(dev)
-        dev._seq = BaseWaveguideSequencer([])
-        h2 = hash(dev)
-        dev._seq.options["defaultWidth"] += 1.0
-        h3 = hash(dev)
+    def test_sequencer_options_affect_hash(self, dummy_device: smdev.Device) -> None:
+        h1 = hash(dummy_device)
+        dummy_device._seq = BaseWaveguideSequencer([])
+        h2 = hash(dummy_device)
+        dummy_device._seq.options["defaultWidth"] += 1.0
+        h3 = hash(dummy_device)
         assert h1 != h2 != h3
 
     @pytest.mark.parametrize(
@@ -191,84 +187,80 @@ class TestDevice:
         ],
     )
     def test_get_set_angle(
-        self, angle: float, expected_hv: bool, expected_bf: bool
+        self,
+        angle: float,
+        expected_hv: bool,
+        expected_bf: bool,
+        dummy_device: smdev.Device,
     ) -> None:
-        dev = dm.DummyDevice.build()
-        dev.set_angle(angle)
-        dev._hv = expected_hv
-        dev._bf = expected_bf
-        assert dev.angle() == pytest.approx(angle)
+        dummy_device.set_angle(angle)
+        dummy_device._hv = expected_hv
+        dummy_device._bf = expected_bf
+        assert dummy_device.angle() == pytest.approx(angle)
 
-    def test_set_position(self) -> None:
-        dev = dm.DummyDevice.build()
-        dev.set_position(10.0, 20.0)
-        assert dev._x0 == pytest.approx(10.0)
-        assert dev._y0 == pytest.approx(20.0)
+    def test_set_position(self, dummy_device: smdev.Device) -> None:
+        dummy_device.set_position(10.0, 20.0)
+        assert dummy_device._x0 == pytest.approx(10.0)
+        assert dummy_device._y0 == pytest.approx(20.0)
 
-        g = dev.run()
+        g = dummy_device.run()
         bb = g.bounding_box()
         assert bb.llx == pytest.approx(10.0)
         assert bb.cy() == pytest.approx(20.0)
 
-    def test_addparameter_rejects_colon(self) -> None:
-        dev = dm.DummyDevice.build()
+    def test_addparameter_rejects_colon(self, dummy_device: smdev.Device) -> None:
         with pytest.raises(ValueError, match="containing ':'"):
-            dev.addparameter("bad:name", 1.0, "invalid")
+            dummy_device.addparameter("bad:name", 1.0, "invalid")
 
-    def test_addlocalparameter_rejects_colon(self) -> None:
-        dev = dm.DummyDevice.build()
+    def test_addlocalparameter_rejects_colon(self, dummy_device: smdev.Device) -> None:
         with pytest.raises(ValueError, match="containing ':'"):
-            dev.addlocalparameter("bad:name", 1.0, "invalid")
+            dummy_device.addlocalparameter("bad:name", 1.0, "invalid")
 
-    def test_set_param_unknown_raises(self) -> None:
-        dev = dm.DummyDevice.build()
+    def test_set_param_unknown_raises(self, dummy_device: smdev.Device) -> None:
         with pytest.raises(ValueError, match="Could not set parameter"):
-            dev.set_param("does_not_exist", 1)
+            dummy_device.set_param("does_not_exist", 1)
 
-    def test_get_params_casts_and_clips(self) -> None:
-        dev = dm.DummyDevice.build()
-        dev.set_param("width", "1234")
-        dev.set_param("height", -23)
-        p = dev.get_params(cast_types=True, clip_in_range=True)
+    def test_get_params_casts_and_clips(self, dummy_device: smdev.Device) -> None:
+        dummy_device.set_param("width", "1234")
+        dummy_device.set_param("height", -23)
+        p = dummy_device.get_params(cast_types=True, clip_in_range=True)
         assert isinstance(p["width"], float)
         assert p["width"] == pytest.approx(1000.0)
         assert p["height"] == pytest.approx(1.0)
 
-        dev.set_param("width", 5)
-        p = dev.get_params(cast_types=True, clip_in_range=True)
+        dummy_device.set_param("width", 5)
+        p = dummy_device.get_params(cast_types=True, clip_in_range=True)
         assert p["width"] == pytest.approx(5.0)
         assert isinstance(p["width"], float)
 
-        dev.set_param("height", "not a number")
+        dummy_device.set_param("height", "not a number")
         with pytest.raises(ValueError, match="could not convert"):
-            p = dev.get_params(cast_types=True, clip_in_range=True)
+            p = dummy_device.get_params(cast_types=True, clip_in_range=True)
 
-    def test_get_localport_raises_for_missing_port(self) -> None:
-        dev = dm.DummyDevice.build()
+    def test_get_localport_raises_for_missing_port(
+        self, dummy_device: smdev.Device
+    ) -> None:
         with pytest.raises(ValueError, match="Could not find port"):
-            dev.get_localport("missing")
+            dummy_device.get_localport("missing")
 
-    def test_remove_localport(self) -> None:
-        dev = dm.DummyDevice.build()
+    def test_remove_localport(self, dummy_device: smdev.Device) -> None:
         port = BaseWaveguidePort(0, 0, name="test")
-        dev.addlocalport(port)
-        assert "test" in dev._localp["_ports_"]
-        dev.remove_localport("test")
-        assert "test" not in dev._localp["_ports_"]
+        dummy_device.addlocalport(port)
+        assert "test" in dummy_device._localp["_ports_"]
+        dummy_device.remove_localport("test")
+        assert "test" not in dummy_device._localp["_ports_"]
 
     @pytest.mark.xfail(
         strict=True,
         reason="remove_localport should raise for missing port but currently does not",
     )
-    def test_remove_localport_unknown_raises(self) -> None:
-        dev = dm.DummyDevice.build()
+    def test_remove_localport_unknown_raises(self, dummy_device: smdev.Device) -> None:
         with pytest.raises(ValueError, match="Could not find local port"):
-            dev.remove_localport("missing")
+            dummy_device.remove_localport("missing")
 
-    def test_get_port_raises_for_missing_port(self) -> None:
-        dev = dm.DummyDevice.build()
+    def test_get_port_raises_for_missing_port(self, dummy_device: smdev.Device) -> None:
         with pytest.raises(ValueError, match="Could not find port"):
-            dev.get_port("missing")
+            dummy_device.get_port("missing")
 
     def test_build_registered_returns_named_device(
         self, dummy_device_list: dict[str, type[smdev.Device]]
@@ -284,13 +276,12 @@ class TestDevice:
         with pytest.raises(ValueError, match="No device named"):
             smdev.Device.build_registered("UNKNOWN")
 
-    def test_run_use_reference(self) -> None:
-        dev = dm.DummyDevice.build()
-        g = dev.run()
-        assert "in" in dev._ports
+    def test_run_use_reference(self, dummy_device: smdev.Device) -> None:
+        g = dummy_device.run()
+        assert "in" in dummy_device._ports
 
-        lport = dev.get_localport("in")
-        port = dev._ports["in"]
+        lport = dummy_device.get_localport("in")
+        port = dummy_device._ports["in"]
         assert isinstance(lport, BaseWaveguidePort)
         assert isinstance(port, BaseWaveguidePort)
         assert lport is not port  # deepcopy
@@ -304,14 +295,13 @@ class TestDevice:
         assert len(g.group) == 1
         assert isinstance(g.group[0], sp.SRef)
 
-    def test_run_no_reference(self) -> None:
-        dev = dm.DummyDevice.build()
-        dev.use_references = False
-        g = dev.run()
-        assert "in" in dev._ports
+    def test_run_no_reference(self, dummy_device: smdev.Device) -> None:
+        dummy_device.use_references = False
+        g = dummy_device.run()
+        assert "in" in dummy_device._ports
 
-        lport = dev.get_localport("in")
-        port = dev._ports["in"]
+        lport = dummy_device.get_localport("in")
+        port = dummy_device._ports["in"]
         assert isinstance(lport, BaseWaveguidePort)
         assert isinstance(port, BaseWaveguidePort)
         assert lport is not port  # deepcopy
@@ -577,30 +567,26 @@ class TestDeviceLibraryExports:
         _ = dummy_device_list
         output_file = tmp_path / "library.gds"
 
-        calls: dict[str, object] = {}
+        created_writers: list[FakeGDSWriter] = []
 
-        class FakeGDSWriter:
-            def open_library(self, filename: str) -> None:
-                calls["open"] = filename
+        def _writer_factory() -> FakeGDSWriter:
+            writer = FakeGDSWriter()
+            created_writers.append(writer)
+            return writer
 
-            def write_structure(self, devname: str, geom: GeomGroup) -> None:
-                calls["devname"] = devname
-                calls["geom"] = geom
-
-            def close_library(self) -> None:
-                calls["closed"] = True
-
-        monkeypatch.setattr(smdev, "GDSWriter", FakeGDSWriter)
+        monkeypatch.setattr(smdev, "GDSWriter", _writer_factory)
 
         smdev.CreateDeviceLibrary(
             "TESTLIB_DUMMY_CONNECTOR", {"length": 7.0}, str(output_file)
         )
 
-        geom = calls["geom"]
+        writer = created_writers[0]
+        geom = writer.calls[1][2]
 
-        assert calls["open"] == str(output_file)
-        assert calls["devname"] == "TESTLIB_DUMMY_CONNECTOR"
-        assert calls["closed"] is True
+        assert writer.calls[0] == ("open_library", str(output_file))
+        assert writer.calls[1][0] == "write_structure"
+        assert writer.calls[1][1] == "TESTLIB_DUMMY_CONNECTOR"
+        assert writer.calls[2] == ("close_library", None)
         assert isinstance(geom, GeomGroup)
         assert isinstance(geom.group[-1], sp.Text)
 
