@@ -13,7 +13,7 @@ def _site_set(
 ) -> set[tuple[float, float]]:
     rounded_x = np.round(xpts.astype(float), digits)
     rounded_y = np.round(ypts.astype(float), digits)
-    return set(zip(rounded_x.tolist(), rounded_y.tolist(), strict=False))
+    return set(zip(rounded_x.tolist(), rounded_y.tolist(), strict=True))
 
 
 @pytest.fixture
@@ -310,7 +310,7 @@ def test_make_phc_uses_scaled_coordinates_and_translates() -> None:
     g = make_phc(
         crystal=c,
         scaling=2.5,
-        cellparams=[10.0, 100.0],
+        cellparams=[10.0],
         x0=1.0,
         y0=-2.0,
         cellfun=custom_cellfun,
