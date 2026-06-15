@@ -188,11 +188,16 @@ def test_make_phc_uses_scaled_coordinates_and_translates() -> None:
     c = Crystal(
         xpts=[0.0, 2.0],
         ypts=[1.0, -1.0],
-        params=[[1.0, 2.0], [3.0, 4.0]],
+        params=[[1.0, 2.0]],
     )
     calls: list[tuple[float, float, list[float]]] = []
 
-    def custom_cellfun(x: float, y: float, params: list[float]) -> GeomGroup:
+    def custom_cellfun(x: float, y: float, params: list[float] | str) -> GeomGroup | int:
+        if params == "test":
+            return 1
+        elif isinstance(params, str):
+            msg = "Unexpected params value in custom_cellfun."
+            raise ValueError(msg)
         calls.append((x, y, params))
         return sm.make_circle(x, y, params[0], layer=7)
 
@@ -209,10 +214,10 @@ def test_make_phc_uses_scaled_coordinates_and_translates() -> None:
     assert len(calls) == 2
     assert calls[0][0] == pytest.approx(0.0)
     assert calls[0][1] == pytest.approx(2.5)
-    assert calls[0][2] == pytest.approx([10.0, 300.0])
+    assert calls[0][2] == pytest.approx([10.0])
     assert calls[1][0] == pytest.approx(5.0)
     assert calls[1][1] == pytest.approx(-2.5)
-    assert calls[1][2] == pytest.approx([20.0, 400.0])
+    assert calls[1][2] == pytest.approx([20.0])
 
     circles = [shape for shape in g.group if isinstance(shape, Circle)]
     assert len(circles) == 2
@@ -236,7 +241,12 @@ def test_make_phc_inpoly_filters_sites() -> None:
         layer=1,
     )
 
-    def custom_cellfun(x: float, y: float, params: list[float]) -> GeomGroup:
+    def custom_cellfun(x: float, y: float, params: list[float] | str) -> GeomGroup | int:
+        if params == "test":
+            return 1
+        elif isinstance(params, str):
+            msg = "Unexpected params value in custom_cellfun."
+            raise ValueError(msg)
         return sm.make_circle(x, y, params[0], layer=3)
 
     g = make_phc_inpoly(
