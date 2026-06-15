@@ -1,6 +1,7 @@
 """Unit tests for the samplemaker.layout module."""
 
 import os
+from pathlib import Path
 from typing import Generator
 
 import pytest
@@ -19,7 +20,6 @@ from samplemaker.makers import make_rect, make_sref
 from samplemaker.shapes import ARef, Box, GeomGroup, Poly, SRef, Text
 from tests import dummy as dm
 from tests.fakes import FakeGDSReader, FakeGDSWriter
-from pathlib import Path
 
 
 @pytest.fixture

@@ -1,11 +1,11 @@
 import math
 from pathlib import Path
 
-from samplemaker.baselib.waveguides import BaseWaveguidePort, BaseWaveguideSequencer
-import samplemaker.devices as smdev
-import samplemaker.shapes as sp
 import pytest
 
+import samplemaker.devices as smdev
+import samplemaker.shapes as sp
+from samplemaker.baselib.waveguides import BaseWaveguidePort, BaseWaveguideSequencer
 from samplemaker.shapes import GeomGroup
 from tests import dummy as dm
 from tests.fakes import FakeGDSWriter
@@ -594,7 +594,7 @@ class TestDeviceLibraryExports:
         assert txt.x0 == pytest.approx(0)
         assert txt.y0 == pytest.approx(0)
         assert "__PORT__ io E" in txt.text
-        assert "ConnectorPort" in txt.text
+        assert "DummyConnectorPort" in txt.text
 
     def test_export_device_schematics(
         self,
