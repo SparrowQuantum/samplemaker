@@ -8,6 +8,14 @@ from samplemaker.phc import Crystal, make_phc, make_phc_inpoly
 from samplemaker.shapes import Circle, GeomGroup, Poly
 
 
+def _site_set(
+    xpts: np.ndarray, ypts: np.ndarray, digits: int = 9
+) -> set[tuple[float, float]]:
+    rounded_x = np.round(xpts.astype(float), digits)
+    rounded_y = np.round(ypts.astype(float), digits)
+    return set(zip(rounded_x.tolist(), rounded_y.tolist(), strict=False))
+
+
 @pytest.fixture
 def crystal_three_sites() -> Crystal:
     return Crystal(
@@ -104,7 +112,7 @@ def test_add_and_remove_crystal() -> None:
     assert list(c1.params[0]) == pytest.approx([1.0])
 
 
-def test_copy_is_deep(crystal_three_sites: Crystal) -> None:
+def test_crystal_copy_is_deep(crystal_three_sites: Crystal) -> None:
     copied = crystal_three_sites.copy()
     copied.shift_at_index([0], shift_x=5.0, shift_y=6.0)
     copied.param_at_index(index=0, pindex=0, pvalues=999.0)
@@ -129,12 +137,46 @@ def test_triangular_hexagonal_ring_size(N: int) -> None:
     assert c.ypts.size == 6 * N
 
 
+def test_triangular_hexagonal_ring_N1_exact_coordinates() -> None:
+    c = Crystal.triangular_hexagonal(N=1, filled=False)
+    expected = {
+        (1.0, 0.0),
+        (0.5, np.sqrt(3) / 2),
+        (-0.5, np.sqrt(3) / 2),
+        (-1.0, 0.0),
+        (-0.5, -np.sqrt(3) / 2),
+        (0.5, -np.sqrt(3) / 2),
+    }
+    expected_site_set = _site_set(
+        np.array([p[0] for p in expected]), np.array([p[1] for p in expected])
+    )
+
+    assert _site_set(c.xpts, c.ypts) == expected_site_set
+
+
 @pytest.mark.parametrize("N", [1, 2, 3])
 def test_triangular_hexagonal_filled_size(N: int) -> None:
     c = Crystal.triangular_hexagonal(N=N, filled=True)
     expected_points = 1 + 3 * N * (N - 1)
     assert c.xpts.size == expected_points
     assert c.ypts.size == expected_points
+
+
+def test_triangular_hexagonal_filled_N2_exact_coordinates() -> None:
+    c = Crystal.triangular_hexagonal(N=2, filled=True)
+    expected = {
+        (0.0, 0.0),
+        (1.0, 0.0),
+        (0.5, np.sqrt(3) / 2),
+        (-0.5, np.sqrt(3) / 2),
+        (-1.0, 0.0),
+        (-0.5, -np.sqrt(3) / 2),
+        (0.5, -np.sqrt(3) / 2),
+    }
+    expected_site_set = _site_set(
+        np.array([p[0] for p in expected]), np.array([p[1] for p in expected])
+    )
+    assert _site_set(c.xpts, c.ypts) == expected_site_set
 
 
 def test_triangular_box_basic_shape() -> None:
@@ -144,6 +186,28 @@ def test_triangular_box_basic_shape() -> None:
     assert c.params.shape == (2, 13)
     assert np.max(c.ypts) == pytest.approx(np.sqrt(3))
     assert np.min(c.ypts) == pytest.approx(-np.sqrt(3))
+
+
+def test_triangular_box_N1_N1_exact_coordinates() -> None:
+    c = Crystal.triangular_box(Nx=1, Ny=1, Nparams=1)
+    s3 = np.sqrt(3)
+    expected_x1 = [-1.0, 0.0, 1.0]
+    expected_y1 = [-s3, 0.0, s3]
+    expected_x2 = [-0.5, 0.5]
+    expected_y2 = [-s3 / 2, s3 / 2]
+
+    expected: set[tuple[float, float]] = set()
+    for y in expected_y1:
+        for x in expected_x1:
+            expected.add((x, y))
+    for y in expected_y2:
+        for x in expected_x2:
+            expected.add((x, y))
+
+    expected_site_set = _site_set(
+        np.array([p[0] for p in expected]), np.array([p[1] for p in expected])
+    )
+    assert _site_set(c.xpts, c.ypts) == expected_site_set
 
 
 @pytest.mark.xfail(
@@ -165,6 +229,46 @@ def test_triangular_heterophc_is_symmetric_for_integer_Nx() -> None:
     )
     assert np.max(c.xpts) == pytest.approx(-np.min(c.xpts))
     assert c.params.shape[1] == c.xpts.size
+
+
+def test_triangular_heterophc_Ny0_exact_coordinates() -> None:
+    c = Crystal.triangular_heterophc(
+        Nx=4,
+        Ny=0,
+        spacing=[0.8, 1.1],
+        periods=[1, 2],
+        Nparams=1,
+    )
+    expected_x = np.array([-4.0, -3.0, -1.9, -0.8, 0.0, 0.8, 1.9, 3.0, 4.0])
+    expected_y = np.zeros_like(expected_x)
+    assert _site_set(c.xpts, c.ypts) == _site_set(expected_x, expected_y)
+
+
+def test_triangular_heterophc_uniform_spacing_row_structure() -> None:
+    c = Crystal.triangular_heterophc(
+        Nx=2,
+        Ny=1,
+        spacing=[1.0],
+        periods=[1],
+        Nparams=1,
+    )
+
+    s3 = np.sqrt(3)
+    expected: set[tuple[float, float]] = set()
+    x1 = [-2.0, -1.0, 0.0, 1.0, 2.0]
+    x2 = [-1.5, -0.5, 0.5, 1.5]
+
+    for y in (-s3, s3):
+        for x in x1:
+            expected.add((x, y))
+    for y in (-s3 / 2, s3 / 2):
+        for x in x2:
+            expected.add((x, y))
+
+    expected_site_set = _site_set(
+        np.array([p[0] for p in expected]), np.array([p[1] for p in expected])
+    )
+    assert _site_set(c.xpts, c.ypts) == expected_site_set
 
 
 @pytest.mark.xfail(
@@ -192,7 +296,9 @@ def test_make_phc_uses_scaled_coordinates_and_translates() -> None:
     )
     calls: list[tuple[float, float, list[float]]] = []
 
-    def custom_cellfun(x: float, y: float, params: list[float] | str) -> GeomGroup | int:
+    def custom_cellfun(
+        x: float, y: float, params: list[float] | str
+    ) -> GeomGroup | int:
         if params == "test":
             return 1
         elif isinstance(params, str):
@@ -241,7 +347,9 @@ def test_make_phc_inpoly_filters_sites() -> None:
         layer=1,
     )
 
-    def custom_cellfun(x: float, y: float, params: list[float] | str) -> GeomGroup | int:
+    def custom_cellfun(
+        x: float, y: float, params: list[float] | str
+    ) -> GeomGroup | int:
         if params == "test":
             return 1
         elif isinstance(params, str):
