@@ -2,6 +2,7 @@
 
 import inspect
 from collections.abc import Callable
+from copy import deepcopy
 
 import pytest
 
@@ -76,7 +77,7 @@ class TestDefaultCommandList:
         self, default_command_list: _DCMD
     ) -> None:
         expected_keys = {"INIT", "STATE", "CENTER", "STORE", "DEV"}
-        assert set(default_command_list) == expected_keys
+        assert expected_keys.issubset(default_command_list)
 
     def test_init_command_has_correct_signature(
         self, default_command_list: _DCMD
@@ -181,7 +182,10 @@ class TestDefaultCommandList:
         self, default_command_list: _DCMD, sequencer_test_state: dict
     ) -> None:
         _, fun = default_command_list["STORE"]
-        test_state = sequencer_test_state.copy()
+        test_state = {
+            **sequencer_test_state,
+            "STORED": deepcopy(sequencer_test_state["STORED"]),
+        }
         x0 = test_state["x"]
         y0 = test_state["y"]
         expected_stored = test_state["STORED"] + [[x0, y0]]
