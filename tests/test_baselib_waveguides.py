@@ -1,4 +1,5 @@
 """Tests for the base waveguide library in samplemaker.baselib.waveguides."""
+
 import math
 
 import pytest
