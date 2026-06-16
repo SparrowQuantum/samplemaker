@@ -1,7 +1,4 @@
-"""Automatic port-to-port routing functions.
-
-
-"""
+"""Automatic port-to-port routing functions."""
 
 import math
 from copy import deepcopy
@@ -17,7 +14,7 @@ def __connectable_facing(port1: DevicePort, port2: DevicePort, rad: float = 3):
     """This function returns true and a sequence
     if two ports are directly connectable and facing
     each other. The sequence is either a straight line
-    or a cosine bend
+    or a cosine bend.
 
     Parameters
     ----------
@@ -92,7 +89,7 @@ def __connectable_bend(port1: DevicePort, port2: DevicePort, rad: float = 3):
     """This function calculates if two ports can be connected with a single bend
     It calculates the projected intersection of two straight paths and returns
     a sequence that connects the ports. It might sometimes fail if ports are
-    too close
+    too close.
 
     Parameters
     ----------
@@ -145,7 +142,7 @@ def __connectable_bend(port1: DevicePort, port2: DevicePort, rad: float = 3):
 def __connect_step(port1: DevicePort, port2: DevicePort, rad: float = 3):
     """Performs a single connection step, attempts at getting port1 closer to
     port2 by bending left or right or going straight. This connector works
-    well for optical waveguides
+    well for optical waveguides.
 
     Parameters
     ----------

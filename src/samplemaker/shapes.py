@@ -87,7 +87,7 @@ _STENCIL_FONT_PATH = (
 
 class GeomGroup:
     def __init__(self):
-        """Create an empty GeomGroup with no elements
+        """Create an empty GeomGroup with no elements.
 
         Returns
         -------
@@ -97,7 +97,7 @@ class GeomGroup:
         self.group = list()
 
     def __add__(self, other: "GeomGroup") -> "GeomGroup":
-        """Combine two geometries
+        """Combine two geometries.
 
         Parameters
         ----------
@@ -115,7 +115,7 @@ class GeomGroup:
         return gg
 
     def add(self, geom):
-        """Add a shape to the group (deprecated)
+        """Add a shape to the group (deprecated).
 
         Parameters
         ----------
@@ -226,7 +226,7 @@ class GeomGroup:
     def rotate_translate(self, dx: float, dy: float, rot: float):
         """First rotate around 0,0 and then translate by dx,dy.
         It is typically
-        faster than using rotate() followed by translate()
+        faster than using rotate() followed by translate().
 
         Parameters
         ----------
@@ -268,7 +268,7 @@ class GeomGroup:
         return self
 
     def scale(self, x0: float, y0: float, scale_x: float, scale_y: float):
-        """Scale the geometry using x0,y0 as center
+        """Scale the geometry using x0,y0 as center.
 
         Parameters
         ----------
@@ -291,7 +291,7 @@ class GeomGroup:
         return self
 
     def mirrorX(self, x0: float):
-        """Mirror the geometry around x-axis
+        """Mirror the geometry around x-axis.
 
         Parameters
         ----------
@@ -308,7 +308,7 @@ class GeomGroup:
         return self
 
     def mirrorY(self, y0: float):
-        """Mirror the geometry around y-axis
+        """Mirror the geometry around y-axis.
 
         Parameters
         ----------
@@ -353,7 +353,7 @@ class GeomGroup:
         return cnt
 
     def __str__(self):
-        """Display basic geometry information (size and layers)
+        """Display basic geometry information (size and layers).
 
         Returns
         -------
@@ -438,7 +438,7 @@ class GeomGroup:
         return bb
 
     def set_layer(self, layer: int):
-        """Assign a new layer to all the shapes in the geometry
+        """Assign a new layer to all the shapes in the geometry.
 
         Parameters
         ----------
@@ -495,7 +495,7 @@ class GeomGroup:
         return g
 
     def deselect_layers(self, layers: list[int]) -> "GeomGroup":
-        """Create a new GeomGroup containing only shapes that are not in layer list
+        """Create a new GeomGroup containing only shapes that are not in layer list.
 
         Parameters
         ----------
@@ -806,7 +806,7 @@ class GeomGroup:
         return False
 
     def keep_refs_only(self):
-        """Keep only the Sref and Aref (can be used to keep a skeleton of the structure)
+        """Keep only the Sref and Aref (can be used to keep a skeleton of the structure).
 
         Returns
         -------
@@ -835,7 +835,7 @@ class GeomGroup:
         self.group = self.group + polys.group
 
     def boolean_union(self, layer: int):
-        """Perform a full boolean union (OR) of all polygons in the group matching a layer
+        """Perform a full boolean union (OR) of all polygons in the group matching a layer.
 
         All other elements (circles, paths, texts) are ignored unless they have been
         already converted to polygons.
@@ -899,7 +899,7 @@ class GeomGroup:
         """Perform an exclusive-OR operation between the polygons in the calling group
         matching layerA and the polygons in group targetB, matching layerB. All other
         elements (circles, paths, texts) are ignored unless they have been already
-        converted to polygons
+        converted to polygons.
 
         Parameters
         ----------
@@ -932,7 +932,7 @@ class GeomGroup:
         """Perform a full intersection (AND) between the polygons in the calling group
         matching layerA and the polygons in group targetB, matching layerB. All other
         elements (circles, paths, texts) are ignored unless they have been already
-        converted to polygons
+        converted to polygons.
 
         Parameters
         ----------
@@ -1236,7 +1236,7 @@ class Dot:
 
 class Box:
     def __init__(self, llx: float, lly: float, width: float, height: float):
-        """Initialize a box object (not for drawing)
+        """Initialize a box object (not for drawing).
 
         Parameters
         ----------
@@ -1260,7 +1260,7 @@ class Box:
         self.height = height
 
     def cx(self):
-        """The x-coordinate of the box center
+        """The x-coordinate of the box center.
 
         Returns
         -------
@@ -1271,7 +1271,7 @@ class Box:
         return self.llx + self.width / 2
 
     def cy(self):
-        """The y-coordinate of the box center
+        """The y-coordinate of the box center.
 
         Returns
         -------
@@ -1282,7 +1282,7 @@ class Box:
         return self.lly + self.height / 2
 
     def urx(self):
-        """The x-coordinate of the upper-right corner
+        """The x-coordinate of the upper-right corner.
 
         Returns
         -------
@@ -1293,7 +1293,7 @@ class Box:
         return self.llx + self.width
 
     def ury(self):
-        """The y-coordinate of the upper-right corner
+        """The y-coordinate of the upper-right corner.
 
         Returns
         -------
@@ -1304,7 +1304,7 @@ class Box:
         return self.lly + self.height
 
     def combine(self, other: "Box"):
-        """Extend the box to fit another box "other"
+        """Extend the box to fit another box "other".
 
         Parameters
         ----------
@@ -1331,7 +1331,7 @@ class Box:
         self.height = tmp_ury - self.lly
 
     def toPoly(self):
-        """Create a Poly object (not for drawing)
+        """Create a Poly object (not for drawing).
 
         Returns
         -------
@@ -1346,7 +1346,7 @@ class Box:
         )
 
     def toRect(self) -> "GeomGroup":
-        """Create a group with a rectangle (as in make_rect), for drawing
+        """Create a group with a rectangle (as in make_rect), for drawing.
 
         Returns
         -------
@@ -1360,7 +1360,7 @@ class Box:
 
     def get_numkey_point(self, numkey: int) -> tuple:
         """Return a tuple with x,y coordinate of the point matching the numerical
-        keypad (e.g. 5 is the center, 1 is the lower left corner, etc...)
+        keypad (e.g. 5 is the center, 1 is the lower left corner, etc...).
 
 
         Parameters

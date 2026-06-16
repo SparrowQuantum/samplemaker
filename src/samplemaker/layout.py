@@ -106,8 +106,7 @@ from samplemaker.shapes import Box, GeomGroup, SRef
 
 
 class Marker:
-    """Class that defines a single Marker.
-    """
+    """Class that defines a single Marker."""
 
     def __init__(self, name: str, dev: Device, x0: float = 0, y0: float = 0):
         """Marker class initializer. Use this class with custom devices to place a single marker in the layout.
@@ -134,7 +133,7 @@ class Marker:
         self.y0 = y0
 
     def get_geom(self) -> GeomGroup:
-        """Creates the geometry (runs the device) and places it in x0,y0
+        """Creates the geometry (runs the device) and places it in x0,y0.
 
         Returns
         -------
@@ -159,7 +158,7 @@ class MarkerSet(Marker):
         xdist: float = 1000,
         ydist: float = 1000,
     ):
-        """MarkerSet is a class to describe a set of markers (inherits Marker)
+        """MarkerSet is a class to describe a set of markers (inherits Marker).
 
         Parameters
         ----------
@@ -887,7 +886,7 @@ class Mask:
             _BoundingBoxPool["_CIRCLE"] = Box(-1, -1, 2, 2)
 
     def addToMainCell(self, geom_group: GeomGroup):
-        """Adds a geometry to the main cell
+        """Adds a geometry to the main cell.
 
         Parameters
         ----------
@@ -1076,7 +1075,7 @@ class Mask:
                     e.group = LayoutPool[e.cellname]
 
     def addMarkers(self, markerset: "MarkerSet"):
-        """Add a marker set to the mask
+        """Add a marker set to the mask.
 
         Parameters
         ----------

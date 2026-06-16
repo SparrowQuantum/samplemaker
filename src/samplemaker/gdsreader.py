@@ -32,8 +32,7 @@ class GDSRecord:
 
 
 class GDSReader:
-    """GDS input class
-    """
+    """GDS input class."""
 
     def __init__(self):
         self.buf = ""
@@ -235,7 +234,7 @@ class GDSReader:
 
     def quick_read(self, filename: str):
         """Performs a quick scan of the GDS file and stores
-        structures (between BGNSTR and ENDSTR) in memory
+        structures (between BGNSTR and ENDSTR) in memory.
 
         Parameters
         ----------

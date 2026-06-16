@@ -200,8 +200,7 @@ from samplemaker.shapes import GeomGroup, Poly
 
 
 class IncompatiblePortError(RuntimeError):
-    """Exception raised when trying to link incompatible ports.
-    """
+    """Exception raised when trying to link incompatible ports."""
 
 
 class DevicePort:
@@ -307,7 +306,7 @@ class DevicePort:
 
 class Device:
     def __init__(self):
-        """Initializes a Device. Should never be called.
+        """Initialize a Device. Should never be called.
 
         Returns
         -------
@@ -350,7 +349,7 @@ class Device:
         return hash((frozenset(self._p.items()), self._name))
 
     def angle(self):
-        """Returns the orientation of the device in radians.
+        """Return the orientation of the device in radians.
 
         Returns
         -------
@@ -361,7 +360,7 @@ class Device:
         return math.pi * (3 - (self._hv + self._bf * 2)) / 2
 
     def set_angle(self, angle: float):
-        """Changes the orientation of the device
+        """Change the orientation of the device.
 
         Parameters
         ----------
@@ -378,7 +377,7 @@ class Device:
         self._bf = math.floor(i / 2) == 1
 
     def set_position(self, x0: float, y0: float):
-        """Changes the position of the device
+        """Changes the position of the device.
 
         Parameters
         ----------
@@ -503,7 +502,7 @@ class Device:
         self._localp["_ports_"][port.name] = port
 
     def get_localport(self, portname: str):
-        """Returns the local port (i.e. within the geom() function.)
+        """Returns the local port (i.e. within the geom() function.).
 
         Parameters
         ----------
@@ -637,7 +636,7 @@ class Device:
         self._name = name
 
     def set_description(self, descr: str):
-        """Sets the device description (should be called from initialize)
+        """Sets the device description (should be called from initialize).
 
         Parameters
         ----------
@@ -652,7 +651,7 @@ class Device:
         self._description = descr
 
     def initialize(self):
-        """Re-implement this function in your device to initialize and set the device name
+        """Re-implement this function in your device to initialize and set the device name.
 
         Returns
         -------
@@ -662,7 +661,7 @@ class Device:
         pass
 
     def parameters(self):
-        """Re-implement this function to define parameters of the device
+        """Re-implement this function to define parameters of the device.
 
         Returns
         -------
@@ -886,7 +885,7 @@ class NetList:
 
     def set_aligned_ports(self, aligned_ports: list):
         """Define a list of wires (list of strings) that should be
-        aligned with each other
+        aligned with each other.
 
         Parameters
         ----------
@@ -1043,7 +1042,7 @@ class Circuit(Device):
         return hash((frozenset(flatdict.items()), self._name))
 
     def initialize(self):
-        """Names the Circuit as 'X' to be referred in other circuits
+        """Names the Circuit as 'X' to be referred in other circuits.
 
         Returns
         -------
@@ -1281,7 +1280,7 @@ def registerDevicesInModule(module_name: str):
 def CreateDeviceLibrary(devname: str, params: dict, filename: str):
     """Generates a GDS file with a re-usable GDS-format device.
     Also exports ports as text element in GDS.
-    Flattens everything
+    Flattens everything.
 
     Parameters
     ----------

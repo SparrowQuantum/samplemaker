@@ -16,11 +16,10 @@ from samplemaker.shapes import GeomGroup
 
 
 class GDSWriter:
-    """GDS output class
-    """
+    """GDS output class."""
 
     def __init__(self, circleres: int = 12, arcres: int = 32):
-        """Initialize the GDSWriter class
+        """Initialize the GDSWriter class.
 
         Parameters
         ----------
@@ -201,7 +200,7 @@ class GDSWriter:
         return gg
 
     def open_library(self, filename: str):
-        """Opens a new GDS file for writing. To close, call close_library()
+        """Opens a new GDS file for writing. To close, call close_library().
 
         Parameters
         ----------
@@ -250,7 +249,7 @@ class GDSWriter:
         """Opens a new structure (or cell) in the existing GDS stream.
         The file should be already open using open_library()
         This function can be used to write multiple objects in a single cell.
-        It should be closed with close_structure()
+        It should be closed with close_structure().
 
         Parameters
         ----------
@@ -289,7 +288,7 @@ class GDSWriter:
         """Writes a GeomGroup to GDS stream. The file should be first opened with
         open_library() followed by open_structure().
         To be used for interactive writing only. See write_structure() for
-        direct writing (recommended)
+        direct writing (recommended).
 
         Parameters
         ----------
@@ -336,7 +335,7 @@ class GDSWriter:
                 continue
 
     def close_structure(self):
-        """Closes the structure, should be called after open_structure()
+        """Closes the structure, should be called after open_structure().
 
         Returns
         -------
@@ -351,7 +350,7 @@ class GDSWriter:
         This is equivalent to
             open_structure(structure_name)
             write_geomgroup(geom_group)
-            close_structure()
+            close_structure().
 
         Parameters
         ----------
@@ -389,7 +388,7 @@ class GDSWriter:
     def write_pool_use_cache(self, pool: dict, cache: dict):
         """Writes all the structures in the dictionary using key name as structure
         reference name and value as the group to be written.
-        Uses GDS cache when available
+        Uses GDS cache when available.
 
         Parameters
         ----------
@@ -411,7 +410,7 @@ class GDSWriter:
                 self.write_structure(sname, group)
 
     def close_library(self):
-        """Closes the GDS library and the file stream
+        """Closes the GDS library and the file stream.
 
         Returns
         -------

@@ -112,7 +112,7 @@ def make_text(
     layer: int = 1,
     to_poly: bool = False,
 ) -> GeomGroup:
-    """Create a text object
+    """Create a text object.
 
     Parameters
     ----------
@@ -172,7 +172,7 @@ def make_sref(
     angle: float = 0,
     mirror: bool = 0,
 ) -> GeomGroup:
-    """Create a CELL reference or SREF element in GDS
+    """Create a CELL reference or SREF element in GDS.
 
     Parameters
     ----------
@@ -217,7 +217,7 @@ def make_aref(
     angle: float = 0,
     mirror: bool = 0,
 ) -> GeomGroup:
-    """Create an ARRAY of cell references or AREF element in GDS
+    """Create an ARRAY of cell references or AREF element in GDS.
 
     Parameters
     ----------
@@ -271,7 +271,7 @@ def make_circle(
     to_poly: bool = False,
     vertices: int = 32,
 ) -> GeomGroup:
-    """Create a filled circle
+    """Create a filled circle.
 
     Parameters
     ----------
@@ -314,7 +314,7 @@ def make_ellipse(
     to_poly: bool = 0,
     vertices: int = 32,
 ) -> GeomGroup:
-    """Create a filled ellipse
+    """Create a filled ellipse.
 
     Parameters
     ----------
@@ -418,7 +418,7 @@ def make_arc(
 ) -> GeomGroup:
     """Create an elliptical arc (if rX=rY a circular arc is made).
     The width should be >0.
-    The two angles a1 and a2 specify the initial and final angle of the arc
+    The two angles a1 and a2 specify the initial and final angle of the arc.
 
     Parameters
     ----------
@@ -583,7 +583,7 @@ def make_tapered_path(
     xpts: list[float], ypts: list[float], widths: list[float], layer: int = 1
 ) -> GeomGroup:
     """Creates a path with variable width. A list of path widths is given
-    so that at each point the width can be changed. A polygon is produced
+    so that at each point the width can be changed. A polygon is produced.
 
     Parameters
     ----------

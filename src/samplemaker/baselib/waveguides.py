@@ -58,7 +58,7 @@ def BaseWaveguideINIT(state, options):
 
 # The S command to go straight
 def BaseWaveguideS(args, state, options) -> GeomGroup:
-    """Draw straight waveguide
+    """Draw straight waveguide.
 
     Parameters
     ----------
@@ -92,7 +92,7 @@ def BaseWaveguideS(args, state, options) -> GeomGroup:
 
 # The B command to make a circular bend
 def BaseWaveguideB(args, state, options) -> GeomGroup:
-    """Draw circular bend waveguide
+    """Draw circular bend waveguide.
 
     Parameters
     ----------
@@ -198,7 +198,7 @@ def BaseWaveguideC(args, state, options) -> GeomGroup:
 
 
 def BaseWaveguideT(args, state, options) -> GeomGroup:
-    """Draw linear taper
+    """Draw linear taper.
 
     Parameters
     ----------
@@ -235,7 +235,7 @@ def BaseWaveguideT(args, state, options) -> GeomGroup:
 
 
 def BaseWaveguideOFF(args, state, options) -> GeomGroup:
-    """Offset the waveguide (jumps left or right of waveguide)
+    """Offset the waveguide (jumps left or right of waveguide).
 
     Parameters
     ----------

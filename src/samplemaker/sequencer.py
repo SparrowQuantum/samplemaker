@@ -248,7 +248,7 @@ class Sequencer:
         self.debug_state = value
 
     def get_state(self):
-        """The current state of the sequencer
+        """The current state of the sequencer.
 
         Returns
         -------

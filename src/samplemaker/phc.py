@@ -73,7 +73,7 @@ class Crystal:
         self.params = np.array(params, dtype=np.float64)
 
     def remove_at_index(self, index: list[int]):
-        """Removes lattice sites from a list of indices
+        """Removes lattice sites from a list of indices.
 
         Parameters
         ----------
@@ -99,7 +99,7 @@ class Crystal:
         orig_x: float = 0,
         orig_y: float = 0,
     ):
-        """Shifts the lattice sites specified in the list
+        """Shifts the lattice sites specified in the list.
 
         Parameters
         ----------
@@ -418,7 +418,7 @@ def make_phc(
     cellfun=__circ_cellfun__,
     name: str = "",
 ):
-    """Creates a photonic crystal geometry
+    """Creates a photonic crystal geometry.
 
     Parameters
     ----------
