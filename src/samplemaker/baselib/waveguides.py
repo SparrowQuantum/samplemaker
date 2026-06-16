@@ -321,7 +321,7 @@ def BaseWaveguideConnector(port1: DevicePort, port2: DevicePort) -> GeomGroup:
     res = WaveguideConnect(
         port1, port2, BaseWaveguideConnectorOptions["bending_radius"]
     )
-    if res[0] == True:
+    if res[0]:
         so = BaseWaveguideSequencer(res[1])
         so.options = deepcopy(BaseWaveguideConnectorOptions["sequencer_options"])
         g = so.run()

@@ -1048,7 +1048,7 @@ class Mask:
                 gdsr = GDSReader()
                 gdsr.quick_read(self.name + ".gds")
                 gdsr.celldata.pop(self.mainsymbol, None)
-            except:
+            except OSError:
                 pass
 
         gdsw = GDSWriter()
