@@ -1,5 +1,4 @@
-"""
-Functions that generate shapes into `samplemaker.shapes.GeomGroup` objects.
+"""Functions that generate shapes into `samplemaker.shapes.GeomGroup` objects.
 
 The concept of "makers"
 ---------------------
@@ -21,8 +20,7 @@ from samplemaker.shapes import GeomGroup
 
 
 def make_dot(x0: float, y0: float) -> smsh.Dot:
-    """
-    Creates a dot object. Dots cannot be exported to GDS but they are useful
+    """Creates a dot object. Dots cannot be exported to GDS but they are useful
     to store coordinates and perform rotations.
 
     Parameters
@@ -42,8 +40,7 @@ def make_dot(x0: float, y0: float) -> smsh.Dot:
 
 
 def make_poly(xpts: list[float], ypts: list[float], layer: int = 1) -> GeomGroup:
-    """
-    Creates a closed polygon object.
+    """Creates a closed polygon object.
     The first and last point should not be specified twice.
 
     Parameters
@@ -73,8 +70,7 @@ def make_path(
     layer: int = 1,
     to_poly: bool = 0,
 ) -> GeomGroup:
-    """
-    Creates a path object (open line with width).
+    """Creates a path object (open line with width).
     Ideally the width should be >0, a width of zero should be avoided.
 
     Parameters
@@ -116,8 +112,7 @@ def make_text(
     layer: int = 1,
     to_poly: bool = False,
 ) -> GeomGroup:
-    """
-    Create a text object
+    """Create a text object
 
     Parameters
     ----------
@@ -177,8 +172,7 @@ def make_sref(
     angle: float = 0,
     mirror: bool = 0,
 ) -> GeomGroup:
-    """
-    Create a CELL reference or SREF element in GDS
+    """Create a CELL reference or SREF element in GDS
 
     Parameters
     ----------
@@ -223,8 +217,7 @@ def make_aref(
     angle: float = 0,
     mirror: bool = 0,
 ) -> GeomGroup:
-    """
-    Create an ARRAY of cell references or AREF element in GDS
+    """Create an ARRAY of cell references or AREF element in GDS
 
     Parameters
     ----------
@@ -278,8 +271,7 @@ def make_circle(
     to_poly: bool = False,
     vertices: int = 32,
 ) -> GeomGroup:
-    """
-    Create a filled circle
+    """Create a filled circle
 
     Parameters
     ----------
@@ -322,8 +314,7 @@ def make_ellipse(
     to_poly: bool = 0,
     vertices: int = 32,
 ) -> GeomGroup:
-    """
-    Create a filled ellipse
+    """Create a filled ellipse
 
     Parameters
     ----------
@@ -371,8 +362,7 @@ def make_ring(
     to_poly: bool = 0,
     vertices: int = 32,
 ) -> GeomGroup:
-    """
-    Create an elliptical ring (if rX=rY a circular ring is made).
+    """Create an elliptical ring (if rX=rY a circular ring is made).
     The width should be >0.
 
     Parameters
@@ -426,8 +416,7 @@ def make_arc(
     vertices: int = 32,
     split: bool = False,
 ) -> GeomGroup:
-    """
-    Create an elliptical arc (if rX=rY a circular arc is made).
+    """Create an elliptical arc (if rX=rY a circular arc is made).
     The width should be >0.
     The two angles a1 and a2 specify the initial and final angle of the arc
 
@@ -477,8 +466,7 @@ def make_arc(
 def make_rect(
     x0: float, y0: float, width: float, height: float, numkey: int = 5, layer: int = 1
 ) -> GeomGroup:
-    """
-    Create a rectangle centered in x0,y0.
+    """Create a rectangle centered in x0,y0.
     Optionally, the reference point x0,y0 can be any of the corners by
     specifying a "numkey" parameter.
 
@@ -531,8 +519,7 @@ def make_rounded_rect(
     numkey: int = 5,
     layer: int = 1,
 ) -> GeomGroup:
-    """
-    Create a rectangle centered in x0,y0 with corners rounded
+    """Create a rectangle centered in x0,y0 with corners rounded
     Optionally, the reference point x0,y0 can be any of the corners by
     specifying a "numkey" parameter.
 
@@ -595,8 +582,7 @@ def make_rounded_rect(
 def make_tapered_path(
     xpts: list[float], ypts: list[float], widths: list[float], layer: int = 1
 ) -> GeomGroup:
-    """
-    Creates a path with variable width. A list of path widths is given
+    """Creates a path with variable width. A list of path widths is given
     so that at each point the width can be changed. A polygon is produced
 
     Parameters
@@ -616,7 +602,6 @@ def make_tapered_path(
         A group containing a single path.
 
     """
-
     x = xpts
     y = ypts
     w = widths

@@ -1,5 +1,4 @@
-"""
-This module contains the classes to configure the mask layout.
+"""This module contains the classes to configure the mask layout.
 
 Mask layout
 -----------
@@ -107,13 +106,11 @@ from samplemaker.shapes import Box, GeomGroup, SRef
 
 
 class Marker:
-    """
-    Class that defines a single Marker.
+    """Class that defines a single Marker.
     """
 
     def __init__(self, name: str, dev: Device, x0: float = 0, y0: float = 0):
-        """
-        Marker class initializer. Use this class with custom devices to place a single marker in the layout.
+        """Marker class initializer. Use this class with custom devices to place a single marker in the layout.
 
         Parameters
         ----------
@@ -137,8 +134,7 @@ class Marker:
         self.y0 = y0
 
     def get_geom(self) -> GeomGroup:
-        """
-        Creates the geometry (runs the device) and places it in x0,y0
+        """Creates the geometry (runs the device) and places it in x0,y0
 
         Returns
         -------
@@ -163,9 +159,7 @@ class MarkerSet(Marker):
         xdist: float = 1000,
         ydist: float = 1000,
     ):
-        """
-        MarkerSet is a class to describe a set of markers (inherits Marker)
-
+        """MarkerSet is a class to describe a set of markers (inherits Marker)
 
         Parameters
         ----------
@@ -195,8 +189,7 @@ class MarkerSet(Marker):
         self.ydist = ydist
 
     def get_geom(self) -> GeomGroup:
-        """
-        Creates the geometry (runs the device) and places copies of them in the mask.
+        """Creates the geometry (runs the device) and places copies of them in the mask.
 
         Returns
         -------
@@ -255,8 +248,7 @@ class DeviceTableAnnotations:
         above: bool = True,
         below: bool = True,
     ):
-        """
-        Initalize the DeviceTableAnnotations class that controls how text is produced in tables.
+        """Initalize the DeviceTableAnnotations class that controls how text is produced in tables.
         You can define headers on the four edges of a table.
         An instance of this object should be passed to `DeviceTable.set_annotations` method to
         add headers.
@@ -312,8 +304,7 @@ class DeviceTableAnnotations:
         self.to_poly = True
 
     def set_poly_text(self, to_poly: bool):
-        """
-        Sets whether table annotation should be rendered as polygon objects
+        """Sets whether table annotation should be rendered as polygon objects
         or text objects.
 
         Parameters
@@ -339,8 +330,7 @@ class DeviceTableAnnotations:
         rowdict: dict,
         coldict: dict,
     ) -> GeomGroup:
-        """
-        Renders the text for a given element in a table. This function should not be called
+        """Renders the text for a given element in a table. This function should not be called
         by the user. It is intended to be run by the DeviceTable functions.
 
         Parameters
@@ -410,8 +400,7 @@ class DeviceTableAnnotations:
 
 class DeviceTable:
     def __init__(self, dev: Device, nrow: int, ncol: int, rowvars: dict, colvars: dict):
-        """
-        Create a table of `samplemaker.devices.Device` objects and generate their geometries
+        """Create a table of `samplemaker.devices.Device` objects and generate their geometries
         in an array. The array can have 1 or more rows and 1 or more columns.
         On each row and column the device will be instantiated according to the values
         provided by the rowvars and colvars parameters.
@@ -471,8 +460,7 @@ class DeviceTable:
         self._getgeom_ran = False
 
     def set_table_positions(self, positions: tuple):
-        """
-        Defines the position of each element using a 3-dimensional tuple of the
+        """Defines the position of each element using a 3-dimensional tuple of the
         kind pos[i][j][k] where i,j control the row and column element and k=0,1
         are the x and y coordinate.
 
@@ -505,8 +493,7 @@ class DeviceTable:
         self.set_table_positions(newpos)
 
     def set_linked_ports(self, row_linkports: tuple = (), col_linkports: tuple = ()):
-        """
-        Automatically route ports between devices across columns and rows.
+        """Automatically route ports between devices across columns and rows.
 
         Parameters
         ----------
@@ -524,8 +511,7 @@ class DeviceTable:
         self.row_linkports = row_linkports
 
     def set_aligned_ports(self, align_rows: bool = False, align_columns: bool = False):
-        """
-        Align ports along columns and rows.
+        """Align ports along columns and rows.
 
         Parameters
         ----------
@@ -543,8 +529,7 @@ class DeviceTable:
         self.row_alignports = align_rows
 
     def set_device_rotation(self, device_rotation: float):
-        """
-        Rotates each device in the table.
+        """Rotates each device in the table.
 
         Parameters
         ----------
@@ -561,8 +546,7 @@ class DeviceTable:
         self._portmap = []
 
     def set_annotations(self, annotations: DeviceTableAnnotations):
-        """
-        Sets the table headers using the `DeviceTableAnnotations` class.
+        """Sets the table headers using the `DeviceTableAnnotations` class.
 
         Parameters
         ----------
@@ -577,8 +561,7 @@ class DeviceTable:
         self.annotations = annotations
 
     def get_external_ports(self) -> dict:
-        """
-        If the device contains ports, all the instantiated ports are returned
+        """If the device contains ports, all the instantiated ports are returned
         so that tables can be connected to external devices or ports.
 
         Returns
@@ -627,8 +610,7 @@ class DeviceTable:
                     pp.y0 += self.pos_xy[j][i][1]
 
     def auto_align(self, min_dist_x: float, min_dist_y: float, numkey: int = 5):
-        """
-        Automagically aligns devices in the table according to their bounding boxes.
+        """Automagically aligns devices in the table according to their bounding boxes.
         The spacing is controlled by min_dist_x and min_dist_y.
 
         Parameters
@@ -689,8 +671,7 @@ class DeviceTable:
                     self.pos_xy[j][i][1] += sum(sy[0:j])
 
     def get_geometries(self) -> GeomGroup:
-        """
-        Builds the table and returns all the geometries.
+        """Builds the table and returns all the geometries.
 
         Returns
         -------
@@ -797,8 +778,7 @@ class DeviceTable:
         x0: float = 0,
         y0: float = 0,
     ) -> tuple:
-        """
-        This static method produces a regular table array. It returns a tuple
+        """This static method produces a regular table array. It returns a tuple
         that can be passed to `DeviceTable.set_table_positions`.
 
         Parameters
@@ -838,8 +818,7 @@ class DeviceTable:
 
 class Mask:
     def __init__(self, name: str = "layout001"):
-        """
-        Initialize a Mask class. The name given is used as base name for file export.
+        """Initialize a Mask class. The name given is used as base name for file export.
 
         Parameters
         ----------
@@ -858,8 +837,7 @@ class Mask:
         self.clear()  # A new mask clears the pool
 
     def clear(self):
-        """
-        Clears the mask and all its content.
+        """Clears the mask and all its content.
 
         Returns
         -------
@@ -875,8 +853,7 @@ class Mask:
         self.__add_basic_elements()
 
     def set_cache(self, cache: bool):
-        """
-        Turns on or off the cache system. When cache is turned on, the layout
+        """Turns on or off the cache system. When cache is turned on, the layout
         is stored on disk (with .cache extension) and reloaded when the mask
         is created again (for example when running the same script multiple times).
         Addditionally, the cache system re-uses the GDS bitstream from a previously
@@ -910,8 +887,7 @@ class Mask:
             _BoundingBoxPool["_CIRCLE"] = Box(-1, -1, 2, 2)
 
     def addToMainCell(self, geom_group: GeomGroup):
-        """
-        Adds a geometry to the main cell
+        """Adds a geometry to the main cell
 
         Parameters
         ----------
@@ -929,8 +905,7 @@ class Mask:
             LayoutPool[self.mainsymbol] += geom_group
 
     def addCell(self, cellname: str, geom_group: GeomGroup):
-        """
-        Adds a new cell to the GDS structure and assigns a geometry to it.
+        """Adds a new cell to the GDS structure and assigns a geometry to it.
 
         Parameters
         ----------
@@ -947,8 +922,7 @@ class Mask:
         LayoutPool[cellname] = geom_group
 
     def getCell(self, cellname: str) -> GeomGroup:
-        """
-        Returns a reference to the GeomGroup correspondin to the cellname.
+        """Returns a reference to the GeomGroup correspondin to the cellname.
         Note: if you modify the geometry, it will be also modified in the mask.
 
         Parameters
@@ -1033,15 +1007,13 @@ class Mask:
             _DevicePool.pop(hsh, None)
 
     def exportGDS(self):
-        """
-        Finalize the mask, perform cache operations, if any, and write to GDS.
+        """Finalize the mask, perform cache operations, if any, and write to GDS.
 
         Returns
         -------
         None.
 
         """
-
         self.__cleanup_cellref()
         if self.cache:
             try:
@@ -1062,8 +1034,7 @@ class Mask:
             self.__export_cache()
 
     def importGDS(self, filename: str):
-        """
-        Import the full mask from GDS file.
+        """Import the full mask from GDS file.
 
         Parameters
         ----------
@@ -1075,7 +1046,6 @@ class Mask:
         None.
 
         """
-
         self.clear()
 
         reflist = set()
@@ -1106,8 +1076,7 @@ class Mask:
                     e.group = LayoutPool[e.cellname]
 
     def addMarkers(self, markerset: "MarkerSet"):
-        """
-        Add a marker set to the mask
+        """Add a marker set to the mask
 
         Parameters
         ----------
@@ -1128,8 +1097,7 @@ class Mask:
     def addWriteField(
         self, wf_size: float, x0: float, y0: float, passes: int = 1, shift: float = 0
     ):
-        """
-        Add a square writefield centered in x0,y0.
+        """Add a square writefield centered in x0,y0.
 
         Parameters
         ----------
@@ -1161,8 +1129,7 @@ class Mask:
         passes: int = 1,
         shift: float = 0,
     ):
-        """
-        Create a grid Nx x Ny of writefields with given size and position.
+        """Create a grid Nx x Ny of writefields with given size and position.
 
         Parameters
         ----------
@@ -1212,8 +1179,7 @@ class Mask:
     def addDeviceTable(
         self, device_table: DeviceTable, x0: float, y0: float, cell: str = ""
     ):
-        """
-        Adds a `DeviceTable` to the layout.
+        """Adds a `DeviceTable` to the layout.
 
         Parameters
         ----------

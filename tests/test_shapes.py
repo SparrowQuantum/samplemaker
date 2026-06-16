@@ -284,8 +284,7 @@ class TestBox:
 
 
 class TestPoly:
-    """
-    Tests for the Poly class.
+    """Tests for the Poly class.
 
     Methods without coverage:
 

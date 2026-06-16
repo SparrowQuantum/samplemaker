@@ -1,5 +1,4 @@
-"""
-Automatic port-to-port routing functions.
+"""Automatic port-to-port routing functions.
 
 
 """
@@ -15,8 +14,7 @@ from samplemaker.devices import DevicePort
 
 # The following are routines for the connector
 def __connectable_facing(port1: DevicePort, port2: DevicePort, rad: float = 3):
-    """
-    This function returns true and a sequence
+    """This function returns true and a sequence
     if two ports are directly connectable and facing
     each other. The sequence is either a straight line
     or a cosine bend
@@ -38,7 +36,6 @@ def __connectable_facing(port1: DevicePort, port2: DevicePort, rad: float = 3):
         A sequence to perform the connection.
 
     """
-
     # Get the vector from port 1 to port 2
     dx = port2.x0 - port1.x0
     dy = port2.y0 - port1.y0
@@ -92,8 +89,7 @@ def __connectable_facing(port1: DevicePort, port2: DevicePort, rad: float = 3):
 
 
 def __connectable_bend(port1: DevicePort, port2: DevicePort, rad: float = 3):
-    """
-    This function calculates if two ports can be connected with a single bend
+    """This function calculates if two ports can be connected with a single bend
     It calculates the projected intersection of two straight paths and returns
     a sequence that connects the ports. It might sometimes fail if ports are
     too close
@@ -147,8 +143,7 @@ def __connectable_bend(port1: DevicePort, port2: DevicePort, rad: float = 3):
 
 
 def __connect_step(port1: DevicePort, port2: DevicePort, rad: float = 3):
-    """
-    Performs a single connection step, attempts at getting port1 closer to
+    """Performs a single connection step, attempts at getting port1 closer to
     port2 by bending left or right or going straight. This connector works
     well for optical waveguides
 
@@ -169,7 +164,6 @@ def __connect_step(port1: DevicePort, port2: DevicePort, rad: float = 3):
         A sequence to perform the connection.
 
     """
-
     seq = []
     if port1.dx() != 0:
         if abs(port2.y0 - port1.y0) < 2 * rad:  # It's better to bend if too close
@@ -230,8 +224,7 @@ def __connect_step(port1: DevicePort, port2: DevicePort, rad: float = 3):
 
 
 def WaveguideConnect(port1: DevicePort, port2: DevicePort, rad: float = 3):
-    """
-    Simple waveguide connector for two ports. Given a start port and an
+    """Simple waveguide connector for two ports. Given a start port and an
     end port, the function attempts to connect the ports using
     a sequence of straight lines (sequencer command S), 90 degrees bends
     (sequencer command B) and cosine bends (sequencer command C).
@@ -282,8 +275,7 @@ def WaveguideConnect(port1: DevicePort, port2: DevicePort, rad: float = 3):
 
 
 def ElbowRouter(port1: DevicePort, port2: DevicePort, offset: float = 5):
-    """
-    Simple elbow connector based on Bezier curve.
+    """Simple elbow connector based on Bezier curve.
 
     Typically used for electrical interconnects. Does not check collisions.
     The offset parameter controls how far should the connector go straight out

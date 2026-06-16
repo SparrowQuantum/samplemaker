@@ -1,5 +1,4 @@
-"""
-Base device library.
+"""Base device library.
 
 This is a collection of some simple demo devices distributed with the base version of
 `samplemaker`. It can be used as template for creating new libraries or to learn how to

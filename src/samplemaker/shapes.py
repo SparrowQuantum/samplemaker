@@ -1,5 +1,4 @@
-"""
-Shape classes supported by the GDS format and most lithography systems / pattern
+"""Shape classes supported by the GDS format and most lithography systems / pattern
 generators.
 
 Basic shapes in `samplemaker`
@@ -88,8 +87,7 @@ _STENCIL_FONT_PATH = (
 
 class GeomGroup:
     def __init__(self):
-        """
-        Create an empty GeomGroup with no elements
+        """Create an empty GeomGroup with no elements
 
         Returns
         -------
@@ -99,8 +97,7 @@ class GeomGroup:
         self.group = list()
 
     def __add__(self, other: "GeomGroup") -> "GeomGroup":
-        """
-        Combine two geometries
+        """Combine two geometries
 
         Parameters
         ----------
@@ -118,8 +115,7 @@ class GeomGroup:
         return gg
 
     def add(self, geom):
-        """
-        Add a shape to the group (deprecated)
+        """Add a shape to the group (deprecated)
 
         Parameters
         ----------
@@ -134,8 +130,7 @@ class GeomGroup:
         self.group.append(geom)
 
     def copy(self) -> "GeomGroup":
-        """
-        Make a deep copy of the object.
+        """Make a deep copy of the object.
 
         Returns
         -------
@@ -146,8 +141,7 @@ class GeomGroup:
         return deepcopy(self)
 
     def flatten(self, layer_list: Collection[int] | None = None) -> "GeomGroup":
-        """
-        Flatten the entire group. Turns all SREF and AREF objects in flattened objects.
+        """Flatten the entire group. Turns all SREF and AREF objects in flattened objects.
         All references to cell are removed. A new flattened group is returned and no
         changes are made to the calling object.
 
@@ -176,8 +170,7 @@ class GeomGroup:
         return g
 
     def get_sref_list(self):
-        """
-        Return a unique list of strings with the structures referenced by the object
+        """Return a unique list of strings with the structures referenced by the object
         (recursively).
 
         Returns
@@ -194,8 +187,7 @@ class GeomGroup:
         return sref_list
 
     def get_layer_list(self) -> set[int]:
-        """
-        Return a unique set of int with the layers in the object (recursively).
+        """Return a unique set of int with the layers in the object (recursively).
 
         Returns
         -------
@@ -213,8 +205,7 @@ class GeomGroup:
         return layer_list
 
     def translate(self, dx: float, dy: float):
-        """
-        Shift the entire geometry by dx and dy.
+        """Shift the entire geometry by dx and dy.
 
         Parameters
         ----------
@@ -233,8 +224,7 @@ class GeomGroup:
         return self
 
     def rotate_translate(self, dx: float, dy: float, rot: float):
-        """
-        First rotate around 0,0 and then translate by dx,dy.
+        """First rotate around 0,0 and then translate by dx,dy.
         It is typically
         faster than using rotate() followed by translate()
 
@@ -257,8 +247,7 @@ class GeomGroup:
         return self
 
     def rotate(self, x0: float, y0: float, rot: float):
-        """
-        Rotate the geometry around x0,y0 by a given angle.
+        """Rotate the geometry around x0,y0 by a given angle.
 
         Parameters
         ----------
@@ -279,8 +268,7 @@ class GeomGroup:
         return self
 
     def scale(self, x0: float, y0: float, scale_x: float, scale_y: float):
-        """
-        Scale the geometry using x0,y0 as center
+        """Scale the geometry using x0,y0 as center
 
         Parameters
         ----------
@@ -303,8 +291,7 @@ class GeomGroup:
         return self
 
     def mirrorX(self, x0: float):
-        """
-        Mirror the geometry around x-axis
+        """Mirror the geometry around x-axis
 
         Parameters
         ----------
@@ -321,8 +308,7 @@ class GeomGroup:
         return self
 
     def mirrorY(self, y0: float):
-        """
-        Mirror the geometry around y-axis
+        """Mirror the geometry around y-axis
 
         Parameters
         ----------
@@ -367,8 +353,7 @@ class GeomGroup:
         return cnt
 
     def __str__(self):
-        """
-        Display basic geometry information (size and layers)
+        """Display basic geometry information (size and layers)
 
         Returns
         -------
@@ -384,8 +369,7 @@ class GeomGroup:
         return msg
 
     def info(self) -> dict:
-        """
-        Generate useful statistics on the group (element count, size) and return it in
+        """Generate useful statistics on the group (element count, size) and return it in
         a dict.
 
         Returns
@@ -414,8 +398,7 @@ class GeomGroup:
         return stat
 
     def bounding_box(self) -> "Box":
-        """
-        Calculate the group bounding box.
+        """Calculate the group bounding box.
 
         Returns
         -------
@@ -431,8 +414,7 @@ class GeomGroup:
         return bb
 
     def to_boxes(self, layer: int) -> "GeomGroup":
-        """
-        Generate a GeomGroup with the bounding boxes of each individual
+        """Generate a GeomGroup with the bounding boxes of each individual
         geometry. It can be used to create a coarse overlay mask. Acts
         on a single layer.
 
@@ -456,8 +438,7 @@ class GeomGroup:
         return bb
 
     def set_layer(self, layer: int):
-        """
-        Assign a new layer to all the shapes in the geometry
+        """Assign a new layer to all the shapes in the geometry
 
         Parameters
         ----------
@@ -474,8 +455,7 @@ class GeomGroup:
         return self
 
     def select_layer(self, layer: int) -> "GeomGroup":
-        """
-        Create a new GeomGroup containing only shapes in a given layer.
+        """Create a new GeomGroup containing only shapes in a given layer.
 
         Parameters
         ----------
@@ -495,8 +475,7 @@ class GeomGroup:
         return g
 
     def select_layers(self, layers: list[int]) -> "GeomGroup":
-        """
-        Create a new GeomGroup containing only shapes in a list of layers.
+        """Create a new GeomGroup containing only shapes in a list of layers.
 
         Parameters
         ----------
@@ -516,8 +495,7 @@ class GeomGroup:
         return g
 
     def deselect_layers(self, layers: list[int]) -> "GeomGroup":
-        """
-        Create a new GeomGroup containing only shapes that are not in layer list
+        """Create a new GeomGroup containing only shapes that are not in layer list
 
         Parameters
         ----------
@@ -537,8 +515,7 @@ class GeomGroup:
         return g
 
     def select(self, query_str: str) -> "GeomGroup":
-        """
-        Perform a selection of the shapes (filtering) based on geometrical properties.
+        """Perform a selection of the shapes (filtering) based on geometrical properties.
 
         The output GeomGroup contains only the elements that satisfy the conditions
         expressed in the query string. For example, to select only polygons with area
@@ -644,8 +621,7 @@ class GeomGroup:
         return g
 
     def find_matching_patterns(self, pattern: "GeomGroup", layer: int):
-        """
-        Find the position of a given repeating pattern in the geometry.
+        """Find the position of a given repeating pattern in the geometry.
 
         User provides a pattern as a geom group. The pattern should not be
         disjoint (i.e. after boolean union, it should contain one element only)
@@ -688,8 +664,7 @@ class GeomGroup:
         return res
 
     def get_area(self) -> float:
-        """
-        Calculate the total area of the group.
+        """Calculate the total area of the group.
 
         Returns
         -------
@@ -706,8 +681,7 @@ class GeomGroup:
         return float(round(area * 1e6)) / 1e6
 
     def path_to_poly(self):
-        """
-        Convert all path objects in the current group to polygons.
+        """Convert all path objects in the current group to polygons.
 
         Returns
         -------
@@ -723,8 +697,7 @@ class GeomGroup:
         self.group = self.group + paths.group
 
     def text_to_poly(self):
-        """
-        Convert all text objects in the current group to polygons.
+        """Convert all text objects in the current group to polygons.
 
         Returns
         -------
@@ -742,15 +715,13 @@ class GeomGroup:
     def all_to_poly(
         self, Npts_circ: int = 12, Npts_arc: int = 32, split_arc: bool = False
     ):
-        """
-        Convert all elements except for SRef and Aref to polygons.
+        """Convert all elements except for SRef and Aref to polygons.
 
         Returns
         -------
         None.
 
         """
-
         polys = GeomGroup()
         for i in range(len(self.group)):
             g = self.group[i]
@@ -775,8 +746,7 @@ class GeomGroup:
     def poly_to_circle(
         self, thresh: float = 0.95, vcount: int = 10, include_refs: bool = True
     ):
-        """
-        Convert all polygons to circle, when they meet a circularity threshold and
+        """Convert all polygons to circle, when they meet a circularity threshold and
         a vertex count larger than the vcount parameter.
 
 
@@ -814,8 +784,7 @@ class GeomGroup:
         self.group = self.group + polys.group
 
     def in_polygons(self, x: float, y: float) -> bool:
-        """
-        Check if a given coordinate is inside the GeomGroup polygons.
+        """Check if a given coordinate is inside the GeomGroup polygons.
 
         Parameters
         ----------
@@ -837,8 +806,7 @@ class GeomGroup:
         return False
 
     def keep_refs_only(self):
-        """
-        Keep only the Sref and Aref (can be used to keep a skeleton of the structure)
+        """Keep only the Sref and Aref (can be used to keep a skeleton of the structure)
 
         Returns
         -------
@@ -867,8 +835,7 @@ class GeomGroup:
         self.group = self.group + polys.group
 
     def boolean_union(self, layer: int):
-        """
-        Perform a full boolean union (OR) of all polygons in the group matching a layer
+        """Perform a full boolean union (OR) of all polygons in the group matching a layer
 
         All other elements (circles, paths, texts) are ignored unless they have been
         already converted to polygons.
@@ -895,8 +862,7 @@ class GeomGroup:
         return self
 
     def boolean_difference(self, targetB: "GeomGroup", layerA: int, layerB: int):
-        """
-        Perform a full difference between the polygons in the calling group matching
+        """Perform a full difference between the polygons in the calling group matching
         layerA and the polygons in group targetB, matching layerB.
 
         All other elements (circles, paths, texts) are ignored unless they have been
@@ -930,8 +896,7 @@ class GeomGroup:
         return self
 
     def boolean_xor(self, targetB: "GeomGroup", layerA: int, layerB: int):
-        """
-        Perform an exclusive-OR operation between the polygons in the calling group
+        """Perform an exclusive-OR operation between the polygons in the calling group
         matching layerA and the polygons in group targetB, matching layerB. All other
         elements (circles, paths, texts) are ignored unless they have been already
         converted to polygons
@@ -964,8 +929,7 @@ class GeomGroup:
         return self
 
     def boolean_intersection(self, targetB: "GeomGroup", layerA: int, layerB: int):
-        """
-        Perform a full intersection (AND) between the polygons in the calling group
+        """Perform a full intersection (AND) between the polygons in the calling group
         matching layerA and the polygons in group targetB, matching layerB. All other
         elements (circles, paths, texts) are ignored unless they have been already
         converted to polygons
@@ -1004,8 +968,7 @@ class GeomGroup:
         corner_fill_arc: bool = False,
         num_circle_segments: int = 0,
     ):
-        """
-        Offset the polygon by a certain distance. Acts only on polygons and on a single
+        """Offset the polygon by a certain distance. Acts only on polygons and on a single
         layer.
 
         Parameters
@@ -1034,8 +997,7 @@ class GeomGroup:
         return self
 
     def poly_anisotropic_resize(self, angles: list, deltas: list, layer: int):
-        """
-        Perform an anisotropic offset of the polygons in a given layer.
+        """Perform an anisotropic offset of the polygons in a given layer.
 
         Requires an offset array in deltas matching the angle of expansion. Angles
         should cover -90 to 90 degrees.
@@ -1067,8 +1029,7 @@ class GeomGroup:
         corner_fill_arc: bool = False,
         num_circle_segments: int = 0,
     ):
-        """
-        Calculate the polygon outline by resizing and subtracting the original geometry.
+        """Calculate the polygon outline by resizing and subtracting the original geometry.
 
         Also works on circles (ignores the other elements, which must be converted to
         poly first)
@@ -1133,8 +1094,7 @@ class GeomGroup:
         return self
 
     def invert(self, layer: int, offset: float = 0):
-        """
-        Perform the inverse boolean operation (NOT) on a group.
+        """Perform the inverse boolean operation (NOT) on a group.
 
         Acts on the specified layer only.
 
@@ -1172,8 +1132,7 @@ class GeomGroup:
         return self
 
     def trapezoids(self, layer: int):
-        """
-        Convert and fractures all polygons in a set of trapezoids.
+        """Convert and fractures all polygons in a set of trapezoids.
 
         Parameters
         ----------
@@ -1194,8 +1153,7 @@ class GeomGroup:
         return self
 
     def poly_filter(self, keep_str: str) -> int:
-        """
-        Perform filtering of vertices based on a condition string.
+        """Perform filtering of vertices based on a condition string.
 
         Possible conditions are expressed based on the following variables:
 
@@ -1278,8 +1236,7 @@ class Dot:
 
 class Box:
     def __init__(self, llx: float, lly: float, width: float, height: float):
-        """
-        Initialize a box object (not for drawing)
+        """Initialize a box object (not for drawing)
 
         Parameters
         ----------
@@ -1303,8 +1260,7 @@ class Box:
         self.height = height
 
     def cx(self):
-        """
-        The x-coordinate of the box center
+        """The x-coordinate of the box center
 
         Returns
         -------
@@ -1315,8 +1271,7 @@ class Box:
         return self.llx + self.width / 2
 
     def cy(self):
-        """
-        The y-coordinate of the box center
+        """The y-coordinate of the box center
 
         Returns
         -------
@@ -1324,12 +1279,10 @@ class Box:
             y-coordinate of the box center.
 
         """
-
         return self.lly + self.height / 2
 
     def urx(self):
-        """
-        The x-coordinate of the upper-right corner
+        """The x-coordinate of the upper-right corner
 
         Returns
         -------
@@ -1337,12 +1290,10 @@ class Box:
             x-coordinate of the upper-right corner.
 
         """
-
         return self.llx + self.width
 
     def ury(self):
-        """
-        The y-coordinate of the upper-right corner
+        """The y-coordinate of the upper-right corner
 
         Returns
         -------
@@ -1350,12 +1301,10 @@ class Box:
             y-coordinate of the upper-right corner.
 
         """
-
         return self.lly + self.height
 
     def combine(self, other: "Box"):
-        """
-        Extend the box to fit another box "other"
+        """Extend the box to fit another box "other"
 
         Parameters
         ----------
@@ -1382,8 +1331,7 @@ class Box:
         self.height = tmp_ury - self.lly
 
     def toPoly(self):
-        """
-        Create a Poly object (not for drawing)
+        """Create a Poly object (not for drawing)
 
         Returns
         -------
@@ -1398,8 +1346,7 @@ class Box:
         )
 
     def toRect(self) -> "GeomGroup":
-        """
-        Create a group with a rectangle (as in make_rect), for drawing
+        """Create a group with a rectangle (as in make_rect), for drawing
 
         Returns
         -------
@@ -1412,8 +1359,7 @@ class Box:
         return g
 
     def get_numkey_point(self, numkey: int) -> tuple:
-        """
-        Return a tuple with x,y coordinate of the point matching the numerical
+        """Return a tuple with x,y coordinate of the point matching the numerical
         keypad (e.g. 5 is the center, 1 is the lower left corner, etc...)
 
 
@@ -1542,8 +1488,7 @@ class Poly:
         return p
 
     def three_point_filter(self, keep_str: str) -> int:
-        """
-        Perform filtering of vertices based on a condition string.
+        """Perform filtering of vertices based on a condition string.
 
         Possible conditions are expressed based on the following variables:
 
@@ -1705,8 +1650,7 @@ class Poly:
         return c
 
     def anisotropic_resize(self, angle, deltas):
-        """
-        Perform an anisotropic offset of the polygon.
+        """Perform an anisotropic offset of the polygon.
 
         Requires an offset array in deltas matching the angle of expansion. Angles
         should cover -90 to 90 degrees.

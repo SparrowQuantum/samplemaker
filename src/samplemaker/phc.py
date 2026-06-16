@@ -1,5 +1,4 @@
-"""
-Classes for drawing photonic crystals and periodic sturctures.
+"""Classes for drawing photonic crystals and periodic sturctures.
 
 Crystals
 --------
@@ -48,9 +47,7 @@ class Crystal:
         ypts: Iterable[float] | None = None,
         params: Iterable[float] | None = None,
     ):
-        """
-        Initialize a Crystal template.
-
+        """Initialize a Crystal template.
 
         Parameters
         ----------
@@ -76,8 +73,7 @@ class Crystal:
         self.params = np.array(params, dtype=np.float64)
 
     def remove_at_index(self, index: list[int]):
-        """
-        Removes lattice sites from a list of indices
+        """Removes lattice sites from a list of indices
 
         Parameters
         ----------
@@ -103,8 +99,7 @@ class Crystal:
         orig_x: float = 0,
         orig_y: float = 0,
     ):
-        """
-        Shifts the lattice sites specified in the list
+        """Shifts the lattice sites specified in the list
 
         Parameters
         ----------
@@ -139,8 +134,7 @@ class Crystal:
                 self.ypts[index] = self.ypts[index] + shift_y
 
     def param_at_index(self, index: int, pindex: int, pvalues: float):
-        """
-        Sets a parameter at the lattice index.
+        """Sets a parameter at the lattice index.
 
         Parameters
         ----------
@@ -159,8 +153,7 @@ class Crystal:
         self.params[pindex, index] = pvalues
 
     def coord_to_index(self, xc, yc):
-        """
-        Converts a coordinate to an index (if matches).
+        """Converts a coordinate to an index (if matches).
 
         Parameters
         ----------
@@ -191,8 +184,7 @@ class Crystal:
         return sel
 
     def remove_crystal(self, crystal: "Crystal"):
-        """
-        Subtracts a crystal from another crystal.
+        """Subtracts a crystal from another crystal.
 
         Parameters
         ----------
@@ -207,8 +199,7 @@ class Crystal:
         self.remove_at_index(self.coord_to_index(crystal.xpts, crystal.ypts))
 
     def add_crystal(self, crystal: "Crystal"):
-        """
-        Adds a crystal to the current crystal.
+        """Adds a crystal to the current crystal.
 
         Parameters
         ----------
@@ -225,8 +216,7 @@ class Crystal:
         self.params = np.append(self.params, crystal.params, axis=1)
 
     def copy(self):
-        """
-        Create a deep copy of the crystal.
+        """Create a deep copy of the crystal.
 
         Returns
         -------
@@ -238,8 +228,7 @@ class Crystal:
 
     @classmethod
     def triangular_hexagonal(cls, N: int, filled: bool, Nparams: int = 1):
-        """
-        Creates a triangular photonic crystal in the shape of a hexagon, often
+        """Creates a triangular photonic crystal in the shape of a hexagon, often
         useful for point-defect cavities.
 
         Parameters
@@ -285,8 +274,7 @@ class Crystal:
 
     @classmethod
     def triangular_box(cls, Nx: int, Ny: int, Nparams: int = 1):
-        """
-        Creates a triangular photonic crystal in the shape of a rectangular
+        """Creates a triangular photonic crystal in the shape of a rectangular
         box.
 
         Parameters
@@ -330,8 +318,7 @@ class Crystal:
         periods: list[int],
         Nparams: int = 1,
     ):
-        """
-        Creates a triangular photonic crystal in the shape of a rectangular
+        """Creates a triangular photonic crystal in the shape of a rectangular
         box using a heterostructure.
 
         Parameters
@@ -431,8 +418,7 @@ def make_phc(
     cellfun=__circ_cellfun__,
     name: str = "",
 ):
-    """
-    Creates a photonic crystal geometry
+    """Creates a photonic crystal geometry
 
     Parameters
     ----------
@@ -483,8 +469,7 @@ def make_phc_inpoly(
     cellfun=__circ_cellfun__,
     name: str = "",
 ):
-    """
-    Creates a photonic crystal geometry clipped inside a polygon area.
+    """Creates a photonic crystal geometry clipped inside a polygon area.
 
     Parameters
     ----------

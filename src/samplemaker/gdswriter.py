@@ -1,5 +1,4 @@
-"""
-Binary export to GDS files.
+"""Binary export to GDS files.
 
 The `GDSWriter` class should not be used directly but via the `samplemaker.layout.Mask` object
 in the `samplemaker.layout` submodule.
@@ -17,13 +16,11 @@ from samplemaker.shapes import GeomGroup
 
 
 class GDSWriter:
-    """
-    GDS output class
+    """GDS output class
     """
 
     def __init__(self, circleres: int = 12, arcres: int = 32):
-        """
-        Initialize the GDSWriter class
+        """Initialize the GDSWriter class
 
         Parameters
         ----------
@@ -204,8 +201,7 @@ class GDSWriter:
         return gg
 
     def open_library(self, filename: str):
-        """
-        Opens a new GDS file for writing. To close, call close_library()
+        """Opens a new GDS file for writing. To close, call close_library()
 
         Parameters
         ----------
@@ -251,8 +247,7 @@ class GDSWriter:
         print(f"Opened {filename}")
 
     def open_structure(self, structure_name: str):
-        """
-        Opens a new structure (or cell) in the existing GDS stream.
+        """Opens a new structure (or cell) in the existing GDS stream.
         The file should be already open using open_library()
         This function can be used to write multiple objects in a single cell.
         It should be closed with close_structure()
@@ -291,8 +286,7 @@ class GDSWriter:
         self.__write_string(structure_name, 1542)
 
     def write_geomgroup(self, geom_group: GeomGroup):
-        """
-        Writes a GeomGroup to GDS stream. The file should be first opened with
+        """Writes a GeomGroup to GDS stream. The file should be first opened with
         open_library() followed by open_structure().
         To be used for interactive writing only. See write_structure() for
         direct writing (recommended)
@@ -342,8 +336,7 @@ class GDSWriter:
                 continue
 
     def close_structure(self):
-        """
-        Closes the structure, should be called after open_structure()
+        """Closes the structure, should be called after open_structure()
 
         Returns
         -------
@@ -353,8 +346,7 @@ class GDSWriter:
         self.fid.write(struct.pack(">2H", 4, 1792))
 
     def write_structure(self, structure_name: str, geom_group: "GeomGroup"):
-        """
-        Write a GeomGroup into a named structure/cell. The GeomGroup is written
+        """Write a GeomGroup into a named structure/cell. The GeomGroup is written
         into the cell once and then the GDS cell is closed.
         This is equivalent to
             open_structure(structure_name)
@@ -378,8 +370,7 @@ class GDSWriter:
         self.close_structure()
 
     def write_pool(self, pool: dict):
-        """
-        Writes all the structures in the dictionary using key name as structure
+        """Writes all the structures in the dictionary using key name as structure
         reference name and value as the group to be written.
 
         Parameters
@@ -396,8 +387,7 @@ class GDSWriter:
             self.write_structure(sname, group)
 
     def write_pool_use_cache(self, pool: dict, cache: dict):
-        """
-        Writes all the structures in the dictionary using key name as structure
+        """Writes all the structures in the dictionary using key name as structure
         reference name and value as the group to be written.
         Uses GDS cache when available
 
@@ -421,8 +411,7 @@ class GDSWriter:
                 self.write_structure(sname, group)
 
     def close_library(self):
-        """
-        Closes the GDS library and the file stream
+        """Closes the GDS library and the file stream
 
         Returns
         -------

@@ -1,6 +1,4 @@
-"""
-Base waveguide library.
-
+"""Base waveguide library.
 
 Implements a simple waveguide sequencer and optical ports.
 This module can be used as template to develop different waveguide libraries.
@@ -39,8 +37,7 @@ def BaseWaveguideOptions():
 # the current waveguide width as well using the parameter 'w'
 class BaseWaveguideState(smseq.SequencerState):
     def __init__(self):
-        """
-        The sequencer state for BaseWaveguide library.
+        """The sequencer state for BaseWaveguide library.
         Defines 'w' as current waveguide width.
 
         Returns
@@ -61,8 +58,7 @@ def BaseWaveguideINIT(state, options):
 
 # The S command to go straight
 def BaseWaveguideS(args, state, options) -> GeomGroup:
-    """
-    Draw straight waveguide
+    """Draw straight waveguide
 
     Parameters
     ----------
@@ -96,8 +92,7 @@ def BaseWaveguideS(args, state, options) -> GeomGroup:
 
 # The B command to make a circular bend
 def BaseWaveguideB(args, state, options) -> GeomGroup:
-    """
-    Draw circular bend waveguide
+    """Draw circular bend waveguide
 
     Parameters
     ----------
@@ -151,8 +146,7 @@ def BaseWaveguideB(args, state, options) -> GeomGroup:
 
 
 def BaseWaveguideC(args, state, options) -> GeomGroup:
-    """
-    Draw cosine bend waveguide. While keeping the same direciton,
+    """Draw cosine bend waveguide. While keeping the same direciton,
     bend the waveguide using a cosine function.
 
     Parameters
@@ -204,8 +198,7 @@ def BaseWaveguideC(args, state, options) -> GeomGroup:
 
 
 def BaseWaveguideT(args, state, options) -> GeomGroup:
-    """
-    Draw linear taper
+    """Draw linear taper
 
     Parameters
     ----------
@@ -242,8 +235,7 @@ def BaseWaveguideT(args, state, options) -> GeomGroup:
 
 
 def BaseWaveguideOFF(args, state, options) -> GeomGroup:
-    """
-    Offset the waveguide (jumps left or right of waveguide)
+    """Offset the waveguide (jumps left or right of waveguide)
 
     Parameters
     ----------
@@ -268,8 +260,7 @@ def BaseWaveguideOFF(args, state, options) -> GeomGroup:
 
 
 def BaseWaveguideCommands() -> dict:
-    """
-    Creates the dictionary with the command list and corresponding
+    """Creates the dictionary with the command list and corresponding
     functions.
 
     Returns
@@ -291,8 +282,7 @@ def BaseWaveguideCommands() -> dict:
 # Finally, create a custom sequencer
 class BaseWaveguideSequencer(smseq.Sequencer):
     def __init__(self, seq):
-        """
-        Creates a custom sequencer for simple waveguides.
+        """Creates a custom sequencer for simple waveguides.
 
         Parameters
         ----------

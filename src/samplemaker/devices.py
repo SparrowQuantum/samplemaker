@@ -1,5 +1,4 @@
-"""
-This module contains the base classes for generating re-usable device classes.
+"""This module contains the base classes for generating re-usable device classes.
 
 The Device class
 ----------------
@@ -201,8 +200,7 @@ from samplemaker.shapes import GeomGroup, Poly
 
 
 class IncompatiblePortError(RuntimeError):
-    """
-    Exception raised when trying to link incompatible ports.
+    """Exception raised when trying to link incompatible ports.
     """
 
 
@@ -309,8 +307,7 @@ class DevicePort:
 
 class Device:
     def __init__(self):
-        """
-        Initializes a Device. Should never be called.
+        """Initializes a Device. Should never be called.
 
         Returns
         -------
@@ -353,8 +350,7 @@ class Device:
         return hash((frozenset(self._p.items()), self._name))
 
     def angle(self):
-        """
-        Returns the orientation of the device in radians.
+        """Returns the orientation of the device in radians.
 
         Returns
         -------
@@ -365,8 +361,7 @@ class Device:
         return math.pi * (3 - (self._hv + self._bf * 2)) / 2
 
     def set_angle(self, angle: float):
-        """
-        Changes the orientation of the device
+        """Changes the orientation of the device
 
         Parameters
         ----------
@@ -383,8 +378,7 @@ class Device:
         self._bf = math.floor(i / 2) == 1
 
     def set_position(self, x0: float, y0: float):
-        """
-        Changes the position of the device
+        """Changes the position of the device
 
         Parameters
         ----------
@@ -402,8 +396,7 @@ class Device:
         self._y0 = y0
 
     def addport(self, port: DevicePort):
-        """
-        Call this from the ports() method to add a port to the device.
+        """Call this from the ports() method to add a port to the device.
 
         Parameters
         ----------
@@ -425,8 +418,7 @@ class Device:
         param_type: type = float,
         param_range: tuple[float, float] = (0, np.inf),
     ):
-        """
-        Call this from the parameters() method to add a parameter to the device.
+        """Call this from the parameters() method to add a parameter to the device.
 
         Parameters
         ----------
@@ -463,8 +455,7 @@ class Device:
         param_type: type = float,
         param_range: tuple[float, float] = (0, np.inf),
     ):
-        """
-        Defines a local parameter that is only used within the class and not
+        """Defines a local parameter that is only used within the class and not
         controllable from outside.
 
         Parameters
@@ -495,8 +486,7 @@ class Device:
         self._prange[param_name] = param_range
 
     def addlocalport(self, port: DevicePort):
-        """
-        Same as local parameter, but allows creating ports from the geom() function.
+        """Same as local parameter, but allows creating ports from the geom() function.
         If you need some info from the geom() function to create ports just add local
         ports and they will be automatically added to ports by the port() function.
 
@@ -513,8 +503,7 @@ class Device:
         self._localp["_ports_"][port.name] = port
 
     def get_localport(self, portname: str):
-        """
-        Returns the local port (i.e. within the geom() function.)
+        """Returns the local port (i.e. within the geom() function.)
 
         Parameters
         ----------
@@ -537,8 +526,7 @@ class Device:
         return lports[portname]
 
     def remove_localport(self, portname: str):
-        """
-        Removes a local port.
+        """Removes a local port.
 
         Parameters
         ----------
@@ -555,8 +543,7 @@ class Device:
             self._localp["_ports_"].pop(portname)
 
     def set_param(self, param_name: str, value):
-        """
-        Change a paramter. To be called after build().
+        """Change a paramter. To be called after build().
 
         Parameters
         ----------
@@ -585,8 +572,7 @@ class Device:
                 raise ValueError(msg)
 
     def get_params(self, cast_types: bool = True, clip_in_range: bool = True) -> dict:
-        """
-        To be called by geom() functions. Returns the dictionary with all parameters.
+        """To be called by geom() functions. Returns the dictionary with all parameters.
 
         Parameters
         ----------
@@ -614,8 +600,7 @@ class Device:
         return self._p
 
     def get_port(self, port_name: str):
-        """
-        Should not be called by user. Returns the named port.
+        """Should not be called by user. Returns the named port.
 
         Parameters
         ----------
@@ -637,8 +622,7 @@ class Device:
         return self._ports[port_name]
 
     def set_name(self, name: str):
-        """
-        Sets the device name (should be called from initialize).
+        """Sets the device name (should be called from initialize).
 
         Parameters
         ----------
@@ -653,8 +637,7 @@ class Device:
         self._name = name
 
     def set_description(self, descr: str):
-        """
-        Sets the device description (should be called from initialize)
+        """Sets the device description (should be called from initialize)
 
         Parameters
         ----------
@@ -669,8 +652,7 @@ class Device:
         self._description = descr
 
     def initialize(self):
-        """
-        Re-implement this function in your device to initialize and set the device name
+        """Re-implement this function in your device to initialize and set the device name
 
         Returns
         -------
@@ -680,8 +662,7 @@ class Device:
         pass
 
     def parameters(self):
-        """
-        Re-implement this function to define parameters of the device
+        """Re-implement this function to define parameters of the device
 
         Returns
         -------
@@ -691,8 +672,7 @@ class Device:
         pass
 
     def geom(self):
-        """
-        Re-implement this function to generate the geometry of the device.
+        """Re-implement this function to generate the geometry of the device.
 
         Returns
         -------
@@ -702,8 +682,7 @@ class Device:
         pass
 
     def run(self):
-        """
-        Runs the device and generates a geometry.
+        """Runs the device and generates a geometry.
 
         Returns
         -------
@@ -754,8 +733,7 @@ class Device:
         return g
 
     def ports(self):
-        """
-        Re-implement this to define ports.
+        """Re-implement this to define ports.
         If localports are used via the geom() function do not re-implement.
 
         Returns
@@ -770,8 +748,7 @@ class Device:
 
     @staticmethod
     def build_registered(name: str):
-        """
-        Builds a device from the pool of registered device names.
+        """Builds a device from the pool of registered device names.
 
         Parameters
         ----------
@@ -791,8 +768,7 @@ class Device:
 
     @classmethod
     def build(cls):
-        """
-        Class method to build a device.
+        """Class method to build a device.
 
         Returns
         -------
@@ -811,8 +787,7 @@ class NetListEntry:
     def __init__(
         self, devname: str, x0: float, y0: float, rot: str, portmap: dict, params: dict
     ):
-        """
-        Defines a single entry in a NetList.
+        """Defines a single entry in a NetList.
 
         Parameters
         ----------
@@ -863,8 +838,7 @@ class NetListEntry:
 
 class NetList:
     def __init__(self, name: str, entry_list: list[NetListEntry]):
-        """
-        Creates a new NetList for circuit generation.
+        """Creates a new NetList for circuit generation.
 
         Parameters
         ----------
@@ -895,8 +869,7 @@ class NetList:
         )
 
     def set_external_ports(self, ext_ports: list):
-        """
-        Define a list of wires (list of strings) that should be
+        """Define a list of wires (list of strings) that should be
         connected outside the circuit.
 
         Parameters
@@ -912,8 +885,7 @@ class NetList:
         self.external_ports = ext_ports
 
     def set_aligned_ports(self, aligned_ports: list):
-        """
-        Define a list of wires (list of strings) that should be
+        """Define a list of wires (list of strings) that should be
         aligned with each other
 
         Parameters
@@ -929,8 +901,7 @@ class NetList:
         self.aligned_ports = aligned_ports
 
     def set_path(self, port_name: str, coords: list):
-        """
-        Define a specific path that a wire should follow.
+        """Define a specific path that a wire should follow.
 
         Parameters
         ----------
@@ -948,8 +919,7 @@ class NetList:
 
     @classmethod
     def ImportCircuit(cls, file_name: str, circuit_name: str = ""):
-        """
-        Generates a NetList object from a circuit file.
+        """Generates a NetList object from a circuit file.
         The input is a text file with circuit description similar to the
         SPICE netlist format (yet with some important differences).
         Check the tutorials for examples.
@@ -1073,8 +1043,7 @@ class Circuit(Device):
         return hash((frozenset(flatdict.items()), self._name))
 
     def initialize(self):
-        """
-        Names the Circuit as 'X' to be referred in other circuits
+        """Names the Circuit as 'X' to be referred in other circuits
 
         Returns
         -------
@@ -1084,8 +1053,7 @@ class Circuit(Device):
         self._name = "X"
 
     def parameters(self):
-        """
-        Defines the parameter NETLIST taking a `NetList` object as input.
+        """Defines the parameter NETLIST taking a `NetList` object as input.
 
         Returns
         -------
@@ -1120,8 +1088,7 @@ class Circuit(Device):
             )
 
     def set_param(self, param_name: str, value):
-        """
-        Sets the value of a parameter. In a Circuit, you can refer to
+        """Sets the value of a parameter. In a Circuit, you can refer to
         individual device parameters by using the following convention:
 
             dev.set_param("dev_MYDEVICE_1::length", 12)
@@ -1147,8 +1114,7 @@ class Circuit(Device):
             self.update_parameters()
 
     def geom(self):
-        """
-        Draws the entire circuit.
+        """Draws the entire circuit.
 
         Returns
         -------
@@ -1265,8 +1231,7 @@ class Circuit(Device):
         return g
 
     def ports(self):
-        """
-        Adds external ports that are not connected in the netlist.
+        """Adds external ports that are not connected in the netlist.
 
         Returns
         -------
@@ -1282,8 +1247,7 @@ _DeviceList: dict[str, type[Device]] = {"X": Circuit}
 
 
 def registerDevicesInModule(module_name: str):
-    """
-    To be called at the end of a python module containing device classes
+    """To be called at the end of a python module containing device classes
     that inherit the `Device` class. It will register the device names in a
     global database.
 
@@ -1315,8 +1279,7 @@ def registerDevicesInModule(module_name: str):
 
 
 def CreateDeviceLibrary(devname: str, params: dict, filename: str):
-    """
-    Generates a GDS file with a re-usable GDS-format device.
+    """Generates a GDS file with a re-usable GDS-format device.
     Also exports ports as text element in GDS.
     Flattens everything
 
@@ -1356,8 +1319,7 @@ def CreateDeviceLibrary(devname: str, params: dict, filename: str):
 
 
 def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel"):
-    """
-    Generates a Layout Editor library file (LEL) containing the Devices currently
+    """Generates a Layout Editor library file (LEL) containing the Devices currently
     loaded on the Device List. The library file can be used in combination with
     Layout Editor Schematic to produce spice netlists for circuit design.
 

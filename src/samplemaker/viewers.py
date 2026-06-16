@@ -1,5 +1,4 @@
-"""
-Basic functions to plot and inspect geometries.
+"""Basic functions to plot and inspect geometries.
 
 These are very basic plotting functions to speed up the development of masks
 and circuits. They can be used instead of writing and opening GDS files external
@@ -94,8 +93,7 @@ def __get_device_ports_patches(dev: Device):
 
 
 def GeomView(grp: GeomGroup):
-    """
-    Plot a geometry in a matplotlib window.
+    """Plot a geometry in a matplotlib window.
 
     Only polygons and circles are displayed. Most elements are either ignored or
     converted to polygon.
@@ -153,8 +151,7 @@ def __update_scrollbar(_val):
 
 
 def DeviceInspect(devcl: Device | type[Device]):
-    """
-    Interactive display of devices defined from `samplemaker.devices`.
+    """Interactive display of devices defined from `samplemaker.devices`.
 
     If a device class is provided, the device is rendered using its default
     parameter values. If a device instance is provided, the device is rendered

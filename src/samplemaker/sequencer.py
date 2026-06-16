@@ -1,5 +1,4 @@
-"""
-Classes to handle custom sequences of shapes (e.g. waveguides).
+"""Classes to handle custom sequences of shapes (e.g. waveguides).
 
 The concept of sequence
 -----------------------
@@ -131,8 +130,7 @@ def __insertDevice(args, state, options):
 
 
 def default_command_list():
-    """
-    Create a basic dictionary with basic commands required by the sequencer.
+    """Create a basic dictionary with basic commands required by the sequencer.
 
     These include
 
@@ -157,8 +155,7 @@ def default_command_list():
 
 
 def default_options():
-    """
-    Create default options for the sequencer.
+    """Create default options for the sequencer.
 
     This returns the essential base options.
 
@@ -180,8 +177,7 @@ def default_options():
 
 class SequencerState:
     def __init__(self):
-        """
-        Initialize a sequencer state to default values.
+        """Initialize a sequencer state to default values.
         The default sequencer state contains the following variables:
 
         * 'x': The current x-coordinate of the sequencer. Initially 0
@@ -211,8 +207,7 @@ class Sequencer:
     def __init__(
         self, seq, seq_options: dict, seq_state: SequencerState, seq_dictionary: dict
     ):
-        """
-        Initializes a new sequencer object. It requires a sequence, an option
+        """Initializes a new sequencer object. It requires a sequence, an option
         dictionary, a state object, and a dictionary to interpret commands.
 
         Parameters
@@ -238,8 +233,7 @@ class Sequencer:
         self.debug_state = False
 
     def set_debug_state(self, value: bool):
-        """
-        Sets debug mode. In debug mode the state is printed at all steps.
+        """Sets debug mode. In debug mode the state is printed at all steps.
 
         Parameters
         ----------
@@ -254,8 +248,7 @@ class Sequencer:
         self.debug_state = value
 
     def get_state(self):
-        """
-        The current state of the sequencer
+        """The current state of the sequencer
 
         Returns
         -------
@@ -266,8 +259,7 @@ class Sequencer:
         return deepcopy(self.state)
 
     def reset(self):
-        """
-        Resets the sequencer position state to 0,0
+        """Resets the sequencer position state to 0,0
         and sets direction back to zero.
 
         Returns
@@ -280,8 +272,7 @@ class Sequencer:
         self.state["a"] = 0
 
     def run(self):
-        """
-        Execute the sequence and get the final geometry object.
+        """Execute the sequence and get the final geometry object.
 
         Returns
         -------

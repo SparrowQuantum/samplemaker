@@ -1,5 +1,4 @@
-"""
-Binary import of GDS files.
+"""Binary import of GDS files.
 
 This class does not import GDS files directly into geometries.
 It only imports the binary streams for reuse.
@@ -33,8 +32,7 @@ class GDSRecord:
 
 
 class GDSReader:
-    """
-    GDS input class
+    """GDS input class
     """
 
     def __init__(self):
@@ -236,8 +234,7 @@ class GDSReader:
         return gg
 
     def quick_read(self, filename: str):
-        """
-        Performs a quick scan of the GDS file and stores
+        """Performs a quick scan of the GDS file and stores
         structures (between BGNSTR and ENDSTR) in memory
 
         Parameters
@@ -250,7 +247,6 @@ class GDSReader:
         None.
 
         """
-
         with open(filename, "rb") as f:
             self.buf = f.read()
 
