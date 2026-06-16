@@ -1,8 +1,8 @@
 """The Python version of Sample Maker.
 
-Sample Maker is a scripting tool for designing lithographic masks in the GDSII format. 
-The package `samplemaker` comes with different tools and submodules for the creation 
-and manipulation of basic shapes, periodic shapes, sequences (e.g. waveguides), 
+Sample Maker is a scripting tool for designing lithographic masks in the GDSII format.
+The package `samplemaker` comes with different tools and submodules for the creation
+and manipulation of basic shapes, periodic shapes, sequences (e.g. waveguides),
 circuits, and complex devices.
 
 The code has been developed primarily for nanophotonics, but it can be easily extended
@@ -13,8 +13,8 @@ University of Copenhagen). It is based on the MATLAB(R) code developed by Leonar
 Midolo between 2013 and 2019. The first version of the rewritten Python code has been
 released in October 2021.
 
-This software has been realized with the financial support from the European Research 
-Council (ERC) under the European Union's Horizon 2020 research and innovation programme 
+This software has been realized with the financial support from the European Research
+Council (ERC) under the European Union's Horizon 2020 research and innovation programme
 (Grant agreement No. 949043, NANOMEQ).
 
 .. include:: ./documentation.md
