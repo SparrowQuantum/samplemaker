@@ -36,6 +36,16 @@ classifiers = [
 [project.urls]
 Repository = "https://github.com/SparrowQuantum/samplemaker.git"
 
+[tool.ruff]
+extend-exclude = ["tutorials/*"]
+
+[tool.ruff.lint]
+select = ["D"]
+ignore = ["D203", "D213", "D413"]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"tests/*" = ["D1"]
+
 [tool.scikit-build]
 minimum-version = "0.11.6"
 build-dir = "build/{wheel_tag}"
