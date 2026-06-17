@@ -40,8 +40,8 @@ Repository = "https://github.com/SparrowQuantum/samplemaker.git"
 extend-exclude = ["tutorials/*"]
 
 [tool.ruff.lint]
-select = ["D", "E", "W", "I"]
-ignore = ["D203", "D213", "D413"]
+select = ["D", "E", "W", "I", "ANN"]
+ignore = ["D203", "D213"]
 
 [tool.ruff.lint.extend-per-file-ignores]
 "tests/*" = ["D1"]
