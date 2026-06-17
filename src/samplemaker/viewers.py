@@ -23,7 +23,7 @@ _ViewerCurrentDevice: Device | None = None
 _ViewerCurrentAxes: plt.Axes | None = None
 
 
-def __get_geom_patches(grp: GeomGroup):
+def __get_geom_patches(grp: GeomGroup) -> list:
     prop_cycle = plt.rcParams["axes.prop_cycle"]
     colors = prop_cycle.by_key()["color"]
     patches = []
@@ -77,14 +77,14 @@ def __get_geom_patches(grp: GeomGroup):
     return patches
 
 
-def _get_port_patches(port: DevicePort):
+def _get_port_patches(port: DevicePort) -> list:
     if port.name == "":
         return []
     tpath = TextPath((port.x0, port.y0), port.name, size=1)
     return [Arrow(port.x0, port.y0, port.dx(), port.dy()), PathPatch(tpath)]
 
 
-def __get_device_ports_patches(dev: Device):
+def __get_device_ports_patches(dev: Device) -> list:
     patches = []
     for port in dev._ports.values():
         patches += _get_port_patches(port)
@@ -92,7 +92,7 @@ def __get_device_ports_patches(dev: Device):
     return patches
 
 
-def GeomView(grp: GeomGroup):
+def GeomView(grp: GeomGroup) -> None:
     """Plot a geometry in a matplotlib window.
 
     Only polygons and circles are displayed. Most elements are either ignored or
@@ -120,7 +120,7 @@ def GeomView(grp: GeomGroup):
     plt.show()
 
 
-def __update_scrollbar(_val):
+def __update_scrollbar(_val: float) -> None:
     global _ViewerCurrentDevice
     global _ViewerCurrentSliders
     global _ViewerCurrentAxes
@@ -150,7 +150,7 @@ def __update_scrollbar(_val):
     ax.figure.canvas.draw_idle()
 
 
-def DeviceInspect(devcl: Device | type[Device]):
+def DeviceInspect(devcl: Device | type[Device]) -> None:
     """Interactive display of devices defined from `samplemaker.devices`.
 
     If a device class is provided, the device is rendered using its default
