@@ -30,8 +30,9 @@ with the designed parameters.
 
 import math
 import warnings
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from copy import deepcopy
+from typing import TypeVar
 
 import numpy as np
 
@@ -39,14 +40,21 @@ import samplemaker.makers as sm
 from samplemaker.layout import LayoutPool
 from samplemaker.shapes import GeomGroup, Poly
 
+T = TypeVar("T", bound="Crystal")
+
 
 class Crystal:
+    """Class containing the lattice sites and parameters of a crystal.
+
+    Comes with several templates for common photonic crystals.
+    """
+
     def __init__(
         self,
         xpts: Iterable[float] | None = None,
         ypts: Iterable[float] | None = None,
         params: Iterable[float] | None = None,
-    ):
+    ) -> None:
         """Initialize a Crystal template.
 
         Parameters
@@ -72,8 +80,8 @@ class Crystal:
         self.ypts = np.array(ypts, dtype=np.float64)
         self.params = np.array(params, dtype=np.float64)
 
-    def remove_at_index(self, index: list[int]):
-        """Removes lattice sites from a list of indices.
+    def remove_at_index(self, index: list[int]) -> None:
+        """Remove lattice sites from a list of indices.
 
         Parameters
         ----------
@@ -98,7 +106,7 @@ class Crystal:
         relative: bool = False,
         orig_x: float = 0,
         orig_y: float = 0,
-    ):
+    ) -> None:
         """Shifts the lattice sites specified in the list.
 
         Parameters
@@ -133,8 +141,8 @@ class Crystal:
                 self.xpts[index] = self.xpts[index] + shift_x
                 self.ypts[index] = self.ypts[index] + shift_y
 
-    def param_at_index(self, index: int, pindex: int, pvalues: float):
-        """Sets a parameter at the lattice index.
+    def param_at_index(self, index: int, pindex: int, pvalues: float) -> None:
+        """Set a parameter at the lattice index.
 
         Parameters
         ----------
@@ -143,7 +151,7 @@ class Crystal:
         pindex : int
             The parameter index.
         pvalues : float
-            The new value of the paramter to be set.
+            The new value of the parameter to be set.
 
         Returns
         -------
@@ -152,8 +160,10 @@ class Crystal:
         """
         self.params[pindex, index] = pvalues
 
-    def coord_to_index(self, xc, yc):
-        """Converts a coordinate to an index (if matches).
+    def coord_to_index(
+        self, xc: float | np.ndarray, yc: float | np.ndarray
+    ) -> list[int]:
+        """Convert a coordinate to an index (if matches).
 
         Parameters
         ----------
@@ -183,7 +193,7 @@ class Crystal:
                 sel.append(res[0][0])
         return sel
 
-    def remove_crystal(self, crystal: "Crystal"):
+    def remove_crystal(self, crystal: "Crystal") -> None:
         """Subtracts a crystal from another crystal.
 
         Parameters
@@ -198,8 +208,8 @@ class Crystal:
         """
         self.remove_at_index(self.coord_to_index(crystal.xpts, crystal.ypts))
 
-    def add_crystal(self, crystal: "Crystal"):
-        """Adds a crystal to the current crystal.
+    def add_crystal(self, crystal: "Crystal") -> None:
+        """Add another crystal to the current crystal.
 
         Parameters
         ----------
@@ -215,7 +225,7 @@ class Crystal:
         self.ypts = np.append(self.ypts, crystal.ypts)
         self.params = np.append(self.params, crystal.params, axis=1)
 
-    def copy(self):
+    def copy(self) -> T:
         """Create a deep copy of the crystal.
 
         Returns
@@ -227,9 +237,10 @@ class Crystal:
         return deepcopy(self)
 
     @classmethod
-    def triangular_hexagonal(cls, N: int, filled: bool, Nparams: int = 1):
-        """Creates a triangular photonic crystal in the shape of a hexagon, often
-        useful for point-defect cavities.
+    def triangular_hexagonal(cls, N: int, filled: bool, Nparams: int = 1) -> T:
+        """Create a triangular photonic crystal in the shape of a hexagon.
+
+        Often useful for point-defect cavities.
 
         Parameters
         ----------
@@ -273,9 +284,8 @@ class Crystal:
         return cls(xpts, ypts, params)
 
     @classmethod
-    def triangular_box(cls, Nx: int, Ny: int, Nparams: int = 1):
-        """Creates a triangular photonic crystal in the shape of a rectangular
-        box.
+    def triangular_box(cls, Nx: int, Ny: int, Nparams: int = 1) -> T:
+        """Create a triangular photonic crystal in the shape of a box.
 
         Parameters
         ----------
@@ -317,9 +327,11 @@ class Crystal:
         spacing: list[float],
         periods: list[int],
         Nparams: int = 1,
-    ):
-        """Creates a triangular photonic crystal in the shape of a rectangular
-        box using a heterostructure.
+    ) -> T:
+        """Create a triangular photonic crystal.
+
+        The resulting crystal is in the shape of a rectangular box using a
+        heterostructure.
 
         Parameters
         ----------
@@ -341,7 +353,7 @@ class Crystal:
 
         Returns
         -------
-        heterophc : Crystal
+        Crystal
             A crystal object with the pre-compiled lattice sites.
 
         """
@@ -395,14 +407,14 @@ class Crystal:
         return heterophc
 
 
-def __circ_cellfun__(x, y, params):
+def __circ_cellfun__(x: float, y: float, params: list[float]) -> GeomGroup:
     if params == "test":
         return 1
     else:
         return sm.make_circle(x, y, params[0], 0)
 
 
-def __circref_cellfun__(x, y, params):
+def __circref_cellfun__(x: float, y: float, params: list[float]) -> GeomGroup:
     if params == "test":
         return 1
     else:
@@ -415,10 +427,10 @@ def make_phc(
     cellparams: list[float],
     x0: float,
     y0: float,
-    cellfun=__circ_cellfun__,
+    cellfun: Callable[[float, float, list[float] | str], GeomGroup] = __circ_cellfun__,
     name: str = "",
-):
-    """Creates a photonic crystal geometry.
+) -> GeomGroup:
+    """Create a photonic crystal geometry.
 
     Parameters
     ----------
@@ -432,7 +444,7 @@ def make_phc(
         Position x-coordinate in um.
     y0 : float
         Position y-coordinate in um.
-    cellfun : TYPE, optional
+    cellfun : Callable[[float, float, list[float] | str], GeomGroup], optional
         A function of the type fun(x,y,params) that returns the geometry of the unit
         cell. It should also return the number of parameters required to draw the unit
         cell if "test" is passed as params. The default is __circ_cellfun__.
@@ -441,7 +453,7 @@ def make_phc(
 
     Returns
     -------
-    phc : GeomGroup
+    GeomGroup
         A geometry containing the full crystal.
 
     """
@@ -466,10 +478,10 @@ def make_phc_inpoly(
     cellparams: list[float],
     x0: float,
     y0: float,
-    cellfun=__circ_cellfun__,
+    cellfun: Callable[[float, float, list[float] | str], GeomGroup] = __circ_cellfun__,
     name: str = "",
-):
-    """Creates a photonic crystal geometry clipped inside a polygon area.
+) -> GeomGroup:
+    """Create a photonic crystal geometry clipped inside a polygon area.
 
     Parameters
     ----------
@@ -485,7 +497,7 @@ def make_phc_inpoly(
         Position x-coordinate in um.
     y0 : float
         Position y-coordinate in um.
-    cellfun : TYPE, optional
+    cellfun : Callable[[float, float, list[float] | str], GeomGroup], optional
         A function of the type fun(x,y,params) that returns the geometry of the unit
         cell. It should also return the number of parameters required to draw the unit
         cell if "test" is passed as params. The default is __circ_cellfun__.
@@ -494,7 +506,7 @@ def make_phc_inpoly(
 
     Returns
     -------
-    phc : GeomGroup
+    GeomGroup
         A geometry containing the full crystal.
 
     """
