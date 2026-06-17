@@ -240,7 +240,7 @@ class TestBox:
     def test_to_poly(self, box_obj: sp.Box) -> None:
         poly = box_obj.toPoly()
         assert isinstance(poly, sp.Poly)
-        # poly.data should be of the format [x0, y0, x1, y1, x2, y2, x3, y3, ..., x0, y0]
+        # poly.data should be of the format [x0, y0, x1, y1, x2, y2, ..., x0, y0]
         assert isinstance(poly.data, np.ndarray)
         assert len(poly.data) == 10
 
