@@ -53,29 +53,31 @@ with `samplemaker`.
 """
 
 import math
+from collections.abc import Callable
 from copy import deepcopy
+from typing import Any
 
 from samplemaker.devices import _DeviceList
 from samplemaker.shapes import GeomGroup
 
 
-def __changeState(args, state, options):
+def __changeState(args: list, state: dict, options: dict) -> GeomGroup:
     state[args[0]] = args[1]
     return GeomGroup()
 
 
-def __centerState(args, state, options):
+def __centerState(args: list, state: dict, options: dict) -> GeomGroup:
     state["__XC__"] = -state["x"] + args[0]
     state["__YC__"] = -state["y"] + args[1]
     return GeomGroup()
 
 
-def __storeState(args, state, options):
+def __storeState(args: list, state: dict, options: dict) -> GeomGroup:
     state["STORED"] += [[state["x"], state["y"]]]
     return GeomGroup()
 
 
-def __initState(state, options):
+def __initState(state: dict, options: dict) -> None:
     if not options["__no_init__"]:
         state["x"] = 0
         state["y"] = 0
@@ -86,7 +88,7 @@ def __initState(state, options):
         state["STORED"] = []
 
 
-def __insertDevice(args, state, options):
+def __insertDevice(args: list, state: dict, options: dict) -> GeomGroup:
     devname = args[0]
     inport = args[1]
     outport = args[2]
@@ -129,7 +131,7 @@ def __insertDevice(args, state, options):
     return g
 
 
-def default_command_list():
+def default_command_list() -> dict[str, tuple[int, Callable]]:
     """Create a basic dictionary with basic commands required by the sequencer.
 
     These include
@@ -141,7 +143,7 @@ def default_command_list():
 
     Returns
     -------
-    defcmdlist : dict
+    dict[str, tuple[int, Callable]]
         The default command dictionary.
 
     """
@@ -154,14 +156,14 @@ def default_command_list():
     return defcmdlist
 
 
-def default_options():
+def default_options() -> dict[str, Any]:
     """Create default options for the sequencer.
 
     This returns the essential base options.
 
     Returns
     -------
-    defopts : dict
+    dict[str, Any]
         Returns the default options for the sequencer.
 
     """
@@ -176,8 +178,16 @@ def default_options():
 
 
 class SequencerState:
-    def __init__(self):
+    """Class to handle the state of the sequencer.
+
+    The state is a dictionary that can be modified by the instructions in the sequence.
+    The state is initialized to default values when a SequencerState object is created.
+
+    """
+
+    def __init__(self) -> None:
         """Initialize a sequencer state to default values.
+
         The default sequencer state contains the following variables:
 
         * 'x': The current x-coordinate of the sequencer. Initially 0
@@ -190,7 +200,7 @@ class SequencerState:
 
         Returns
         -------
-        None.
+        None
 
         """
         self.state = dict()
@@ -204,21 +214,29 @@ class SequencerState:
 
 
 class Sequencer:
+    """Class to handle the execution of a sequence of instructions."""
+
     def __init__(
-        self, seq, seq_options: dict, seq_state: SequencerState, seq_dictionary: dict
-    ):
-        """Initializes a new sequencer object. It requires a sequence, an option
-        dictionary, a state object, and a dictionary to interpret commands.
+        self,
+        seq: list[list[Any]],
+        seq_options: dict[str, Any],
+        seq_state: SequencerState,
+        seq_dictionary: dict[str, tuple[int, Callable]],
+    ) -> None:
+        """Initialize a new sequencer object.
+
+        Requires a sequence, an option dictionary, a state object, and a dictionary to
+        interpret commands.
 
         Parameters
         ----------
-        seq : List
+        seq : list[list[Any]]
             The sequence to be executed (list of instructions).
-        seq_options : dict
+        seq_options : dict[str, Any]
             Dictionary with all the options to be passed to instructions.
         seq_state : SequencerState
             SequencerState object with the initial state of the sequencer.
-        seq_dictionary : dict
+        seq_dictionary : dict[str, tuple[int, Callable]]
             The dictionary with instructions.
 
         Returns
@@ -232,13 +250,15 @@ class Sequencer:
         self.state = seq_state.state
         self.debug_state = False
 
-    def set_debug_state(self, value: bool):
-        """Sets debug mode. In debug mode the state is printed at all steps.
+    def set_debug_state(self, value: bool) -> None:
+        """Set debug mode.
+
+        In debug mode the state is printed at all steps.
 
         Parameters
         ----------
         value : bool
-            True to set debug mode on.
+            True to set debug mode on. False to set debug mode off.
 
         Returns
         -------
@@ -247,20 +267,19 @@ class Sequencer:
         """
         self.debug_state = value
 
-    def get_state(self):
-        """The current state of the sequencer.
+    def get_state(self) -> dict[str, Any]:
+        """Get the current state of the sequencer.
 
         Returns
         -------
-        SequencerState
-            Returns the SequencerState object.
+        dict[str, Any]
+            Returns the current state of the sequencer.
 
         """
         return deepcopy(self.state)
 
-    def reset(self):
-        """Resets the sequencer position state to 0,0
-        and sets direction back to zero.
+    def reset(self) -> None:
+        """Reset the sequencer position state to (0,0) and direction state to zero.
 
         Returns
         -------
@@ -271,12 +290,12 @@ class Sequencer:
         self.state["y"] = 0
         self.state["a"] = 0
 
-    def run(self):
+    def run(self) -> GeomGroup:
         """Execute the sequence and get the final geometry object.
 
         Returns
         -------
-        g : samplemaker.shapes.GeomGroup
+        g : GeomGroup
             The resulting geometry.
 
         """
