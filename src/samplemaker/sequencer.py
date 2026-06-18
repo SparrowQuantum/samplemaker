@@ -55,29 +55,47 @@ with `samplemaker`.
 import math
 from collections.abc import Callable
 from copy import deepcopy
-from typing import Any
+from typing import Any, TypeAlias
 
 from samplemaker.devices import _DeviceList
 from samplemaker.shapes import GeomGroup
 
+ARGS_TYPE: TypeAlias = list[float]
+STATE_TYPE: TypeAlias = dict[str, Any]
+OPTIONS_TYPE: TypeAlias = dict[str, Any]
+SEQ_TYPE: TypeAlias = list[list[Any]]
 
-def __changeState(args: list, state: dict, options: dict) -> GeomGroup:
+INIT_CALLABLE_TYPE: TypeAlias = Callable[[STATE_TYPE, OPTIONS_TYPE], None]
+COMMAND_CALLABLE_TYPE: TypeAlias = Callable[
+    [ARGS_TYPE, STATE_TYPE, OPTIONS_TYPE], GeomGroup
+]
+_CMD_DICT_VAL_TYPE: TypeAlias = tuple[int, INIT_CALLABLE_TYPE | COMMAND_CALLABLE_TYPE]
+COMMANDS_DICT_TYPE: TypeAlias = dict[str, _CMD_DICT_VAL_TYPE]
+
+
+def __changeState(
+    args: ARGS_TYPE, state: STATE_TYPE, options: OPTIONS_TYPE
+) -> GeomGroup:
     state[args[0]] = args[1]
     return GeomGroup()
 
 
-def __centerState(args: list, state: dict, options: dict) -> GeomGroup:
+def __centerState(
+    args: ARGS_TYPE, state: STATE_TYPE, options: OPTIONS_TYPE
+) -> GeomGroup:
     state["__XC__"] = -state["x"] + args[0]
     state["__YC__"] = -state["y"] + args[1]
     return GeomGroup()
 
 
-def __storeState(args: list, state: dict, options: dict) -> GeomGroup:
+def __storeState(
+    args: ARGS_TYPE, state: STATE_TYPE, options: OPTIONS_TYPE
+) -> GeomGroup:
     state["STORED"] += [[state["x"], state["y"]]]
     return GeomGroup()
 
 
-def __initState(state: dict, options: dict) -> None:
+def __initState(state: STATE_TYPE, options: OPTIONS_TYPE) -> None:
     if not options["__no_init__"]:
         state["x"] = 0
         state["y"] = 0
@@ -88,7 +106,9 @@ def __initState(state: dict, options: dict) -> None:
         state["STORED"] = []
 
 
-def __insertDevice(args: list, state: dict, options: dict) -> GeomGroup:
+def __insertDevice(
+    args: ARGS_TYPE, state: STATE_TYPE, options: OPTIONS_TYPE
+) -> GeomGroup:
     devname = args[0]
     inport = args[1]
     outport = args[2]
@@ -131,7 +151,7 @@ def __insertDevice(args: list, state: dict, options: dict) -> GeomGroup:
     return g
 
 
-def default_command_list() -> dict[str, tuple[int, Callable]]:
+def default_command_list() -> COMMANDS_DICT_TYPE:
     """Create a basic dictionary with basic commands required by the sequencer.
 
     These include
@@ -143,7 +163,7 @@ def default_command_list() -> dict[str, tuple[int, Callable]]:
 
     Returns
     -------
-    dict[str, tuple[int, Callable]]
+    COMMANDS_DICT_TYPE
         The default command dictionary.
 
     """
@@ -156,14 +176,14 @@ def default_command_list() -> dict[str, tuple[int, Callable]]:
     return defcmdlist
 
 
-def default_options() -> dict[str, Any]:
+def default_options() -> OPTIONS_TYPE:
     """Create default options for the sequencer.
 
     This returns the essential base options.
 
     Returns
     -------
-    dict[str, Any]
+    OPTIONS_TYPE
         Returns the default options for the sequencer.
 
     """
@@ -203,7 +223,7 @@ class SequencerState:
         None
 
         """
-        self.state = dict()
+        self.state: STATE_TYPE = dict()
         self.state["x"] = 0
         self.state["y"] = 0
         self.state["a"] = 0
@@ -218,10 +238,10 @@ class Sequencer:
 
     def __init__(
         self,
-        seq: list[list[Any]],
-        seq_options: dict[str, Any],
+        seq: SEQ_TYPE,
+        seq_options: OPTIONS_TYPE,
         seq_state: SequencerState,
-        seq_dictionary: dict[str, tuple[int, Callable]],
+        seq_dictionary: COMMANDS_DICT_TYPE,
     ) -> None:
         """Initialize a new sequencer object.
 
@@ -230,18 +250,18 @@ class Sequencer:
 
         Parameters
         ----------
-        seq : list[list[Any]]
+        seq : SEQ_TYPE
             The sequence to be executed (list of instructions).
-        seq_options : dict[str, Any]
+        seq_options : OPTIONS_TYPE
             Dictionary with all the options to be passed to instructions.
         seq_state : SequencerState
             SequencerState object with the initial state of the sequencer.
-        seq_dictionary : dict[str, tuple[int, Callable]]
+        seq_dictionary : COMMANDS_DICT_TYPE
             The dictionary with instructions.
 
         Returns
         -------
-        None.
+        None
 
         """
         self.seq = seq
@@ -262,17 +282,17 @@ class Sequencer:
 
         Returns
         -------
-        None.
+        None
 
         """
         self.debug_state = value
 
-    def get_state(self) -> dict[str, Any]:
+    def get_state(self) -> STATE_TYPE:
         """Get the current state of the sequencer.
 
         Returns
         -------
-        dict[str, Any]
+        STATE_TYPE
             Returns the current state of the sequencer.
 
         """
@@ -283,7 +303,7 @@ class Sequencer:
 
         Returns
         -------
-        None.
+        None
 
         """
         self.state["x"] = 0
