@@ -15,14 +15,31 @@ import numpy as np
 import samplemaker.makers as sm
 from samplemaker.baselib.waveguides import BaseWaveguidePort, BaseWaveguideSequencer
 from samplemaker.devices import Device, registerDevicesInModule
+from samplemaker.shapes import GeomGroup
 
 
 class CrossMark(Device):
-    def initialize(self):
+    """Generic cross marker for lithographic mask alignment."""
+
+    def initialize(self) -> None:
+        """Initialize the cross mark device.
+
+        Returns
+        -------
+        None
+
+        """
         self.set_name("BASELIB_CMARK")
         self.set_description("Generic cross marker for mask alignment.")
 
-    def parameters(self):
+    def parameters(self) -> None:
+        """Define the parameters of the cross mark.
+
+        Returns
+        -------
+        None
+
+        """
         self.addparameter(
             param_name="length1",
             default_value=20,
@@ -68,7 +85,15 @@ class CrossMark(Device):
             param_type=float,
         )
 
-    def geom(self):
+    def geom(self) -> GeomGroup:
+        """Define the geometry of the cross mark.
+
+        Returns
+        -------
+        GeomGroup
+            The geometry of the cross mark.
+
+        """
         p = self.get_params()
         cross = sm.make_rect(0, 0, p["length1"], p["width1"], layer=1)
         cross += sm.make_rect(0, 0, p["width1"], p["length1"], layer=1)
@@ -91,11 +116,27 @@ class CrossMark(Device):
 
 
 class DirectionalCoupler(Device):
-    def initialize(self):
+    """Simple symmetric directional coupler."""
+
+    def initialize(self) -> None:
+        """Initialize the directional coupler device.
+
+        Returns
+        -------
+        None
+
+        """
         self.set_name("BASELIB_DCPL")
         self.set_description("Simple symmetric directional coupler")
 
-    def parameters(self):
+    def parameters(self) -> None:
+        """Define the parameters of the directional coupler.
+
+        Returns
+        -------
+        None
+
+        """
         self.addparameter("length", 20, "Coupling length", float)
         self.addparameter(
             param_name="width",
@@ -125,7 +166,15 @@ class DirectionalCoupler(Device):
             param_range=(3, np.inf),
         )
 
-    def geom(self):
+    def geom(self) -> GeomGroup:
+        """Define the geometry of the directional coupler.
+
+        Returns
+        -------
+        GeomGroup
+            The geometry of the directional coupler.
+
+        """
         p = self.get_params()
         # Draw the upper arm, then mirror
         off = p["input_dist"] / 2
@@ -156,11 +205,27 @@ class DirectionalCoupler(Device):
 
 
 class FocusingGratingCoupler(Device):
-    def initialize(self):
+    """Apodized focusing grating coupler."""
+
+    def initialize(self) -> None:
+        """Initialize the grating coupler device.
+
+        Returns
+        -------
+        None
+
+        """
         self.set_name("BASELIB_FGC")
         self.set_description("Grating coupler demo.")
 
-    def parameters(self):
+    def parameters(self) -> None:
+        """Define the parameters for the grating coupler.
+
+        Returns
+        -------
+        None
+
+        """
         self.addparameter(
             param_name="w0",
             default_value=0.3,
@@ -228,7 +293,15 @@ class FocusingGratingCoupler(Device):
             param_type=bool,
         )
 
-    def geom(self):
+    def geom(self) -> GeomGroup:
+        """Define the grating coupler geometry.
+
+        Returns
+        -------
+        GeomGroup
+            The geometry of the grating coupler.
+
+        """
         # Grating first
         p = self.get_params()
         theta = math.radians(p["theta"])
@@ -243,7 +316,7 @@ class FocusingGratingCoupler(Device):
         nr_apo = p["nr_Apo"]
         ff_coef = p["ff_coef"]
 
-        g = sm.GeomGroup()
+        g = GeomGroup()
         for q in range(q0, qn):
             b = q * p0
             x0 = b * b * math.sin(theta) / (q * lambda0)
