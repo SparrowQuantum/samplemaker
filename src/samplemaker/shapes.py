@@ -71,7 +71,7 @@ import math
 import pathlib
 from collections.abc import Sequence
 from copy import deepcopy
-from typing import Collection
+from typing import Collection, Self
 
 import numpy as np
 
@@ -137,12 +137,12 @@ class GeomGroup:
         """
         self.group.append(geom)
 
-    def copy(self) -> "GeomGroup":
+    def copy(self) -> Self:
         """Make a deep copy of the object.
 
         Returns
         -------
-        GeomGroup
+        Self
             A copy of the group.
 
         """
@@ -215,7 +215,7 @@ class GeomGroup:
 
         return layer_list
 
-    def translate(self, dx: float, dy: float) -> "GeomGroup":
+    def translate(self, dx: float, dy: float) -> Self:
         """Shift the entire geometry by dx and dy.
 
         Parameters
@@ -227,7 +227,7 @@ class GeomGroup:
 
         Returns
         -------
-        GeomGroup
+        Self
             Reference to the object.
 
         """
@@ -235,7 +235,7 @@ class GeomGroup:
             geom.translate(dx, dy)
         return self
 
-    def rotate_translate(self, dx: float, dy: float, rot: float) -> "GeomGroup":
+    def rotate_translate(self, dx: float, dy: float, rot: float) -> Self:
         """Rotate the group around 0,0 and then translate by dx,dy.
 
         Typically faster than using rotate() followed by translate().
@@ -259,7 +259,7 @@ class GeomGroup:
             geom.rotate_translate(dx, dy, rot)
         return self
 
-    def rotate(self, x0: float, y0: float, rot: float) -> "GeomGroup":
+    def rotate(self, x0: float, y0: float, rot: float) -> Self:
         """Rotate the geometry around x0,y0 by a given angle.
 
         Parameters
@@ -273,7 +273,7 @@ class GeomGroup:
 
         Returns
         -------
-        GeomGroup
+        Self
             Reference to the object.
 
         """
@@ -281,9 +281,7 @@ class GeomGroup:
             geom.rotate(x0, y0, rot)
         return self
 
-    def scale(
-        self, x0: float, y0: float, scale_x: float, scale_y: float
-    ) -> "GeomGroup":
+    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> Self:
         """Scale the geometry using x0,y0 as center.
 
         Parameters
@@ -299,7 +297,7 @@ class GeomGroup:
 
         Returns
         -------
-        GeomGroup
+        Self
             Reference to the object.
 
         """
@@ -307,7 +305,7 @@ class GeomGroup:
             geom.scale(x0, y0, scale_x, scale_y)
         return self
 
-    def mirrorX(self, x0: float) -> "GeomGroup":
+    def mirrorX(self, x0: float) -> Self:
         """Mirror the geometry around x-axis.
 
         Parameters
@@ -317,7 +315,7 @@ class GeomGroup:
 
         Returns
         -------
-        GeomGroup
+        Self
             Reference to the object.
 
         """
@@ -325,7 +323,7 @@ class GeomGroup:
             geom.mirrorX(x0)
         return self
 
-    def mirrorY(self, y0: float) -> "GeomGroup":
+    def mirrorY(self, y0: float) -> Self:
         """Mirror the geometry around y-axis.
 
         Parameters
@@ -335,7 +333,7 @@ class GeomGroup:
 
         Returns
         -------
-        GeomGroup
+        Self
             Reference to the object.
 
         """
@@ -472,7 +470,7 @@ class GeomGroup:
         bb.set_layer(layer)
         return bb
 
-    def set_layer(self, layer: int) -> None:
+    def set_layer(self, layer: int) -> Self:
         """Assign a new layer to all the shapes in the geometry.
 
         Parameters
@@ -482,7 +480,8 @@ class GeomGroup:
 
         Returns
         -------
-        Reference to the object.
+        Self
+            Reference to the object.
 
         """
         for geom in self.group:
@@ -499,7 +498,7 @@ class GeomGroup:
 
         Returns
         -------
-        g : GeomGroup
+        GeomGroup
             A new GeomGroup object with elements of the selected layer.
 
         """
@@ -899,7 +898,7 @@ class GeomGroup:
             polys.add(poly)
         self.group = self.group + polys.group
 
-    def boolean_union(self, layer: int) -> "GeomGroup":
+    def boolean_union(self, layer: int) -> Self:
         """Perform a boolean union (OR) operation of all polygons matching a layer.
 
         This operation is performed in-place.
@@ -914,7 +913,7 @@ class GeomGroup:
 
         Returns
         -------
-        GeomGroup
+        Self
             Reference to the object.
 
         """
@@ -931,7 +930,7 @@ class GeomGroup:
 
     def boolean_difference(
         self, targetB: "GeomGroup", layerA: int, layerB: int
-    ) -> "GeomGroup":
+    ) -> Self:
         """Perform a boolean difference operation between polygons.
 
         The operation is done in-place in the calling group matching `layerA` and the
@@ -951,7 +950,8 @@ class GeomGroup:
 
         Returns
         -------
-        Reference to the object.
+        Self
+            Reference to the object.
 
         """
         # Get the boost python data
@@ -967,9 +967,7 @@ class GeomGroup:
         self.__set_boopy__(polygroup_a, layerA)
         return self
 
-    def boolean_xor(
-        self, targetB: "GeomGroup", layerA: int, layerB: int
-    ) -> "GeomGroup":
+    def boolean_xor(self, targetB: "GeomGroup", layerA: int, layerB: int) -> Self:
         """Perform a boolean exclusive-OR (XOR) operation between polygons.
 
         The operation is done in-place in the calling group matching `layerA` and the
@@ -1008,7 +1006,7 @@ class GeomGroup:
 
     def boolean_intersection(
         self, targetB: "GeomGroup", layerA: int, layerB: int
-    ) -> "GeomGroup":
+    ) -> Self:
         """Perform a boolean intersection (AND) operation between polygons.
 
         The operation is done in-place in the calling group matching `layerA` and the
@@ -1028,7 +1026,7 @@ class GeomGroup:
 
         Returns
         -------
-        GeomGroup
+        Self
             Reference to the object.
 
         """
@@ -1051,7 +1049,7 @@ class GeomGroup:
         layer: int,
         corner_fill_arc: bool = False,
         num_circle_segments: int = 0,
-    ) -> "GeomGroup":
+    ) -> Self:
         """Offset the polygon by a certain distance.
 
         This operation is performed in-place.
@@ -1072,7 +1070,7 @@ class GeomGroup:
 
         Returns
         -------
-        GeomGroup
+        Self
             Reference to the object.
 
         """
@@ -1084,9 +1082,7 @@ class GeomGroup:
         self.__set_boopy__(polygroup, layer)
         return self
 
-    def poly_anisotropic_resize(
-        self, angles: list, deltas: list, layer: int
-    ) -> "GeomGroup":
+    def poly_anisotropic_resize(self, angles: list, deltas: list, layer: int) -> Self:
         """Perform an anisotropic offset of the polygons in a given layer.
 
         Requires an offset array in deltas matching the angle of expansion. Angles
@@ -1103,7 +1099,7 @@ class GeomGroup:
 
         Returns
         -------
-        GeomGroup
+        Self
             Reference to the object.
 
         """
@@ -1119,7 +1115,7 @@ class GeomGroup:
         distance: float = 0,
         corner_fill_arc: bool = False,
         num_circle_segments: int = 0,
-    ) -> "GeomGroup":
+    ) -> Self:
         """Calculate the polygon outline of the polygons in a given layer.
 
         This operation is performed in-place.
@@ -1144,7 +1140,7 @@ class GeomGroup:
 
         Returns
         -------
-        GeomGroup
+        Self
             Reference to the object.
 
         """
@@ -1187,7 +1183,7 @@ class GeomGroup:
 
         return self
 
-    def invert(self, layer: int, offset: float = 0) -> "GeomGroup":
+    def invert(self, layer: int, offset: float = 0) -> Self:
         """Perform a boolean inverse operation (NOT) on the polygons in a layer.
 
         This operation is performed in-place.
@@ -1205,7 +1201,7 @@ class GeomGroup:
 
         Returns
         -------
-        GeomGroup
+        Self
             Reference to the inverted object.
 
         """
@@ -1226,7 +1222,7 @@ class GeomGroup:
 
         return self
 
-    def trapezoids(self, layer: int) -> "GeomGroup":
+    def trapezoids(self, layer: int) -> Self:
         """Convert and fractures all polygons in a set of trapezoids.
 
         This operation is performed in-place.
@@ -1238,7 +1234,7 @@ class GeomGroup:
 
         Returns
         -------
-        GeomGroup
+        Self
             Reference to the object.
 
         """

@@ -32,15 +32,13 @@ import math
 import warnings
 from collections.abc import Callable, Iterable
 from copy import deepcopy
-from typing import TypeVar
+from typing import Self
 
 import numpy as np
 
 import samplemaker.makers as sm
 from samplemaker.layout import LayoutPool
 from samplemaker.shapes import GeomGroup, Poly
-
-T = TypeVar("T", bound="Crystal")
 
 
 class Crystal:
@@ -225,19 +223,19 @@ class Crystal:
         self.ypts = np.append(self.ypts, crystal.ypts)
         self.params = np.append(self.params, crystal.params, axis=1)
 
-    def copy(self) -> T:
+    def copy(self) -> Self:
         """Create a deep copy of the crystal.
 
         Returns
         -------
-        Crystal
+        Self
             A deepcopy of crystal.
 
         """
         return deepcopy(self)
 
     @classmethod
-    def triangular_hexagonal(cls, N: int, filled: bool, Nparams: int = 1) -> T:
+    def triangular_hexagonal(cls, N: int, filled: bool, Nparams: int = 1) -> Self:
         """Create a triangular photonic crystal in the shape of a hexagon.
 
         Often useful for point-defect cavities.
@@ -255,7 +253,7 @@ class Crystal:
 
         Returns
         -------
-        Crystal
+        Self
             A crystal object with the pre-compiled lattice sites.
 
         """
@@ -284,7 +282,7 @@ class Crystal:
         return cls(xpts, ypts, params)
 
     @classmethod
-    def triangular_box(cls, Nx: int, Ny: int, Nparams: int = 1) -> T:
+    def triangular_box(cls, Nx: int, Ny: int, Nparams: int = 1) -> Self:
         """Create a triangular photonic crystal in the shape of a box.
 
         Parameters
@@ -301,7 +299,7 @@ class Crystal:
 
         Returns
         -------
-        Crystal
+        Self
             A crystal object with the pre-compiled lattice sites.
 
         """
@@ -323,11 +321,11 @@ class Crystal:
     def triangular_heterophc(
         cls,
         Nx: float,
-        Ny: float,
+        Ny: int,
         spacing: list[float],
         periods: list[int],
         Nparams: int = 1,
-    ) -> T:
+    ) -> Self:
         """Create a triangular photonic crystal.
 
         The resulting crystal is in the shape of a rectangular box using a
@@ -335,9 +333,10 @@ class Crystal:
 
         Parameters
         ----------
-        Nx : int
+        Nx : float
             Number of holes in the x direction, the crystal will span from
-            -Nx to Nx (double size).
+            -Nx to Nx (double size). Can be a fraction to end the crystal with a partial
+            period.
         Ny : int
             Number of holes in the y direction, note that we consider Ny=1 the
             row where y=sqrt(3). The crystal will span from -Ny to Ny.
@@ -353,7 +352,7 @@ class Crystal:
 
         Returns
         -------
-        Crystal
+        Self
             A crystal object with the pre-compiled lattice sites.
 
         """
