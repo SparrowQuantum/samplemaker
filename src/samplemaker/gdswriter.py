@@ -1,8 +1,7 @@
-"""
-Binary export to GDS files.
+"""Binary export to GDS files.
 
-The `GDSWriter` class should not be used directly but via the `samplemaker.layout.Mask` object
-in the `samplemaker.layout` submodule.
+The `GDSWriter` class should not be used directly but via the `samplemaker.layout.Mask`
+object in the `samplemaker.layout` submodule.
 
 """
 
@@ -13,29 +12,21 @@ import time
 import numpy as np
 
 import samplemaker.shapes as smsh
-from samplemaker.shapes import GeomGroup
 
 
 class GDSWriter:
-    """
-    GDS output class
-    """
+    """GDS output class."""
 
-    def __init__(self, circleres: int = 12, arcres: int = 32):
-        """
-        Initialize the GDSWriter class
+    def __init__(self, circleres: int = 12, arcres: int = 32) -> None:
+        """Initialize the GDSWriter class.
 
         Parameters
         ----------
         circleres : int, optional
-            Number of points to use for circles. The default is 12.
+            Number of points to use for circles, by default 12.
         arcres : int, optional
             Number of points to use for round elements (ellipses, rings, arcs). The
             default is 32.
-
-        Returns
-        -------
-        None.
 
         """
         self.circleres = circleres
@@ -47,14 +38,14 @@ class GDSWriter:
             self.yc[i] = math.sin(i * 2 * math.pi / circleres)
         # Init stuff goes here
 
-    def __write_string(self, text, tag):
+    def __write_string(self, text: str, tag: int) -> None:
         L = len(text)
-        self.fid.write(struct.pack(">2H", L + L % 2 + 4, tag))
-        self.fid.write(text.encode())
+        self.__write_data(struct.pack(">2H", L + L % 2 + 4, tag))
+        self.__write_data(text.encode())
         if L % 2 == 1:
-            self.fid.write(struct.pack("b", 0))
+            self.__write_data(struct.pack("b", 0))
 
-    def __write_real8(self, value):
+    def __write_real8(self, value: float) -> None:
         num = value if value >= 0 else -value
         exponent = math.floor(-math.log2(num) / 4)
         mantissa = num * math.pow(2, 4 * exponent) * math.pow(2, 56)
@@ -63,43 +54,43 @@ class GDSWriter:
         for i in range(6, -1, -1):
             real[6 - i + 1] = math.floor(mantissa / math.pow(2, 8 * i))
             mantissa -= real[6 - i + 1] * math.pow(2, 8 * i)
-        self.fid.write(struct.pack("8B", *real))
+        self.__write_data(struct.pack("8B", *real))
 
-    def __write_data(self, data):
+    def __write_data(self, data: bytes) -> None:
         self.fid.write(data)
 
-    def __write_polygon(self, poly):
+    def __write_polygon(self, poly: smsh.Poly) -> None:
         if poly.layer < 0:
             return
         pdata = poly.int_data()
         buf = np.array(
             [4, 0x0800, 6, 0x0D02, poly.layer, 6, 0x0E02, 0, 4 * len(pdata) + 4, 0x1003]
         )
-        self.fid.write(struct.pack(f">{buf.size}H", *buf))
-        self.fid.write(struct.pack(f">{pdata.size}i", *pdata))
-        self.fid.write(struct.pack(">2H", 4, 0x1100))
+        self.__write_data(struct.pack(f">{buf.size}H", *buf))
+        self.__write_data(struct.pack(f">{pdata.size}i", *pdata))
+        self.__write_data(struct.pack(">2H", 4, 0x1100))
 
-    def __write_circle(self, circ):
+    def __write_circle(self, circ: smsh.Circle) -> None:
         self.__write_polygon(
             smsh.Poly(
                 circ.r * self.xc + circ.x0, circ.r * self.yc + circ.y0, circ.layer
             )
         )
 
-    def __write_path(self, path):
+    def __write_path(self, path: smsh.Path) -> None:
         buf = np.array(
             [4, 0x0900, 6, 0x0D02, path.layer, 6, 0x0E02, 0, 6, 0x2102, 1, 8, 0x0F03]
         )
-        self.fid.write(struct.pack(f">{buf.size}H", *buf))
-        self.fid.write(struct.pack(">i", math.floor(path.width * 1000)))
-        self.fid.write(struct.pack(">2H", 8 * len(path.xpts) + 4, 0x1003))
+        self.__write_data(struct.pack(f">{buf.size}H", *buf))
+        self.__write_data(struct.pack(">i", math.floor(path.width * 1000)))
+        self.__write_data(struct.pack(">2H", 8 * len(path.xpts) + 4, 0x1003))
         data = np.transpose(
             np.round(np.array([path.xpts, path.ypts]) * 1000).astype(int)
         ).reshape(-1)
-        self.fid.write(struct.pack(f">{data.size}i", *data))
-        self.fid.write(struct.pack(">2H", 4, 0x1100))
+        self.__write_data(struct.pack(f">{data.size}i", *data))
+        self.__write_data(struct.pack(">2H", 4, 0x1100))
 
-    def __write_text(self, text):
+    def __write_text(self, text: smsh.Text) -> None:
         if text.text.replace(" ", "") == "":
             return
         buf = np.array(
@@ -119,19 +110,19 @@ class GDSWriter:
                 0x0F03,
             ]
         )
-        self.fid.write(struct.pack(f">{buf.size}H", *buf))
-        self.fid.write(struct.pack(">i", math.floor(text.width * 1000)))
-        self.fid.write(struct.pack(">2H", 12, 0x1003))
-        self.fid.write(
+        self.__write_data(struct.pack(f">{buf.size}H", *buf))
+        self.__write_data(struct.pack(">i", math.floor(text.width * 1000)))
+        self.__write_data(struct.pack(">2H", 12, 0x1003))
+        self.__write_data(
             struct.pack(">2i", math.floor(text.x0 * 1000), math.floor(text.y0 * 1000))
         )
         L = len(text.text)
-        self.fid.write(struct.pack(">2H", L + 4, 0x1906))
-        self.fid.write(text.text.encode())
-        self.fid.write(struct.pack(">2H", 4, 0x1100))
+        self.__write_data(struct.pack(">2H", L + 4, 0x1906))
+        self.__write_data(text.text.encode())
+        self.__write_data(struct.pack(">2H", 4, 0x1100))
 
-    def __write_strans(self, mag, angle, mirror):
-        if mag == 1 and angle == 0 and mirror == 0:
+    def __write_strans(self, mag: float, angle: float, mirror: bool) -> None:
+        if mag == 1 and angle == 0 and not mirror:
             return
         strans = 0
         if mirror:
@@ -141,60 +132,60 @@ class GDSWriter:
         # if(angle!=0):
         #    strans+=2
         buf = np.array([6, 0x1A01, strans])
-        self.fid.write(struct.pack(f">{buf.size}H", *buf))
+        self.__write_data(struct.pack(f">{buf.size}H", *buf))
         if mag != 1:
-            self.fid.write(struct.pack(">2H", 12, 0x1B05))
+            self.__write_data(struct.pack(">2H", 12, 0x1B05))
             self.__write_real8(mag)
         if angle != 0:
-            self.fid.write(struct.pack(">2H", 12, 0x1C05))
+            self.__write_data(struct.pack(">2H", 12, 0x1C05))
             self.__write_real8(angle)
 
-    def __write_sref(self, sref):
-        self.fid.write(struct.pack(">2H", 4, 0x0A00))
+    def __write_sref(self, sref: smsh.SRef) -> None:
+        self.__write_data(struct.pack(">2H", 4, 0x0A00))
         self.__write_string(sref.cellname, 0x1206)
         self.__write_strans(sref.mag, sref.angle, sref.mirror)
-        self.fid.write(struct.pack(">2H", 12, 0x1003))
-        self.fid.write(
+        self.__write_data(struct.pack(">2H", 12, 0x1003))
+        self.__write_data(
             struct.pack(">2i", int(round(sref.x0 * 1000)), int(round(sref.y0 * 1000)))
         )
-        self.fid.write(struct.pack(">2H", 4, 0x1100))
+        self.__write_data(struct.pack(">2H", 4, 0x1100))
 
-    def __write_aref(self, aref):
-        self.fid.write(struct.pack(">2H", 4, 0x0B00))
+    def __write_aref(self, aref: smsh.ARef) -> None:
+        self.__write_data(struct.pack(">2H", 4, 0x0B00))
         self.__write_string(aref.cellname, 0x1206)
         self.__write_strans(aref.mag, aref.angle, aref.mirror)
-        self.fid.write(
+        self.__write_data(
             struct.pack(
                 ">4H", 8, 0x1302, math.floor(aref.ncols), math.floor(aref.nrows)
             )
         )
-        self.fid.write(struct.pack(">2H", 28, 0x1003))
-        self.fid.write(
+        self.__write_data(struct.pack(">2H", 28, 0x1003))
+        self.__write_data(
             struct.pack(">2i", int(round(aref.x0 * 1000)), int(round(aref.y0 * 1000)))
         )
-        self.fid.write(
+        self.__write_data(
             struct.pack(
                 ">2i",
                 math.floor((aref.x0 + aref.ax * aref.ncols) * 1000),
                 math.floor((aref.y0 + aref.ay * aref.ncols) * 1000),
             )
         )
-        self.fid.write(
+        self.__write_data(
             struct.pack(
                 ">2i",
                 math.floor((aref.x0 + aref.bx * aref.nrows) * 1000),
                 math.floor((aref.y0 + aref.by * aref.nrows) * 1000),
             )
         )
-        self.fid.write(struct.pack(">2H", 4, 0x1100))
+        self.__write_data(struct.pack(">2H", 4, 0x1100))
 
-    def __large_polygons(self, gg: "GeomGroup"):
+    def __large_polygons(self, gg: smsh.GeomGroup) -> smsh.GeomGroup:
         group = []
         for geom in gg.group:
             geomtype = type(geom)
             if geomtype == smsh.Poly:
                 if geom.Npts > 8000:
-                    newgrp = GeomGroup()
+                    newgrp = smsh.GeomGroup()
                     newgrp.add(geom)
                     newgrp.trapezoids(geom.layer)
                     group += newgrp.group
@@ -203,9 +194,10 @@ class GDSWriter:
         gg.group = group
         return gg
 
-    def open_library(self, filename: str):
-        """
-        Opens a new GDS file for writing. To close, call close_library()
+    def open_library(self, filename: str) -> None:
+        """Open a new GDS file for writing.
+
+        To close, call close_library().
 
         Parameters
         ----------
@@ -214,7 +206,7 @@ class GDSWriter:
 
         Returns
         -------
-        None.
+        None
 
         """
         self.fid = open(filename, "wb")
@@ -241,21 +233,23 @@ class GDSWriter:
                 lt.tm_sec,
             ]
         )
-        self.fid.write(struct.pack(f">{buf.size}H", *buf))
+        self.__write_data(struct.pack(f">{buf.size}H", *buf))
         # Library name
         self.__write_string(filename, 518)
         # Units
-        self.fid.write(struct.pack(">2H", 20, 0x0305))
+        self.__write_data(struct.pack(">2H", 20, 0x0305))
         self.__write_real8(1e-3)
         self.__write_real8(1e-9)
         print(f"Opened {filename}")
 
-    def open_structure(self, structure_name: str):
-        """
-        Opens a new structure (or cell) in the existing GDS stream.
-        The file should be already open using open_library()
+    def open_structure(self, structure_name: str) -> None:
+        """Open a new structure (or cell) in the existing GDS stream.
+
+        The file should be already open using open_library().
+
         This function can be used to write multiple objects in a single cell.
-        It should be closed with close_structure()
+
+        The `close_structure()` should be called after writing all objects in the cell.
 
         Parameters
         ----------
@@ -264,7 +258,7 @@ class GDSWriter:
 
         Returns
         -------
-        None.
+        None
 
         """
         print(f"Writing structure: {structure_name}")
@@ -287,24 +281,26 @@ class GDSWriter:
                 lt.tm_sec,
             ]
         )
-        self.fid.write(struct.pack(f">{buf.size}H", *buf))
+        self.__write_data(struct.pack(f">{buf.size}H", *buf))
         self.__write_string(structure_name, 1542)
 
-    def write_geomgroup(self, geom_group: GeomGroup):
-        """
-        Writes a GeomGroup to GDS stream. The file should be first opened with
-        open_library() followed by open_structure().
+    def write_geomgroup(self, geom_group: smsh.GeomGroup) -> None:
+        """Write a GeomGroup to GDS stream.
+
+        The file should be first opened with open_library() followed by
+        open_structure().
+
         To be used for interactive writing only. See write_structure() for
-        direct writing (recommended)
+        direct writing (recommended).
 
         Parameters
         ----------
-        geom_group : samplemaker.shapes.GeomGroup
+        geom_group : GeomGroup
             The geometry to be written into GDS format.
 
         Returns
         -------
-        None.
+        None
 
         """
         geom_group = self.__large_polygons(geom_group)
@@ -341,46 +337,41 @@ class GDSWriter:
                 self.__write_polygon(g.group[0])  # produces one geometry only
                 continue
 
-    def close_structure(self):
-        """
-        Closes the structure, should be called after open_structure()
+    def close_structure(self) -> None:
+        """Close the open structure.
+
+        Should be called after open_structure().
 
         Returns
         -------
-        None.
+        None
 
         """
-        self.fid.write(struct.pack(">2H", 4, 1792))
+        self.__write_data(struct.pack(">2H", 4, 1792))
 
-    def write_structure(self, structure_name: str, geom_group: "GeomGroup"):
-        """
-        Write a GeomGroup into a named structure/cell. The GeomGroup is written
-        into the cell once and then the GDS cell is closed.
-        This is equivalent to
-            open_structure(structure_name)
-            write_geomgroup(geom_group)
-            close_structure()
+    def write_structure(self, structure_name: str, geom_group: smsh.GeomGroup) -> None:
+        """Write a GeomGroup into a named structure/cell.
+
+        The GeomGroup is written into the cell once and then the GDS cell is closed.
 
         Parameters
         ----------
         structure_name : str
             A string with a valid GDS structure/cell name.
-        geom_group : 'GeomGroup'
+        geom_group : GeomGroup
             The GeomGroup to be written into GDS format.
 
         Returns
         -------
-        None.
+        None
 
         """
         self.open_structure(structure_name)
         self.write_geomgroup(geom_group)
         self.close_structure()
 
-    def write_pool(self, pool: dict):
-        """
-        Writes all the structures in the dictionary using key name as structure
-        reference name and value as the group to be written.
+    def write_pool(self, pool: dict[str, smsh.GeomGroup]) -> None:
+        """Write all the structures in the pool dictionary into GDS cells.
 
         Parameters
         ----------
@@ -389,28 +380,30 @@ class GDSWriter:
 
         Returns
         -------
-        None.
+        None
 
         """
         for sname, group in pool.items():
             self.write_structure(sname, group)
 
-    def write_pool_use_cache(self, pool: dict, cache: dict):
-        """
-        Writes all the structures in the dictionary using key name as structure
-        reference name and value as the group to be written.
-        Uses GDS cache when available
+    def write_pool_use_cache(
+        self, pool: dict[str, smsh.GeomGroup], cache: dict[str, bytes]
+    ) -> None:
+        """Write all the structures in the pool dictionary into GDS cells.
+
+        Uses GDS cache data when available.
 
         Parameters
         ----------
-        pool : dict
+        pool : dict[str, GeomGroup]
             A dictionary containing structure names as keys and GeomGroup as values.
-        cache: dict
-            A dictionary containing structure names as keys and binary GDS data as values.
+        cache: dict[str, bytes]
+            A dictionary containing structure names as keys and binary GDS data as
+            values.
 
         Returns
         -------
-        None.
+        None
 
         """
         for sname, group in pool.items():
@@ -420,18 +413,17 @@ class GDSWriter:
             else:
                 self.write_structure(sname, group)
 
-    def close_library(self):
-        """
-        Closes the GDS library and the file stream
+    def close_library(self) -> None:
+        """Close the GDS library and the file stream.
 
         Returns
         -------
-        None.
+        None
 
         """
-        self.fid.write(struct.pack(">2H", 4, 1024))
+        self.__write_data(struct.pack(">2H", 4, 1024))
         pos = self.fid.tell()
         buf = np.zeros(2048 - pos % 2048, dtype=int)
-        self.fid.write(struct.pack(f"{buf.size}b", *buf))
+        self.__write_data(struct.pack(f"{buf.size}b", *buf))
         print("Writing to GDS complete.")
         self.fid.close()

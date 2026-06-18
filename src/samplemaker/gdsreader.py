@@ -1,5 +1,4 @@
-"""
-Binary import of GDS files.
+"""Binary import of GDS files.
 
 This class does not import GDS files directly into geometries.
 It only imports the binary streams for reuse.
@@ -9,23 +8,51 @@ Not to be used in actual scripts, unless it is for very special purposes.
 import math
 import struct
 from copy import deepcopy
+from io import BufferedReader
 
 import numpy as np
 
 import samplemaker.makers as sm
 import samplemaker.shapes as smsh
-from samplemaker.shapes import GeomGroup
 
 
 class GDSRecord:
-    def __init__(self, size: int, rectype: int, datatype: int, bheader, data=""):
+    """Helper class representing a GDS record."""
+
+    def __init__(
+        self, size: int, rectype: int, datatype: int, bheader: bytes, data: bytes = b""
+    ) -> None:
+        """Initialize a GDS record.
+
+        Parameters
+        ----------
+        size : int
+            The size of the record.
+        rectype : int
+            The record type.
+        datatype : int
+            The data type.
+        bheader : bytes
+            The binary header of the record.
+        data : bytes, optional
+            The binary data of the record, by default b""
+
+        """
         self.size = size
         self.rectype = rectype
         self.datatype = datatype
         self.bheader = bheader
         self.data = data
 
-    def to_binary(self):
+    def to_binary(self) -> bytes:
+        """Convert the GDS record to binary format.
+
+        Returns
+        -------
+        bytes
+            The binary representation of the GDS record.
+
+        """
         if self.size == 4:
             return self.bheader
         else:
@@ -33,36 +60,35 @@ class GDSRecord:
 
 
 class GDSReader:
-    """
-    GDS input class
-    """
+    """GDS input class."""
 
-    def __init__(self):
-        self.buf = ""
+    def __init__(self) -> None:
+        """Initialize the GDS reader."""
+        self.buf = b""
         self.ptr = 0
-        self.celldata = dict()  # store binary GDS celldata
+        self.celldata: dict[str, bytes] = dict()  # store binary GDS celldata
 
     @staticmethod
-    def __read_rec(f):
-        # Reads next record in file
+    def __read_rec(f: BufferedReader) -> GDSRecord | bool:
+        """Read next record in file."""
         header = f.read(4)
         if not header or len(header) < 4:
             return False
         htpl = struct.unpack(">Hbb", header)
         hlen = htpl[0]
-        recdata = ""
+        recdata = b""
         if hlen > 4:
             recdata = f.read(hlen - 4)
         return GDSRecord(hlen, htpl[1], htpl[2], header, recdata)
 
-    def __read_rec_buf(self):
+    def __read_rec_buf(self) -> tuple[int, int, int]:
         htpl = struct.unpack(">Hbb", self.buf[self.ptr : (self.ptr + 4)])
         hlen = htpl[0]
         self.ptr += hlen
         return htpl[1], self.ptr - hlen, hlen
 
     @staticmethod
-    def __read_real8(data):
+    def __read_real8(data: tuple[int, ...]) -> float:
         # sign = -1 if data[0] >> 7 else 1
         ex = 64 - data[0] % 128
         mantissa = 0
@@ -71,12 +97,20 @@ class GDSReader:
 
         return mantissa / math.pow(2, 4 * ex) / math.pow(2, 56)
 
-    def get_cell(self, cellname: str):
+    def get_cell(self, cellname: str) -> smsh.GeomGroup:
+        """Get a cell from the GDS file.
+
+        Returns
+        -------
+        GeomGroup
+            The cell geometry.
+
+        """
         if cellname not in self.celldata:
             msg = f"Cellname {cellname} does not exist in GDS record."
             raise ValueError(msg)
 
-        gg = GeomGroup()
+        gg = smsh.GeomGroup()
 
         self.buf = self.celldata[cellname]
         self.ptr = 0
@@ -235,10 +269,8 @@ class GDSReader:
 
         return gg
 
-    def quick_read(self, filename: str):
-        """
-        Performs a quick scan of the GDS file and stores
-        structures (between BGNSTR and ENDSTR) in memory
+    def quick_read(self, filename: str) -> None:
+        """Perform a quick scan of the GDS file and stores structures in memory.
 
         Parameters
         ----------
@@ -247,10 +279,9 @@ class GDSReader:
 
         Returns
         -------
-        None.
+        None
 
         """
-
         with open(filename, "rb") as f:
             self.buf = f.read()
 

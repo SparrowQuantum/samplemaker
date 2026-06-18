@@ -1,6 +1,4 @@
-"""
-Base waveguide library.
-
+"""Base waveguide library.
 
 Implements a simple waveguide sequencer and optical ports.
 This module can be used as template to develop different waveguide libraries.
@@ -9,6 +7,7 @@ This module can be used as template to develop different waveguide libraries.
 
 import math
 from copy import deepcopy
+from typing import Any
 
 import numpy as np
 
@@ -23,7 +22,15 @@ from samplemaker.shapes import GeomGroup
 
 
 # Let's define some options for the BaseWaveguide sequencer
-def BaseWaveguideOptions():
+def BaseWaveguideOptions() -> smseq.OPTIONS_TYPE:
+    """Create a dictionary with the default options for the BaseWaveguide sequencer.
+
+    Returns
+    -------
+    smseq.OPTIONS_TYPE
+        The default options for the BaseWaveguide sequencer.
+
+    """
     options = smseq.default_options()
     # Let's define the default waveguide layer
     options["wgLayer"] = 1
@@ -38,44 +45,56 @@ def BaseWaveguideOptions():
 # We could use the default, but we would like to store
 # the current waveguide width as well using the parameter 'w'
 class BaseWaveguideState(smseq.SequencerState):
-    def __init__(self):
-        """
-        The sequencer state for BaseWaveguide library.
+    """The sequencer state for BaseWaveguide library."""
+
+    def __init__(self) -> None:
+        """Initialize the sequencer state.
+
         Defines 'w' as current waveguide width.
-
-        Returns
-        -------
-        None.
-
         """
         super().__init__()
         self.state["w"] = 0  # The value will be set by the INIT command
 
 
 # Let's define the INIT command, which is always the first to execute
-def BaseWaveguideINIT(state, options):
+def BaseWaveguideINIT(state: smseq.STATE_TYPE, options: smseq.OPTIONS_TYPE) -> None:
+    """Initialize the sequencer state.
+
+    Parameters
+    ----------
+    state : smseq.STATE_TYPE
+        The sequencer state to be initialized.
+    options : smseq.OPTIONS_TYPE
+        The sequencer options, which can be used to initialize the state.
+
+    Returns
+    -------
+    None
+
+    """
     smseq.__initState(state, options)
     if not options["__no_init__"]:
         state["w"] = options["defaultWidth"]
 
 
 # The S command to go straight
-def BaseWaveguideS(args, state, options) -> GeomGroup:
-    """
-    Draw straight waveguide
+def BaseWaveguideS(
+    args: smseq.ARGS_TYPE, state: smseq.STATE_TYPE, options: smseq.OPTIONS_TYPE
+) -> GeomGroup:
+    """Draw straight waveguide.
 
     Parameters
     ----------
-    args : list
+    args : smseq.ARGS_TYPE
         1 argument: waveguide length.
-    state : dict
+    state : smseq.STATE_TYPE
         Current state.
-    options : dict
+    options : smseq.OPTIONS_TYPE
         The sequencer options.
 
     Returns
     -------
-    samplemaker.shapes.GeomGroup
+    GeomGroup
         The waveguide geometry.
 
     """
@@ -95,22 +114,23 @@ def BaseWaveguideS(args, state, options) -> GeomGroup:
 
 
 # The B command to make a circular bend
-def BaseWaveguideB(args, state, options) -> GeomGroup:
-    """
-    Draw circular bend waveguide
+def BaseWaveguideB(
+    args: smseq.ARGS_TYPE, state: smseq.STATE_TYPE, options: smseq.OPTIONS_TYPE
+) -> GeomGroup:
+    """Draw circular bend waveguide.
 
     Parameters
     ----------
-    args : list
+    args : smseq.ARGS_TYPE
         2 arguments: angle of bend (in degrees), radius of bend.
-    state : dict
+    state : smseq.STATE_TYPE
         Current state.
-    options : dict
+    options : smseq.OPTIONS_TYPE
         The sequencer options.
 
     Returns
     -------
-    samplemaker.shapes.GeomGroup
+    GeomGroup
         The waveguide geometry.
 
     """
@@ -150,23 +170,26 @@ def BaseWaveguideB(args, state, options) -> GeomGroup:
     return wg
 
 
-def BaseWaveguideC(args, state, options) -> GeomGroup:
-    """
-    Draw cosine bend waveguide. While keeping the same direciton,
-    bend the waveguide using a cosine function.
+def BaseWaveguideC(
+    args: smseq.ARGS_TYPE, state: smseq.STATE_TYPE, options: smseq.OPTIONS_TYPE
+) -> GeomGroup:
+    """Draw cosine bend waveguide.
+
+    Keeping the same the same direction, the function bends the waveguide using a cosine
+    function.
 
     Parameters
     ----------
-    args : list
+    args : smseq.ARGS_TYPE
         2 arguments: offset (in um), radius of bend.
-    state : dict
+    state : smseq.STATE_TYPE
         Current state.
-    options : dict
+    options : smseq.OPTIONS_TYPE
         The sequencer options.
 
     Returns
     -------
-    samplemaker.shapes.GeomGroup
+    GeomGroup
         The waveguide geometry.
 
     """
@@ -203,22 +226,24 @@ def BaseWaveguideC(args, state, options) -> GeomGroup:
     return wg
 
 
-def BaseWaveguideT(args, state, options) -> GeomGroup:
-    """
-    Draw linear taper
+def BaseWaveguideT(
+    args: smseq.ARGS_TYPE, state: smseq.STATE_TYPE, options: smseq.OPTIONS_TYPE
+) -> GeomGroup:
+    """Draw linear taper.
 
     Parameters
     ----------
-    args : list
-        2 arguments: length of taper (in um), final width (if <0, the defaultWidth value is used).
-    state : dict
+    args : smseq.ARGS_TYPE
+        2 arguments: length of taper (in um), final width (if <0, the defaultWidth value
+        is used).
+    state : smseq.STATE_TYPE
         Current state.
-    options : dict
+    options : smseq.OPTIONS_TYPE
         The sequencer options.
 
     Returns
     -------
-    samplemaker.shapes.GeomGroup
+    GeomGroup
         The waveguide geometry.
 
     """
@@ -241,22 +266,23 @@ def BaseWaveguideT(args, state, options) -> GeomGroup:
     return wg
 
 
-def BaseWaveguideOFF(args, state, options) -> GeomGroup:
-    """
-    Offset the waveguide (jumps left or right of waveguide)
+def BaseWaveguideOFF(
+    args: smseq.ARGS_TYPE, state: smseq.STATE_TYPE, options: smseq.OPTIONS_TYPE
+) -> GeomGroup:
+    """Offset the waveguide (jumps left or right of waveguide).
 
     Parameters
     ----------
-    args : list
+    args : smseq.ARGS_TYPE
         1 argument: offset (in um), positive means on left of waveguide direction.
-    state : dict
+    state : smseq.STATE_TYPE
         Current state.
-    options : dict
+    options : smseq.OPTIONS_TYPE
         The sequencer options.
 
     Returns
     -------
-    samplemaker.shapes.GeomGroup
+    GeomGroup
         The waveguide geometry.
 
     """
@@ -267,14 +293,12 @@ def BaseWaveguideOFF(args, state, options) -> GeomGroup:
     return GeomGroup()
 
 
-def BaseWaveguideCommands() -> dict:
-    """
-    Creates the dictionary with the command list and corresponding
-    functions.
+def BaseWaveguideCommands() -> smseq.COMMANDS_DICT_TYPE:
+    """Create a dictionary with the command list and corresponding functions.
 
     Returns
     -------
-    dict
+    smseq.COMMANDS_DICT_TYPE
         The command list to be used by the sequencer.
 
     """
@@ -290,18 +314,15 @@ def BaseWaveguideCommands() -> dict:
 
 # Finally, create a custom sequencer
 class BaseWaveguideSequencer(smseq.Sequencer):
-    def __init__(self, seq):
-        """
-        Creates a custom sequencer for simple waveguides.
+    """Simple waveguide sequencer."""
+
+    def __init__(self, seq: list[list[Any]]) -> None:
+        """Create a custom sequencer for simple waveguides.
 
         Parameters
         ----------
-        seq : list
+        seq : list[list[Any]]
             The sequence to be executed.
-
-        Returns
-        -------
-        None.
 
         """
         opts = BaseWaveguideOptions()
@@ -311,13 +332,28 @@ class BaseWaveguideSequencer(smseq.Sequencer):
 
 
 # some global connector options
-BaseWaveguideConnectorOptions = {
+BaseWaveguideConnectorOptions: dict[str, float | smseq.OPTIONS_TYPE] = {
     "bending_radius": 3,
     "sequencer_options": BaseWaveguideOptions(),
 }
 
 
 def BaseWaveguideConnector(port1: DevicePort, port2: DevicePort) -> GeomGroup:
+    """Connect two waveguide ports using the BaseWaveguideSequencer.
+
+    Parameters
+    ----------
+    port1 : DevicePort
+        The first port.
+    port2 : DevicePort
+        The second port.
+
+    Returns
+    -------
+    GeomGroup
+        The waveguide geometry.
+
+    """
     res = WaveguideConnect(
         port1, port2, BaseWaveguideConnectorOptions["bending_radius"]
     )
@@ -333,6 +369,8 @@ def BaseWaveguideConnector(port1: DevicePort, port2: DevicePort) -> GeomGroup:
 
 # Now let's create a new DevicePort with a connector function
 class BaseWaveguidePort(DevicePort):
+    """A simple waveguide port, with a connector function to connect to other ports."""
+
     def __init__(
         self,
         x0: float,
@@ -340,7 +378,24 @@ class BaseWaveguidePort(DevicePort):
         orient: str = "East",
         width: float = None,
         name: str = None,
-    ):
+    ) -> None:
+        """Initialize a waveguide port.
+
+        Parameters
+        ----------
+        x0 : float
+            x coordinate of the port.
+        y0 : float
+            y coordinate of the port.
+        orient : str, optional
+            Orientation of the port, by default "East". Can be "North", "South", "East",
+            "West" or their first letters (lowercase).
+        width : float, optional
+            Width of the waveguide port.
+        name : str, optional
+            Name of the waveguide port.
+
+        """
         orient = orient.lower()
         horizontal = True
         forward = True

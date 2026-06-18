@@ -1,5 +1,4 @@
-"""
-Classes to handle custom sequences of shapes (e.g. waveguides).
+"""Classes to handle custom sequences of shapes (e.g. waveguides).
 
 The concept of sequence
 -----------------------
@@ -54,29 +53,49 @@ with `samplemaker`.
 """
 
 import math
+from collections.abc import Callable, Sequence
 from copy import deepcopy
+from typing import Any, TypeAlias
 
 from samplemaker.devices import _DeviceList
 from samplemaker.shapes import GeomGroup
 
+ARGS_TYPE: TypeAlias = Sequence[Any]
+STATE_TYPE: TypeAlias = dict[str, Any]
+OPTIONS_TYPE: TypeAlias = dict[str, Any]
+SEQ_TYPE: TypeAlias = Sequence[Sequence[Any]]
 
-def __changeState(args, state, options):
+INIT_CALLABLE_TYPE: TypeAlias = Callable[[STATE_TYPE, OPTIONS_TYPE], None]
+COMMAND_CALLABLE_TYPE: TypeAlias = Callable[
+    [ARGS_TYPE, STATE_TYPE, OPTIONS_TYPE], GeomGroup
+]
+_CMD_DICT_VAL_TYPE: TypeAlias = tuple[int, INIT_CALLABLE_TYPE | COMMAND_CALLABLE_TYPE]
+COMMANDS_DICT_TYPE: TypeAlias = dict[str, _CMD_DICT_VAL_TYPE]
+
+
+def __changeState(
+    args: ARGS_TYPE, state: STATE_TYPE, options: OPTIONS_TYPE
+) -> GeomGroup:
     state[args[0]] = args[1]
     return GeomGroup()
 
 
-def __centerState(args, state, options):
+def __centerState(
+    args: ARGS_TYPE, state: STATE_TYPE, options: OPTIONS_TYPE
+) -> GeomGroup:
     state["__XC__"] = -state["x"] + args[0]
     state["__YC__"] = -state["y"] + args[1]
     return GeomGroup()
 
 
-def __storeState(args, state, options):
+def __storeState(
+    args: ARGS_TYPE, state: STATE_TYPE, options: OPTIONS_TYPE
+) -> GeomGroup:
     state["STORED"] += [[state["x"], state["y"]]]
     return GeomGroup()
 
 
-def __initState(state, options):
+def __initState(state: STATE_TYPE, options: OPTIONS_TYPE) -> None:
     if not options["__no_init__"]:
         state["x"] = 0
         state["y"] = 0
@@ -87,7 +106,9 @@ def __initState(state, options):
         state["STORED"] = []
 
 
-def __insertDevice(args, state, options):
+def __insertDevice(
+    args: ARGS_TYPE, state: STATE_TYPE, options: OPTIONS_TYPE
+) -> GeomGroup:
     devname = args[0]
     inport = args[1]
     outport = args[2]
@@ -130,9 +151,8 @@ def __insertDevice(args, state, options):
     return g
 
 
-def default_command_list():
-    """
-    Create a basic dictionary with basic commands required by the sequencer.
+def default_command_list() -> COMMANDS_DICT_TYPE:
+    """Create a basic dictionary with basic commands required by the sequencer.
 
     These include
 
@@ -143,7 +163,7 @@ def default_command_list():
 
     Returns
     -------
-    defcmdlist : dict
+    COMMANDS_DICT_TYPE
         The default command dictionary.
 
     """
@@ -156,15 +176,14 @@ def default_command_list():
     return defcmdlist
 
 
-def default_options():
-    """
-    Create default options for the sequencer.
+def default_options() -> OPTIONS_TYPE:
+    """Create default options for the sequencer.
 
     This returns the essential base options.
 
     Returns
     -------
-    defopts : dict
+    OPTIONS_TYPE
         Returns the default options for the sequencer.
 
     """
@@ -179,9 +198,16 @@ def default_options():
 
 
 class SequencerState:
-    def __init__(self):
-        """
-        Initialize a sequencer state to default values.
+    """Class to handle the state of the sequencer.
+
+    The state is a dictionary that can be modified by the instructions in the sequence.
+    The state is initialized to default values when a SequencerState object is created.
+
+    """
+
+    def __init__(self) -> None:
+        """Initialize a sequencer state to default values.
+
         The default sequencer state contains the following variables:
 
         * 'x': The current x-coordinate of the sequencer. Initially 0
@@ -192,12 +218,8 @@ class SequencerState:
         * '__YC__': Stores the current y-coordinate when calling 'CENTER'
         * 'STORED': Stores the current position when calling 'STORE'
 
-        Returns
-        -------
-        None.
-
         """
-        self.state = dict()
+        self.state: STATE_TYPE = dict()
         self.state["x"] = 0
         self.state["y"] = 0
         self.state["a"] = 0
@@ -208,27 +230,30 @@ class SequencerState:
 
 
 class Sequencer:
+    """Class to handle the execution of a sequence of instructions."""
+
     def __init__(
-        self, seq, seq_options: dict, seq_state: SequencerState, seq_dictionary: dict
-    ):
-        """
-        Initializes a new sequencer object. It requires a sequence, an option
-        dictionary, a state object, and a dictionary to interpret commands.
+        self,
+        seq: SEQ_TYPE,
+        seq_options: OPTIONS_TYPE,
+        seq_state: SequencerState,
+        seq_dictionary: COMMANDS_DICT_TYPE,
+    ) -> None:
+        """Initialize a new sequencer object.
+
+        Requires a sequence, an option dictionary, a state object, and a dictionary to
+        interpret commands.
 
         Parameters
         ----------
-        seq : List
+        seq : SEQ_TYPE
             The sequence to be executed (list of instructions).
-        seq_options : dict
+        seq_options : OPTIONS_TYPE
             Dictionary with all the options to be passed to instructions.
         seq_state : SequencerState
             SequencerState object with the initial state of the sequencer.
-        seq_dictionary : dict
+        seq_dictionary : COMMANDS_DICT_TYPE
             The dictionary with instructions.
-
-        Returns
-        -------
-        None.
 
         """
         self.seq = seq
@@ -237,55 +262,52 @@ class Sequencer:
         self.state = seq_state.state
         self.debug_state = False
 
-    def set_debug_state(self, value: bool):
-        """
-        Sets debug mode. In debug mode the state is printed at all steps.
+    def set_debug_state(self, value: bool) -> None:
+        """Set debug mode.
+
+        In debug mode the state is printed at all steps.
 
         Parameters
         ----------
         value : bool
-            True to set debug mode on.
+            True to set debug mode on. False to set debug mode off.
 
         Returns
         -------
-        None.
+        None
 
         """
         self.debug_state = value
 
-    def get_state(self):
-        """
-        The current state of the sequencer
+    def get_state(self) -> STATE_TYPE:
+        """Get the current state of the sequencer.
 
         Returns
         -------
-        SequencerState
-            Returns the SequencerState object.
+        STATE_TYPE
+            Returns the current state of the sequencer.
 
         """
         return deepcopy(self.state)
 
-    def reset(self):
-        """
-        Resets the sequencer position state to 0,0
-        and sets direction back to zero.
+    def reset(self) -> None:
+        """Reset the sequencer position state to (0,0) and direction state to zero.
 
         Returns
         -------
-        None.
+        None
 
         """
         self.state["x"] = 0
         self.state["y"] = 0
         self.state["a"] = 0
 
-    def run(self):
-        """
-        Execute the sequence and get the final geometry object.
+    def run(self) -> GeomGroup:
+        """Execute the sequence and get the final geometry object.
 
         Returns
         -------
-        g : samplemaker.shapes.GeomGroup
+        GeomGroup
             The resulting geometry.
 
         """

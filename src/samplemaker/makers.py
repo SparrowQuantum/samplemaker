@@ -1,5 +1,4 @@
-"""
-Functions that generate shapes into `samplemaker.shapes.GeomGroup` objects.
+"""Functions that generate shapes into `samplemaker.shapes.GeomGroup` objects.
 
 The concept of "makers"
 ---------------------
@@ -21,9 +20,10 @@ from samplemaker.shapes import GeomGroup
 
 
 def make_dot(x0: float, y0: float) -> smsh.Dot:
-    """
-    Creates a dot object. Dots cannot be exported to GDS but they are useful
-    to store coordinates and perform rotations.
+    """Create a dot object.
+
+    Dots cannot be exported to GDS but they are useful to store coordinates and perform
+    rotations.
 
     Parameters
     ----------
@@ -34,7 +34,7 @@ def make_dot(x0: float, y0: float) -> smsh.Dot:
 
     Returns
     -------
-    dot : samplemaker.shapes.Dot
+    samplemaker.shapes.Dot
         A Dot object.
 
     """
@@ -42,8 +42,8 @@ def make_dot(x0: float, y0: float) -> smsh.Dot:
 
 
 def make_poly(xpts: list[float], ypts: list[float], layer: int = 1) -> GeomGroup:
-    """
-    Creates a closed polygon object.
+    """Create a closed polygon object.
+
     The first and last point should not be specified twice.
 
     Parameters
@@ -53,11 +53,11 @@ def make_poly(xpts: list[float], ypts: list[float], layer: int = 1) -> GeomGroup
     ypts : list[float]
         y coordinates in um.
     layer : int, optional
-        layer. The default is 1.
+        layer, by default 1.
 
     Returns
     -------
-    g : GeomGroup
+    GeomGroup
         A group containing a single polygon.
 
     """
@@ -73,8 +73,8 @@ def make_path(
     layer: int = 1,
     to_poly: bool = 0,
 ) -> GeomGroup:
-    """
-    Creates a path object (open line with width).
+    """Create a path object (open line with width).
+
     Ideally the width should be >0, a width of zero should be avoided.
 
     Parameters
@@ -86,13 +86,13 @@ def make_path(
     width : float
         path width in um.
     layer : int, optional
-        The path layer. The default is 1.
+        The path layer, by default 1.
     to_poly : bool, optional
-        If true, the path is converted to a polygon. The default is 0.
+        If true, the path is converted to a polygon, by default 0.
 
     Returns
     -------
-    g : GeomGroup
+    GeomGroup
         A group containing a single path.
 
     """
@@ -116,8 +116,7 @@ def make_text(
     layer: int = 1,
     to_poly: bool = False,
 ) -> GeomGroup:
-    """
-    Create a text object
+    """Create a text object.
 
     Parameters
     ----------
@@ -138,18 +137,18 @@ def make_text(
         or mid-points specified by the numerical keypad on a standard keyboard.
         For example numkey=1 means that x0,y0 will be the lower-left corner of
         the rectangle as 1 is located in the lower-left corner of the numerical
-        keypad. Similarly, numkey=9 will be the upper-right corner.
-        The default is 5 (=center).
+        keypad. Similarly, numkey=9 will be the upper-right corner, by default 5
+        (center).
     angle : float, optional
-        Text rotation (only used for conversion to polygon). The default is 0.
+        Text rotation (only used for conversion to polygon), by default 0.
     layer : int, optional
-        The text layer. The default is 1.
+        The text layer, by default 1.
     to_poly : bool, optional
-        If true, the text is converted to a polygon. The default is False.
+        If true, the text is converted to a polygon, by default False.
 
     Returns
     -------
-    g : GeomGroup
+    GeomGroup
         A geometry containing a single text element.
 
     """
@@ -177,8 +176,7 @@ def make_sref(
     angle: float = 0,
     mirror: bool = 0,
 ) -> GeomGroup:
-    """
-    Create a CELL reference or SREF element in GDS
+    """Create a CELL reference or SREF element in GDS.
 
     Parameters
     ----------
@@ -191,15 +189,15 @@ def make_sref(
     group : GeomGroup
         The group of geometries that are being referenced.
     mag : float, optional
-        Magnification factor. The default is 1.0.
+        Magnification factor, by default 1.0.
     angle : float, optional
-        Rotation angle of the cell in degrees. The default is 0.
+        Rotation angle of the cell in degrees, by default 0.
     mirror : bool, optional
-        If true, the cell is mirrored along X. The default is 0.
+        If true, the cell is mirrored along X, by default 0.
 
     Returns
     -------
-    g : GeomGroup
+    GeomGroup
         A geometry containing a single cell reference.
 
     """
@@ -223,8 +221,7 @@ def make_aref(
     angle: float = 0,
     mirror: bool = 0,
 ) -> GeomGroup:
-    """
-    Create an ARRAY of cell references or AREF element in GDS
+    """Create an ARRAY of cell references or AREF element in GDS.
 
     Parameters
     ----------
@@ -249,15 +246,15 @@ def make_aref(
     by : float
         y-component of the "b" base vector.
     mag : float, optional
-        Magnification factor. The default is 1.0.
+        Magnification factor, by default 1.0.
     angle : float, optional
-        Rotation angle of the cell in degrees. The default is 0.
+        Rotation angle of the cell in degrees, by default 0.
     mirror : bool, optional
-        If true, the cell is mirrored along X. The default is 0.
+        If true, the cell is mirrored along X, by default 0.
 
     Returns
     -------
-    g : GeomGroup
+    GeomGroup
         A geometry containing a single array reference to a cell.
 
     """
@@ -278,8 +275,7 @@ def make_circle(
     to_poly: bool = False,
     vertices: int = 32,
 ) -> GeomGroup:
-    """
-    Create a filled circle
+    """Create a filled circle.
 
     Parameters
     ----------
@@ -290,16 +286,16 @@ def make_circle(
     r : float
         radius in um.
     layer : int, optional
-        The circle layer. The default is 1.
+        The circle layer, by default 1.
     to_poly : bool, optional
-        If true, the circle is converted to a polygon. The default is 0.
+        If true, the circle is converted to a polygon, by default 0.
     vertices : int, optional
-        Specify the number of vertices to be used for conversion to polygon.
-        The default is 32.
+        Specify the number of vertices to be used for conversion to polygon, by
+        default 32.
 
     Returns
     -------
-    g : GeomGroup
+    GeomGroup
         A geometry containing a single circle.
 
     """
@@ -322,8 +318,7 @@ def make_ellipse(
     to_poly: bool = 0,
     vertices: int = 32,
 ) -> GeomGroup:
-    """
-    Create a filled ellipse
+    """Create a filled ellipse.
 
     Parameters
     ----------
@@ -338,16 +333,16 @@ def make_ellipse(
     rot: float
         Rotation angle (counterclockwise) in degrees.
     layer : int, optional
-        The ellipse layer. The default is 1.
+        The ellipse layer, by default 1.
     to_poly : bool, optional
-        If true, the ellipse is converted to a polygon. The default is 0.
+        If true, the ellipse is converted to a polygon, by default 0.
     vertices : int, optional
-        Specify the number of vertices to be used for conversion to polygon.
-        The default is 32.
+        Specify the number of vertices to be used for conversion to polygon, by
+        default 32.
 
     Returns
     -------
-    g : GeomGroup
+    GeomGroup
         A geometry containing a single ellipse.
 
     """
@@ -371,9 +366,7 @@ def make_ring(
     to_poly: bool = 0,
     vertices: int = 32,
 ) -> GeomGroup:
-    """
-    Create an elliptical ring (if rX=rY a circular ring is made).
-    The width should be >0.
+    """Create an elliptical ring.
 
     Parameters
     ----------
@@ -390,16 +383,16 @@ def make_ring(
     w : float
         Ring width in um.
     layer : int, optional
-        The ring layer. The default is 1.
+        The ring layer, by default 1.
     to_poly : bool, optional
-        If true, the ring is converted to a polygon. The default is 0.
+        If true, the ring is converted to a polygon, by default 0.
     vertices : int, optional
-        Specify the number of vertices to be used for conversion to polygon.
-        The default is 32.
+        Specify the number of vertices to be used for conversion to polygon, by
+        default 32.
 
     Returns
     -------
-    g : GeomGroup
+    GeomGroup
         A geometry containing a single ring.
 
     """
@@ -426,10 +419,9 @@ def make_arc(
     vertices: int = 32,
     split: bool = False,
 ) -> GeomGroup:
-    """
-    Create an elliptical arc (if rX=rY a circular arc is made).
-    The width should be >0.
-    The two angles a1 and a2 specify the initial and final angle of the arc
+    """Create an elliptical arc.
+
+    The two angles a1 and a2 specify the initial and final angle of the arc.
 
     Parameters
     ----------
@@ -450,18 +442,18 @@ def make_arc(
     a2 : float
         Final angle of the arc in degrees.
     layer : int, optional
-        The arc layer. The default is 1.
+        The arc layer, by default 1.
     to_poly : bool, optional
-        If true, the arc is converted to a polygon. The default is 0.
+        If true, the arc is converted to a polygon, by default 0.
     vertices : int, optional
-        Specify the number of vertices to be used for conversion to polygon.
-        The default is 32.
+        Specify the number of vertices to be used for conversion to polygon, by
+        default 32.
     split : bool, optional
-        Will also split the arc in quadrangles if to_poly is true
+        Will also split the arc in quadrangles if to_poly is True, by default False.
 
     Returns
     -------
-    g : GeomGroup
+    GeomGroup
         A geometry containing a single ring.
 
     """
@@ -477,10 +469,10 @@ def make_arc(
 def make_rect(
     x0: float, y0: float, width: float, height: float, numkey: int = 5, layer: int = 1
 ) -> GeomGroup:
-    """
-    Create a rectangle centered in x0,y0.
-    Optionally, the reference point x0,y0 can be any of the corners by
-    specifying a "numkey" parameter.
+    """Create a rectangle.
+
+    Optionally, the reference point x0,y0 can be any of the corners by specifying a
+    "numkey" parameter.
 
     Parameters
     ----------
@@ -493,18 +485,18 @@ def make_rect(
     height : float
         Rectangle height.
     layer : int, optional
-        The rectangle layer. The default is 1.
+        The rectangle layer, by default 1.
     numkey : int, optional
         The reference point x0,y0 can be any of the corners or mid-points
         specified by the numerical keypad on a standard keyboard. For example
         numkey=1 means that x0,y0 will be the lower-left corner of the
         rectangle as 1 is located in the lower-left corner of the numerical
-        keypad. Similarly, numkey=9 will be the upper-right corner.
-        The default is 5 (=center).
+        keypad. Similarly, numkey=9 will be the upper-right corner, by default 5
+        (center).
 
     Returns
     -------
-    r1 : GeomGroup
+    GeomGroup
         A geometry containing a single rectangle.
 
     """
@@ -531,8 +523,8 @@ def make_rounded_rect(
     numkey: int = 5,
     layer: int = 1,
 ) -> GeomGroup:
-    """
-    Create a rectangle centered in x0,y0 with corners rounded
+    """Create a rectangle with rounded corners.
+
     Optionally, the reference point x0,y0 can be any of the corners by
     specifying a "numkey" parameter.
 
@@ -549,20 +541,20 @@ def make_rounded_rect(
     corner_radius : float
         The radius of the corners in um.
     resolution : int
-        The corner resolution or number of points
+        The corner resolution or number of points, by default 16.
     layer : int, optional
-        The rectangle layer. The default is 1.
+        The rectangle layer, by default 1.
     numkey : int, optional
         The reference point x0,y0 can be any of the corners or mid-points
         specified by the numerical keypad on a standard keyboard. For example
         numkey=1 means that x0,y0 will be the lower-left corner of the
         rectangle as 1 is located in the lower-left corner of the numerical
-        keypad. Similarly, numkey=9 will be the upper-right corner.
-        The default is 5 (=center).
+        keypad. Similarly, numkey=9 will be the upper-right corner, by default 5
+        (center).
 
     Returns
     -------
-    r1 : GeomGroup
+    GeomGroup
         A geometry containing a single rectangle.
 
     """
@@ -595,9 +587,7 @@ def make_rounded_rect(
 def make_tapered_path(
     xpts: list[float], ypts: list[float], widths: list[float], layer: int = 1
 ) -> GeomGroup:
-    """
-    Creates a path with variable width. A list of path widths is given
-    so that at each point the width can be changed. A polygon is produced
+    """Create a path with variable width.
 
     Parameters
     ----------
@@ -608,15 +598,14 @@ def make_tapered_path(
     widths : list[float]
         path widths in um at each point (should be the same size as xpts).
     layer : int, optional
-        The path layer. The default is 1.
+        The path layer, by default 1.
 
     Returns
     -------
-    g : GeomGroup
+    GeomGroup
         A group containing a single path.
 
     """
-
     x = xpts
     y = ypts
     w = widths

@@ -240,7 +240,7 @@ class TestBox:
     def test_to_poly(self, box_obj: sp.Box) -> None:
         poly = box_obj.toPoly()
         assert isinstance(poly, sp.Poly)
-        # poly.data should be of the format [x0, y0, x1, y1, x2, y2, x3, y3, ..., x0, y0]
+        # poly.data should be of the format [x0, y0, x1, y1, x2, y2, ..., x0, y0]
         assert isinstance(poly.data, np.ndarray)
         assert len(poly.data) == 10
 
@@ -284,8 +284,7 @@ class TestBox:
 
 
 class TestPoly:
-    """
-    Tests for the Poly class.
+    """Tests for the Poly class.
 
     Methods without coverage:
 
@@ -1328,7 +1327,10 @@ class TestArc:
         assert isinstance(g, sp.GeomGroup)
         assert len(g.group) == 1
         assert isinstance(g.group[0], sp.Poly)
-        assert g.group[0].layer == arc_obj.layer
+        poly = g.group[0]
+        assert poly.layer == arc_obj.layer
+        poly_ypts = poly.data[1::2]
+        assert np.all(poly_ypts >= arc_obj.y0)
 
     def test_to_polygon_autosplit(self, arc_obj: sp.Arc) -> None:
         n_segments = 8
@@ -1338,6 +1340,9 @@ class TestArc:
         assert len(g.group) == n_segments
         assert all(isinstance(poly, sp.Poly) for poly in g.group)
         assert all(poly.layer == arc_obj.layer for poly in g.group)
+        for poly in g.group:
+            poly_ypts = poly.data[1::2]
+            assert np.all(poly_ypts >= arc_obj.y0)
 
 
 class TestGeomGroup:
