@@ -53,17 +53,17 @@ with `samplemaker`.
 """
 
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from copy import deepcopy
 from typing import Any, TypeAlias
 
 from samplemaker.devices import _DeviceList
 from samplemaker.shapes import GeomGroup
 
-ARGS_TYPE: TypeAlias = list[float]
+ARGS_TYPE: TypeAlias = Sequence[Any]
 STATE_TYPE: TypeAlias = dict[str, Any]
 OPTIONS_TYPE: TypeAlias = dict[str, Any]
-SEQ_TYPE: TypeAlias = list[list[Any]]
+SEQ_TYPE: TypeAlias = Sequence[Sequence[Any]]
 
 INIT_CALLABLE_TYPE: TypeAlias = Callable[[STATE_TYPE, OPTIONS_TYPE], None]
 COMMAND_CALLABLE_TYPE: TypeAlias = Callable[

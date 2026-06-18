@@ -116,7 +116,7 @@ class Marker:
     """
 
     def __init__(self, name: str, dev: Device, x0: float = 0, y0: float = 0) -> None:
-        """Initialze the Marker class.
+        """Initialize the Marker class.
 
         Parameters
         ----------

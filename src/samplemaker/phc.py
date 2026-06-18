@@ -1,4 +1,4 @@
-"""Classes for drawing photonic crystals and periodic sturctures.
+"""Classes for drawing photonic crystals and periodic structures.
 
 Crystals
 --------
@@ -30,15 +30,19 @@ with the designed parameters.
 
 import math
 import warnings
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from copy import deepcopy
-from typing import Self
+from typing import Self, TypeAlias
 
 import numpy as np
 
 import samplemaker.makers as sm
 from samplemaker.layout import LayoutPool
 from samplemaker.shapes import GeomGroup, Poly
+
+CELLFUN_TYPE: TypeAlias = Callable[
+    [float, float, Sequence[float] | str], GeomGroup | int
+]
 
 
 class Crystal:
@@ -399,18 +403,20 @@ class Crystal:
         return heterophc
 
 
-def __circ_cellfun__(x: float, y: float, params: list[float]) -> GeomGroup:
+def __circ_cellfun__(
+    x: float, y: float, params: Sequence[float] | str
+) -> GeomGroup | int:
     if params == "test":
         return 1
-    else:
-        return sm.make_circle(x, y, params[0], 0)
+    return sm.make_circle(x, y, params[0], 0)
 
 
-def __circref_cellfun__(x: float, y: float, params: list[float]) -> GeomGroup:
+def __circref_cellfun__(
+    x: float, y: float, params: Sequence[float] | str
+) -> GeomGroup | int:
     if params == "test":
         return 1
-    else:
-        return sm.make_sref(x, y, "_CIRCLE", LayoutPool["_CIRCLE"], mag=params[0])
+    return sm.make_sref(x, y, "_CIRCLE", LayoutPool["_CIRCLE"], mag=params[0])
 
 
 def make_phc(
@@ -419,7 +425,7 @@ def make_phc(
     cellparams: list[float],
     x0: float,
     y0: float,
-    cellfun: Callable[[float, float, list[float] | str], GeomGroup] = __circ_cellfun__,
+    cellfun: CELLFUN_TYPE = __circ_cellfun__,
     name: str = "",
 ) -> GeomGroup:
     """Create a photonic crystal geometry.
@@ -470,7 +476,7 @@ def make_phc_inpoly(
     cellparams: list[float],
     x0: float,
     y0: float,
-    cellfun: Callable[[float, float, list[float] | str], GeomGroup] = __circ_cellfun__,
+    cellfun: CELLFUN_TYPE = __circ_cellfun__,
     name: str = "",
 ) -> GeomGroup:
     """Create a photonic crystal geometry clipped inside a polygon area.

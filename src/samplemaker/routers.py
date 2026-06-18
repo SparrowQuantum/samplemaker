@@ -31,7 +31,7 @@ def __connectable_facing(
     Returns
     -------
     bool
-        True if connection succeded, False otherwise.
+        True if connection succeeded, False otherwise.
     list[list[Any]]
         A sequence to perform the connection.
 
@@ -108,7 +108,7 @@ def __connectable_bend(
     Returns
     -------
     bool
-        True if connection succeded, False otherwise.
+        True if connection succeeded, False otherwise.
     list[list[Any]]
         A sequence to perform the connection.
 
@@ -164,7 +164,7 @@ def __connect_step(
     Returns
     -------
     bool
-        True if connection succeded, False otherwise.
+        True if connection succeeded, False otherwise.
     list[list[Any]]
         A sequence to perform the connection.
 
@@ -237,7 +237,7 @@ def WaveguideConnect(
     a sequence of straight lines (sequencer command S), 90 degrees bends (sequencer
     command B) and cosine bends (sequencer command C). The bending radius is also given.
     If the ports are too close to be connected via Manhattan-style connectors the
-    function returns False. nThe sequence can be used in combination with any
+    function returns False. The sequence can be used in combination with any
     `samplemaker.sequencer.Sequencer` class that implements the commands S, C, and B.
 
     Parameters
@@ -252,7 +252,7 @@ def WaveguideConnect(
     Returns
     -------
     bool
-        True if connection succeded, False otherwise.
+        True if connection succeeded, False otherwise.
     list
         A sequence that realizes the connection.
 

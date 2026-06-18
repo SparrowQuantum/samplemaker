@@ -3221,7 +3221,7 @@ class Circle:
         """
         return np.pi * self.r * self.r
 
-    def centroid(self) -> float:
+    def centroid(self) -> tuple[float, float]:
         """Return circle centroid.
 
         Returns
