@@ -15,6 +15,7 @@ license-files = ["LICENSE.md"]
 license = "BSD-3-Clause"
 version = "5.4.8"
 dependencies = [
+    "asteval>=1.0.9",
     "matplotlib>=3.10.5",
     "numpy==2.*",
 ]
@@ -40,11 +41,11 @@ Repository = "https://github.com/SparrowQuantum/samplemaker.git"
 extend-exclude = ["tutorials/*"]
 
 [tool.ruff.lint]
-extend-select = ["D", "E", "W", "I", "ANN"]
+extend-select = ["D", "E", "W", "I", "ANN", "S", "NPY", "BLE", "B"]
 ignore = ["D203", "D213"]
 
 [tool.ruff.lint.extend-per-file-ignores]
-"tests/*" = ["D1"]
+"tests/*" = ["D1", "S101"]
 
 [tool.scikit-build]
 minimum-version = "0.11.6"

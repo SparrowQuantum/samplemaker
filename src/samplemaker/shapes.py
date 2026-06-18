@@ -74,6 +74,7 @@ from copy import deepcopy
 from typing import Collection, Self
 
 import numpy as np
+from asteval import Interpreter
 
 import samplemaker.resources.boopy as boopy
 from samplemaker import _BoundingBoxPool
@@ -644,7 +645,8 @@ class GeomGroup:
 
         # Now execute
         g = GeomGroup()
-        sel = eval(code, {"__builtins__": {}}, allowed_names)
+        aeval = Interpreter(usersyms=allowed_names, raise_errors=True)
+        sel = aeval(query_str)
         g.group[:] = [sflat.group[i] for i, val in enumerate(sel) if val]
         return g
 
@@ -1934,6 +1936,7 @@ class Poly:
         ndisc = 0
         j = n - 1
         k = n - 2
+        aeval = Interpreter(raise_errors=True)
         for i in range(n):
             attr = x[i] * (y[j] - y[k]) + x[j] * (y[k] - y[i]) + x[k] * (y[i] - y[j])
             d1 = np.sqrt((x[i] - x[j]) ** 2 + (y[i] - y[j]) ** 2)
@@ -1952,7 +1955,8 @@ class Poly:
             allowed_names["dm"] = d2
             allowed_names["dp"] = d1
             allowed_names["d0"] = d3
-            sel = eval(code, {"__builtins__": {}}, allowed_names)
+            aeval.symtable.update(allowed_names)
+            sel = aeval(keep_str)
             if sel:
                 xf += [x[j]]
                 yf += [y[j]]
