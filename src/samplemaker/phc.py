@@ -58,12 +58,12 @@ class Crystal:
         Parameters
         ----------
         xpts : Iterable[float], optional
-            List of x-coordinates (normalized) of the lattice sites. The default is [].
+            List of x-coordinates (normalized) of the lattice sites, by default [].
         ypts : Iterable[float], optional
-            List of y-coordinates (normalized) of the lattice sites. The default is [].
+            List of y-coordinates (normalized) of the lattice sites, by default [].
         params : Iterable[float], optional
             2D list of parameter values of the lattice sites. Should be of the form
-            params[pindex,site_index]. The default is [].
+            params[pindex,site_index], by default [].
 
         Returns
         -------
@@ -116,11 +116,11 @@ class Crystal:
         shift_y : float
             y-amount of shift (in normalized units).
         relative : bool, optional
-            Perform a relative shift from the origin. The default is False.
+            Perform a relative shift from the origin, by default False.
         orig_x : float, optional
-            x-coordinate of the origin of shift (if relative). The default is 0.
+            x-coordinate of the origin of shift (if relative), by default 0.
         orig_y : float, optional
-            y-coordinate of the origin of shift (if relative). The default is 0.
+            y-coordinate of the origin of shift (if relative), by default 0.
 
         Returns
         -------
@@ -248,8 +248,7 @@ class Crystal:
         filled : bool
             If True, creates a filled hexagonal crystal, otherwise a ring of radius N.
         Nparams : int, optional
-            Number of parameters to be controlled for each lattice site.
-            The default is 1.
+            Number of parameters to be controlled for each lattice site, by default 1.
 
         Returns
         -------
@@ -294,8 +293,7 @@ class Crystal:
             Number of holes in the y direction, note that we consider Ny=1 the
             row where y=sqrt(3). The crystal will span from -Ny to Ny.
         Nparams : int, optional
-            Number of parameters to be controlled for each lattice site.
-            The default is 1.
+            Number of parameters to be controlled for each lattice site, by default 1.
 
         Returns
         -------
@@ -347,8 +345,7 @@ class Crystal:
             How many times should each spacing be repeated (always end with 1 for the
             remaining).
         Nparams : int, optional
-            Number of parameters to be controlled for each lattice site.
-            The default is 1.
+            Number of parameters to be controlled for each lattice site, by default 1.
 
         Returns
         -------
@@ -446,9 +443,9 @@ def make_phc(
     cellfun : Callable[[float, float, list[float] | str], GeomGroup], optional
         A function of the type fun(x,y,params) that returns the geometry of the unit
         cell. It should also return the number of parameters required to draw the unit
-        cell if "test" is passed as params. The default is __circ_cellfun__.
+        cell if "test" is passed as params, by default __circ_cellfun__.
     name : str, optional
-        Name of the crystal. The default is "".
+        Name of the crystal, by default "".
 
     Returns
     -------
@@ -499,9 +496,9 @@ def make_phc_inpoly(
     cellfun : Callable[[float, float, list[float] | str], GeomGroup], optional
         A function of the type fun(x,y,params) that returns the geometry of the unit
         cell. It should also return the number of parameters required to draw the unit
-        cell if "test" is passed as params. The default is __circ_cellfun__.
+        cell if "test" is passed as params, by default __circ_cellfun__.
     name : str, optional
-        Name of the crystal. The default is "".
+        Name of the crystal, by default "".
 
     Returns
     -------

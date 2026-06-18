@@ -26,7 +26,7 @@ def __connectable_facing(
     port2 : DevicePort
         End port for the connection.
     rad : float, optional
-        The maximum bend radius in um. The default is 3.
+        The maximum bend radius in um, by default 3.
 
     Returns
     -------
@@ -103,7 +103,7 @@ def __connectable_bend(
     port2 : DevicePort
         End port for the connection.
     rad : float, optional
-        The maximum bend radius in um. The default is 3.
+        The maximum bend radius in um, by default 3.
 
     Returns
     -------
@@ -159,7 +159,7 @@ def __connect_step(
     port2 : DevicePort
         End port for the connection.
     rad : float, optional
-        The maximum bend radius in um. The default is 3.
+        The maximum bend radius in um, by default 3.
 
     Returns
     -------
@@ -247,7 +247,7 @@ def WaveguideConnect(
     port2 : DevicePort
         End port for the connection.
     rad : float, optional
-        The maximum bend radius in um. The default is 3.
+        The maximum bend radius in um, by default 3.
 
     Returns
     -------
@@ -294,7 +294,7 @@ def ElbowRouter(
     port2 : DevicePort
         End port for the connection.
     offset : float, optional
-        How far should the connector stick away from ports. The default is 5.
+        How far should the connector stick away from ports, by default 5.
 
     Returns
     -------

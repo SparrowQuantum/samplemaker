@@ -295,7 +295,7 @@ class Sequencer:
 
         Returns
         -------
-        g : GeomGroup
+        GeomGroup
             The resulting geometry.
 
         """

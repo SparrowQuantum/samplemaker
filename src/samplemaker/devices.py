@@ -428,9 +428,9 @@ class Device:
         param_description : str
             A text describing the parameters.
         param_type : TYPE, optional
-            The type of the parameter. The default is float.
+            The type of the parameter, by default float.
         param_range : tuple, optional
-            A tuple specifying the min and max value of the parameter . The default is
+            A tuple specifying the min and max value of the parameter , by default
             (0,np.inf).
 
         Returns
@@ -466,9 +466,9 @@ class Device:
         param_description : str
             Description of the parameter.
         param_type : TYPE, optional
-            The type of the paramter. The default is float.
+            The type of the paramter, by default float.
         param_range : tuple, optional
-            A tuple specifying the min and max value of the parameter . The default is
+            A tuple specifying the min and max value of the parameter , by default
             (0,np.inf).
 
         Returns
@@ -576,9 +576,9 @@ class Device:
         Parameters
         ----------
         cast_types : bool, optional
-            Attempts to do a type-cast on the parameter. The default is True.
+            Attempts to do a type-cast on the parameter, by default True.
         clip_in_range : bool, optional
-            Clips the value in the range specified. The default is True.
+            Clips the value in the range specified, by default True.
 
         Returns
         -------
@@ -1325,7 +1325,7 @@ def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel"):
     Parameters
     ----------
     filename : str, optional
-        The library filename with .lel extension. The default is "SampleMakerLibrary.lel".
+        The library filename with .lel extension, by default "SampleMakerLibrary.lel".
 
     Returns
     -------

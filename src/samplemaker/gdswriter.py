@@ -24,7 +24,7 @@ class GDSWriter:
         Parameters
         ----------
         circleres : int, optional
-            Number of points to use for circles. The default is 12.
+            Number of points to use for circles, by default 12.
         arcres : int, optional
             Number of points to use for round elements (ellipses, rings, arcs). The
             default is 32.

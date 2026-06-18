@@ -163,7 +163,7 @@ class GeomGroup:
 
         Returns
         -------
-        g : GeomGroup
+        GeomGroup
             A detached copy of the flattened geometry.
 
         """
@@ -518,7 +518,7 @@ class GeomGroup:
 
         Returns
         -------
-        g : GeomGroup
+        GeomGroup
             A new GeomGroup object with elements of the selected layer list.
 
         """
@@ -538,7 +538,7 @@ class GeomGroup:
 
         Returns
         -------
-        g : GeomGroup
+        GeomGroup
             A new GeomGroup object without elements of the selected layer.
 
         """
@@ -790,11 +790,11 @@ class GeomGroup:
         Parameters
         ----------
         thresh : float, optional
-            Circularity threshold (1=perfect circle). The default is 0.95.
+            Circularity threshold (1=perfect circle), by default 0.95.
         vcount : int, optional
-            Minimum number of vertices to perform the conversion. The default is 10.
+            Minimum number of vertices to perform the conversion, by default 10.
         include_refs : bool, optional
-            Perform recursive conversion to SRefs and ARefs. The default is True.
+            Perform recursive conversion to SRefs and ARefs, by default True.
 
         Returns
         -------
@@ -1063,10 +1063,10 @@ class GeomGroup:
         layer : int
             The layer to be resized.
         corner_fill_arc : bool, optional
-            Rounds the convex corners. The default is False.
+            Rounds the convex corners, by default False.
         num_circle_segments : int, optional
             If corner_fill_arc is True, the number of segments to be used for arc
-            filling. The default is 0.
+            filling, by default 0.
 
         Returns
         -------
@@ -1131,12 +1131,12 @@ class GeomGroup:
             The layer to be resized.
         distance: float, optional
             How far should the outline be displaced from the polygon edge.
-            Negative values mean inward distance. The default is 0.
+            Negative values mean inward distance, by default 0.
         corner_fill_arc : bool, optional
-            Rounds the convex corners. The default is False.
+            Rounds the convex corners, by default False.
         num_circle_segments : int, optional
             If corner_fill_arc is True, the number of segments to be used for arc
-            filling. The default is 0.
+            filling, by default 0.
 
         Returns
         -------
@@ -1196,8 +1196,8 @@ class GeomGroup:
         layer : int
             The layer to be inverted.
         offset : float, optional
-            Resizing amount (positive or negative) of the bounding box before inversion.
-            The default is 0.
+            Resizing amount (positive or negative) of the bounding box before inversion,
+            by default 0.
 
         Returns
         -------
@@ -1556,7 +1556,7 @@ class Box:
 
         Returns
         -------
-        g : GeomGroup
+        GeomGroup
             The group containing the bounding box rectangle.
 
         """

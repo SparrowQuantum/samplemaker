@@ -118,9 +118,9 @@ class Marker:
         dev : samplemaker.devices.Device
             A device object that produces a marker.
         x0 : float, optional
-            Position of the marker, x-coordinate. The default is 0.
+            Position of the marker, x-coordinate, by default 0.
         y0 : float, optional
-            Position of the marker, y-coordinate. The default is 0.
+            Position of the marker, y-coordinate, by default 0.
 
         Returns
         -------
@@ -167,15 +167,15 @@ class MarkerSet(Marker):
         dev : samplemaker.devices.Device
             A sample maker device to use for drawing the marker.
         x0 : float, optional
-            Position of the marker, x-coordinate. The default is 0.
+            Position of the marker, x-coordinate, by default 0.
         y0 : float, optional
-            Position of the marker, y-coordinate. The default is 0.
+            Position of the marker, y-coordinate, by default 0.
         mset : int, optional
-            Number of markers (can be 1, 2 or 4). The default is 4.
+            Number of markers (can be 1, 2 or 4), by default 4.
         xdist : float, optional
-            X-distance between two markers. The default is 1000.
+            X-distance between two markers, by default 1000.
         ydist : float, optional
-            Y-distance between two markers. The default is 1000.
+            Y-distance between two markers, by default 1000.
 
         Returns
         -------
@@ -271,17 +271,17 @@ class DeviceTableAnnotations:
         colvars : tuple
             Same as colvars but for columns.
         text_width : float, optional
-            Width of text to be rendered. The default is 1.
+            Width of text to be rendered, by default 1.
         text_height : float, optional
-            Size of text to be rendered. The default is 10.
+            Size of text to be rendered, by default 10.
         left : bool, optional
-            Render header on the left side of the table. The default is True.
+            Render header on the left side of the table, by default True.
         right : bool, optional
-            Render header on the right side of the table. The default is True.
+            Render header on the right side of the table, by default True.
         above : bool, optional
-            Render header on top of the table. The default is True.
+            Render header on top of the table, by default True.
         below : bool, optional
-            Render header on the bottom of the table. The default is True.
+            Render header on the bottom of the table, by default True.
 
         Returns
         -------
@@ -497,9 +497,9 @@ class DeviceTable:
         Parameters
         ----------
         row_linkports : tuple, optional
-            Tuple of tuples containing port names that should be linked along rows. The default is ().
+            Tuple of tuples containing port names that should be linked along rows, by default ().
         col_linkports : tuple, optional
-            Tuple of tuples containing port names that should be linked along columns. The default is ().
+            Tuple of tuples containing port names that should be linked along columns, by default ().
 
         Returns
         -------
@@ -515,9 +515,9 @@ class DeviceTable:
         Parameters
         ----------
         align_rows : bool, optional
-            If true, the first pair specified in row_linkports will be aligned. The default is False.
+            If true, the first pair specified in row_linkports will be aligned, by default False.
         align_columns : bool, optional
-            If true, the first pair specified in col_linkports will be aligned. The default is False.
+            If true, the first pair specified in col_linkports will be aligned, by default False.
 
         Returns
         -------
@@ -621,8 +621,8 @@ class DeviceTable:
         numkey : int, optional
             Selects which point of the bounding box should be aligned. Specify the
             box corner by visually matching it to the numerical keypad of standard
-            keyboards (e.g. 1 is lower left corner, 3, lower-right, etc)
-            The default is 5 (center).
+            keyboards (e.g. 1 is lower left corner, 3, lower-right, etc), by default 5 
+            (center).
 
         Returns
         -------
@@ -795,9 +795,9 @@ class DeviceTable:
         by : float
             y-step along columns.
         x0 : float, optional
-            x-coordinate of the origin. The default is 0
+            x-coordinate of the origin, by default 0
         y0 : float, optional
-            y-coordinate of the origin. The default is 0
+            y-coordinate of the origin, by default 0
 
         Returns
         -------
@@ -1107,9 +1107,9 @@ class Mask:
         y0 : float
             Y-coordinate of the writefield center in um.
         passes : int, optional
-            Number of write-field passes, not shown in the mask. The default is 1.
+            Number of write-field passes, not shown in the mask, by default 1.
         shift : float, optional
-            Shift of each multi-pass writefield. The default is 0.
+            Shift of each multi-pass writefield, by default 0.
 
         Returns
         -------
@@ -1143,9 +1143,9 @@ class Mask:
         Ny : int
             Number of write fields in y direction.
         passes : int, optional
-            Number of write-field passes, not shown in the mask. The default is 1.
+            Number of write-field passes, not shown in the mask, by default 1.
         shift : float, optional
-            Shift of each multi-pass writefield. The default is 0.
+            Shift of each multi-pass writefield, by default 0.
 
         Returns
         -------
@@ -1189,7 +1189,7 @@ class Mask:
         y0 : float
             Controls the y position of the table center.
         cell : str, optional
-            Adds the table to a named cell. The default is "" (main cell).
+            Adds the table to a named cell, by default "" (main cell).
 
         Returns
         -------
