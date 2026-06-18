@@ -1,4 +1,4 @@
-"""This module contains the classes to configure the mask layout.
+"""Classes to configure the mask layout.
 
 Mask layout
 -----------
@@ -33,7 +33,8 @@ Additionally, if a structure is not changed and a GDS file already exists, the
 GDS data from the previous file is loaded and copied to the output file.
 
 By default, the cache is disabled as for small masks with few polygons there is
-no significant advantage in run time. Using the cache is highly recommended for large masks.
+no significant advantage in run time. Using the cache is highly recommended for large
+masks.
 
 ### Electron beam lithography and write-fields
 A write-field is a square area of the design where electron-beam lithography
@@ -88,7 +89,8 @@ This is done via the `DeviceTableAnnotations` class.
 """
 
 import math
-import pickle  # for cacheing
+import pickle  # for caching
+from collections.abc import Sequence
 from copy import deepcopy
 
 from samplemaker import (
@@ -98,18 +100,23 @@ from samplemaker import (
     _DeviceLocalParamPool,
     _DevicePool,
 )
-from samplemaker.devices import Device, IncompatiblePortError
+from samplemaker.devices import Device, DevicePort, IncompatiblePortError
 from samplemaker.gdsreader import GDSReader
 from samplemaker.gdswriter import GDSWriter
 from samplemaker.makers import make_aref, make_circle, make_path, make_text
 from samplemaker.shapes import Box, GeomGroup, SRef
 
+TAB_POS_TYPE = tuple[tuple[tuple[float, float], ...], ...]
+
 
 class Marker:
-    """Class that defines a single Marker."""
+    """Class that defines a single Marker.
 
-    def __init__(self, name: str, dev: Device, x0: float = 0, y0: float = 0):
-        """Marker class initializer. Use this class with custom devices to place a single marker in the layout.
+    Use this class with custom devices to place a single marker in the layout.
+    """
+
+    def __init__(self, name: str, dev: Device, x0: float = 0, y0: float = 0) -> None:
+        """Initialze the Marker class.
 
         Parameters
         ----------
@@ -124,7 +131,7 @@ class Marker:
 
         Returns
         -------
-        None.
+        None
 
         """
         self.name = name
@@ -133,11 +140,11 @@ class Marker:
         self.y0 = y0
 
     def get_geom(self) -> GeomGroup:
-        """Creates the geometry (runs the device) and places it in x0,y0.
+        """Create the marker geometry.
 
         Returns
         -------
-        g : samplemaker.shapes.GeomGroup
+        GeomGroup
             A geometry containing the marker.
 
         """
@@ -148,6 +155,8 @@ class Marker:
 
 
 class MarkerSet(Marker):
+    """Class that defines a set of markers."""
+
     def __init__(
         self,
         name: str,
@@ -157,8 +166,8 @@ class MarkerSet(Marker):
         mset: int = 4,
         xdist: float = 1000,
         ydist: float = 1000,
-    ):
-        """MarkerSet is a class to describe a set of markers (inherits Marker).
+    ) -> None:
+        """Initialize the MarkerSet class.
 
         Parameters
         ----------
@@ -179,7 +188,7 @@ class MarkerSet(Marker):
 
         Returns
         -------
-        None.
+        None
 
         """
         super().__init__(name, dev, x0, y0)
@@ -188,11 +197,11 @@ class MarkerSet(Marker):
         self.ydist = ydist
 
     def get_geom(self) -> GeomGroup:
-        """Creates the geometry (runs the device) and places copies of them in the mask.
+        """Create the marker geometry and places copies of them in the mask.
 
         Returns
         -------
-        g : samplemaker.shapes.GeomGroup
+        GeomGroup
             A geometry containing the marker.
 
         """
@@ -232,44 +241,48 @@ class MarkerSet(Marker):
 
 
 class DeviceTableAnnotations:
+    """Class to control the annotations of a DeviceTable.
+
+    You can define headers on the four edges of a table. An instance of this object
+    should be passed to `DeviceTable.set_annotations` method to add headers.
+    """
+
     def __init__(
         self,
         rowfmt: str,
         colfmt: str,
         xoff: float,
         yoff: float,
-        rowvars: tuple,
-        colvars: tuple,
+        rowvars: Sequence[str],
+        colvars: Sequence[str],
         text_width: float = 1,
         text_height: float = 10,
         left: bool = True,
         right: bool = True,
         above: bool = True,
         below: bool = True,
-    ):
-        """Initalize the DeviceTableAnnotations class that controls how text is produced in tables.
-        You can define headers on the four edges of a table.
-        An instance of this object should be passed to `DeviceTable.set_annotations` method to
-        add headers.
+    ) -> None:
+        """Initialize the DeviceTableAnnotations class.
 
         Parameters
         ----------
         rowfmt : str
             A template string for formatting the rows text. %I and %J will be replaced
-            with the row and column number, respectively. %Cn and %Rn will be replaced by
-            the n-th column and row variable value, defined in rowvars and colvars. For example
-            if the colvars is ("var0","var1",), the format %C0 will be replaced
-            by the value of var0 on each column and %C1 will be replaced by the value of var1.
+            with the row and column number, respectively. %Cn and %Rn will be replaced
+            by the n-th column and row variable value, defined in rowvars and colvars.
+            For example if the colvars is ("var0","var1",), the format %C0 will be
+            replaced by the value of var0 on each column and %C1 will be replaced by the
+            value of var1.
         colfmt : str
             A template string for formatting the column text. Same as rowfmt.
         xoff : float
             Distance of header text from the edge of the table in the x direction.
         yoff : float
             As xoff but in the y direction.
-        rowvars : tuple
-            A tuple containing a list of varable names that will change along rows.
-        colvars : tuple
-            Same as colvars but for columns.
+        rowvars : Sequence[str]
+            A sequence containing the names of variables that will change along rows.
+        colvars : Sequence[str]
+            A sequence containing the names of variables that will change along columns.
         text_width : float, optional
             Width of text to be rendered, by default 1.
         text_height : float, optional
@@ -285,7 +298,7 @@ class DeviceTableAnnotations:
 
         Returns
         -------
-        None.
+        None
 
         """
         self.colfmt = colfmt
@@ -302,9 +315,11 @@ class DeviceTableAnnotations:
         self.text_height = text_height
         self.to_poly = True
 
-    def set_poly_text(self, to_poly: bool):
-        """Sets whether table annotation should be rendered as polygon objects
-        or text objects.
+    def set_poly_text(self, to_poly: bool) -> None:
+        """Set how the table annotations should be rendered.
+
+        if to_poly is True, the text will be rendered as polygons. Otherwise the text
+        is rendered as a text object.
 
         Parameters
         ----------
@@ -313,7 +328,7 @@ class DeviceTableAnnotations:
 
         Returns
         -------
-        None.
+        None
 
         """
         self.to_poly = to_poly
@@ -329,8 +344,10 @@ class DeviceTableAnnotations:
         rowdict: dict,
         coldict: dict,
     ) -> GeomGroup:
-        """Renders the text for a given element in a table. This function should not be called
-        by the user. It is intended to be run by the DeviceTable functions.
+        """Render the text for a given element in a table.
+
+        This function should not be called by the user. It is intended to be run by the
+        DeviceTable class.
 
         Parameters
         ----------
@@ -346,10 +363,11 @@ class DeviceTableAnnotations:
             X-Position of the item on the table.
         y0 : float
             Y-Position of the item on the table.
-        rowdict : dict
+        rowdict : dict[str, Sequence]
             The dictionary associating the variables and values that change along rows.
-        coldict : dict
-            The dictionary associating the variables and values that change along columns.
+        coldict : dict[str, Sequence]
+            The dictionary associating the variables and values that change along
+            columns.
 
         Returns
         -------
@@ -398,39 +416,49 @@ class DeviceTableAnnotations:
 
 
 class DeviceTable:
-    def __init__(self, dev: Device, nrow: int, ncol: int, rowvars: dict, colvars: dict):
-        """Create a table of `samplemaker.devices.Device` objects and generate their geometries
-        in an array. The array can have 1 or more rows and 1 or more columns.
-        On each row and column the device will be instantiated according to the values
-        provided by the rowvars and colvars parameters.
+    """A table of `samplemaker.devices.Device` objects.
 
-        Note that the actual position of the rendered devices on the table (x,y coordinate)
-        is not defined here. You can use the `set_table_positions` method to control
-        where each item in the table is created.
-        Alternatively, the `auto_align` method should be used to create a regularly-spaced
-        table. By default `auto_align` is called upon initialization and assumes zero
-        spacing between elements.
+    Will generate the device geometries in an array. The array can have 1 or more rows
+    and 1 or more columns.
+
+    On each row and column the device will be instantiated according to the values
+    provided by the rowvars and colvars parameters.
+
+    The positions of the rendered devices can be controlled by using the
+    `set_table_positions` method to control. Alternatively, the `auto_align` method
+    should be used to create a regularly-spaced table.
+    """
+
+    def __init__(
+        self,
+        dev: Device,
+        nrow: int,
+        ncol: int,
+        rowvars: dict[str, Sequence],
+        colvars: dict[str, Sequence],
+    ) -> None:
+        """Initialize the DeviceTable class.
 
         Parameters
         ----------
         dev : samplemaker.device.Device
-            The device to be instantiated in the table. The device should be already built
-            via the build() command.
+            The device to be initialized in the table. The device should be already
+            built via the build() command.
         nrow : int
             Number of rows (typically in y direction).
         ncol : int
             Number of columns (typically in x direction).
-        rowvars : dict
-            A dictionary that associates a device parameter to a list of values.
-            The list of values should have the same size as the number of rows.
+        rowvars : dict[str, Sequence]
+            A dictionary that associates a device parameter to a sequence of values.
+            The sequence of values should have the same size as the number of rows.
             On each row the device parameter will be changed according to the values
             listed. Multiple parameters can be swept simultaneously.
-        colvars : dict
+        colvars : dict[str, Sequence]
             Same as rowvars but controls the parameters being changed along columns.
 
         Returns
         -------
-        None.
+        None
 
         """
         self.dev = deepcopy(dev)  # A prebuilt device with preset parameters
@@ -438,46 +466,55 @@ class DeviceTable:
         self.ncol = ncol
         self.rowvars = rowvars
         self.colvars = colvars
-        self.col_linkports = ()  # "Tuple of tuples containing port names that should be linked along columns")
-        self.row_linkports = ()  # "Tuple of tuples containing port names that should be linked along rows")
-        self.col_alignports = (
-            False  # , "The first pair specified in col_linkports will be aligned",bool)
-        )
-        self.row_alignports = (
-            False  # "The first pair specified in row_linkports will be aligned",bool)
-        )
+        self.col_linkports: Sequence[tuple[str, str]] = ()
+        self.row_linkports: Sequence[tuple[str, str]] = ()
+        self.col_alignports = False
+        self.row_alignports = False
         self.device_rotation = 0
         self.annotations = None
         self.use_references = True
-        self.pos_xy = tuple(
-            [tuple([(0, 0) for i in range(ncol)]) for j in range(nrow)]
-        )  # A colsxrows tuple of coordinates for placing the elements
-        self._external_ports = dict()  # Stores the output ports
+        self.pos_xy = tuple([tuple([(0, 0) for _ in range(ncol)]) for _ in range(nrow)])
+        self._external_ports = dict()
         self._geometries = []
         self._portmap = []
         self._backup_dev = deepcopy(dev)  # Keep it to reset the whole thing
         self._getgeom_ran = False
 
-    def set_table_positions(self, positions: tuple):
-        """Defines the position of each element using a 3-dimensional tuple of the
-        kind pos[i][j][k] where i,j control the row and column element and k=0,1
-        are the x and y coordinate.
+    def set_table_positions(self, positions: TAB_POS_TYPE) -> None:
+        """Define the position of each element in the table.
+
+        Uses a 3-dimensional tuple of the kind pos[i][j][k] where i,j control the row
+        and column element and k=0,1 are the x and y coordinate.
 
         Parameters
         ----------
-        positions : tuple
+        positions : TAB_POS_TYPE
             The tuple describing the position of each element in the table.
 
         Returns
         -------
-        None.
+        None
 
         """
         self.pos_xy = positions
         self._geometries = []
         self._portmap = []
 
-    def shift_table_origin(self, dx: float, dy: float):
+    def shift_table_origin(self, dx: float, dy: float) -> None:
+        """Shift the position of all elements in the table by a given amount.
+
+        Parameters
+        ----------
+        dx : float
+            The amount to shift in the x direction.
+        dy : float
+            The amount to shift in the y direction.
+
+        Returns
+        -------
+        None
+
+        """
         newpos = tuple(
             [
                 tuple(
@@ -491,44 +528,54 @@ class DeviceTable:
         )
         self.set_table_positions(newpos)
 
-    def set_linked_ports(self, row_linkports: tuple = (), col_linkports: tuple = ()):
+    def set_linked_ports(
+        self,
+        row_linkports: Sequence[tuple[str, str]] | None = None,
+        col_linkports: Sequence[tuple[str, str]] | None = None,
+    ) -> None:
         """Automatically route ports between devices across columns and rows.
 
         Parameters
         ----------
-        row_linkports : tuple, optional
-            Tuple of tuples containing port names that should be linked along rows, by default ().
-        col_linkports : tuple, optional
-            Tuple of tuples containing port names that should be linked along columns, by default ().
+        row_linkports : Sequence[tuple[str, str]] | None, optional
+            Sequence of tuples containing port names that should be linked along rows,
+            by default ().
+        col_linkports : Sequence[tuple[str, str]] | None, optional
+            Sequence of tuples containing port names that should be linked along
+            columns, by default ().
 
         Returns
         -------
-        None.
+        None
 
         """
-        self.col_linkports = col_linkports
-        self.row_linkports = row_linkports
+        self.col_linkports = col_linkports if col_linkports is not None else ()
+        self.row_linkports = row_linkports if row_linkports is not None else ()
 
-    def set_aligned_ports(self, align_rows: bool = False, align_columns: bool = False):
+    def set_aligned_ports(
+        self, align_rows: bool = False, align_columns: bool = False
+    ) -> None:
         """Align ports along columns and rows.
 
         Parameters
         ----------
         align_rows : bool, optional
-            If true, the first pair specified in row_linkports will be aligned, by default False.
+            If true, the first pair specified in row_linkports will be aligned, by
+            default False.
         align_columns : bool, optional
-            If true, the first pair specified in col_linkports will be aligned, by default False.
+            If true, the first pair specified in col_linkports will be aligned, by
+            default False.
 
         Returns
         -------
-        None.
+        None
 
         """
         self.col_alignports = align_columns
         self.row_alignports = align_rows
 
-    def set_device_rotation(self, device_rotation: float):
-        """Rotates each device in the table.
+    def set_device_rotation(self, device_rotation: float) -> None:
+        """Rotate each device in the table.
 
         Parameters
         ----------
@@ -537,45 +584,46 @@ class DeviceTable:
 
         Returns
         -------
-        None.
+        None
 
         """
         self.device_rotation = device_rotation
         self._geometries = []
         self._portmap = []
 
-    def set_annotations(self, annotations: DeviceTableAnnotations):
-        """Sets the table headers using the `DeviceTableAnnotations` class.
+    def set_annotations(self, annotations: DeviceTableAnnotations) -> None:
+        """Set the table headers.
 
         Parameters
         ----------
         annotations : DeviceTableAnnotations
-            The annotation class.
+            The annotations to use.
 
         Returns
         -------
-        None.
+        None
 
         """
         self.annotations = annotations
 
-    def get_external_ports(self) -> dict:
-        """If the device contains ports, all the instantiated ports are returned
-        so that tables can be connected to external devices or ports.
+    def get_external_ports(self) -> dict[str, DevicePort]:
+        """Get all instantiated ports in the table.
+
+        This allows tables to be connected to external devices or ports.
 
         Returns
         -------
-        dict
+        dict[str, DevicePort]
             A dictionary of all external ports.
 
         """
         return deepcopy(self._external_ports)
 
-    def __build_geomarray(self):
+    def __build_geomarray(self) -> None:
         dev = self.dev
-        self._portmap = [[dict() for i in range(self.ncol)] for j in range(self.nrow)]
+        self._portmap = [[dict() for _ in range(self.ncol)] for _ in range(self.nrow)]
         self._geometries = [
-            [GeomGroup() for i in range(self.ncol)] for j in range(self.nrow)
+            [GeomGroup() for _ in range(self.ncol)] for _ in range(self.nrow)
         ]
         for i in range(self.ncol):
             for var, valuelist in self.colvars.items():
@@ -594,7 +642,7 @@ class DeviceTable:
                 self._geometries[j][i] = dev.run()
                 self._portmap[j][i] = deepcopy(dev._ports)
 
-    def __place_portmap(self):
+    def __place_portmap(self) -> None:
         # Adjusts the portmap according to the current positions
         if self._geometries == []:
             self.__build_geomarray()
@@ -608,9 +656,8 @@ class DeviceTable:
                     pp.x0 += self.pos_xy[j][i][0]
                     pp.y0 += self.pos_xy[j][i][1]
 
-    def auto_align(self, min_dist_x: float, min_dist_y: float, numkey: int = 5):
-        """Automagically aligns devices in the table according to their bounding boxes.
-        The spacing is controlled by min_dist_x and min_dist_y.
+    def auto_align(self, min_dist_x: float, min_dist_y: float, numkey: int = 5) -> None:
+        """Align devices in the table automatically according to their bounding boxes.
 
         Parameters
         ----------
@@ -621,12 +668,12 @@ class DeviceTable:
         numkey : int, optional
             Selects which point of the bounding box should be aligned. Specify the
             box corner by visually matching it to the numerical keypad of standard
-            keyboards (e.g. 1 is lower left corner, 3, lower-right, etc), by default 5 
+            keyboards (e.g. 1 is lower left corner, 3, lower-right, etc), by default 5
             (center).
 
         Returns
         -------
-        None.
+        None
 
         """
         if self._geometries == []:
@@ -670,11 +717,11 @@ class DeviceTable:
                     self.pos_xy[j][i][1] += sum(sy[0:j])
 
     def get_geometries(self) -> GeomGroup:
-        """Builds the table and returns all the geometries.
+        """Build the table and returns all the geometries.
 
         Returns
         -------
-        samplemaker.shapes.GeomGroup
+        GeomGroup
             The rendered table geometry
 
         Raises
@@ -776,9 +823,10 @@ class DeviceTable:
         by: float,
         x0: float = 0,
         y0: float = 0,
-    ) -> tuple:
-        """This static method produces a regular table array. It returns a tuple
-        that can be passed to `DeviceTable.set_table_positions`.
+    ) -> TAB_POS_TYPE:
+        """Create coordinates for a regular table array.
+
+        Returns a tuple that can be passed to `DeviceTable.set_table_positions`.
 
         Parameters
         ----------
@@ -795,13 +843,13 @@ class DeviceTable:
         by : float
             y-step along columns.
         x0 : float, optional
-            x-coordinate of the origin, by default 0
+            x-coordinate of the origin, by default 0.
         y0 : float, optional
-            y-coordinate of the origin, by default 0
+            y-coordinate of the origin, by default 0.
 
         Returns
         -------
-        tuple
+        TAB_POS_TYPE
             3-dimensional tuple of positions.
 
         """
@@ -816,7 +864,9 @@ class DeviceTable:
 
 
 class Mask:
-    def __init__(self, name: str = "layout001"):
+    """Main class for managing mask layouts and exporting them to GDS files."""
+
+    def __init__(self, name: str = "layout001") -> None:
         """Initialize a Mask class. The name given is used as base name for file export.
 
         Parameters
@@ -826,7 +876,7 @@ class Mask:
 
         Returns
         -------
-        None.
+        None
 
         """
         self.name = name
@@ -835,12 +885,12 @@ class Mask:
         self.cache = False
         self.clear()  # A new mask clears the pool
 
-    def clear(self):
-        """Clears the mask and all its content.
+    def clear(self) -> None:
+        """Clear the mask and all its content.
 
         Returns
         -------
-        None.
+        None
 
         """
         LayoutPool.clear()
@@ -851,12 +901,14 @@ class Mask:
         self.writefields.clear()
         self.__add_basic_elements()
 
-    def set_cache(self, cache: bool):
-        """Turns on or off the cache system. When cache is turned on, the layout
-        is stored on disk (with .cache extension) and reloaded when the mask
-        is created again (for example when running the same script multiple times).
-        Addditionally, the cache system re-uses the GDS bitstream from a previously
-        generated GDS file.
+    def set_cache(self, cache: bool) -> None:
+        """Turn on or off the cache system.
+
+        When cache is turned on, the layout is stored on disk (with .cache extension)
+        and reloaded when the mask is created again (for example when running the same
+        script multiple times). Additionally, the cache system re-uses the GDS bitstream
+        from a previously generated GDS file.
+
         Any changes made to the devices or instances are automatically detected
         and updated even if the cache is on.
 
@@ -870,7 +922,7 @@ class Mask:
 
         Returns
         -------
-        None.
+        None
 
         """
         self.cache = cache
@@ -878,24 +930,24 @@ class Mask:
             self.__import_cache()
 
     @staticmethod
-    def __add_basic_elements():
+    def __add_basic_elements() -> None:
         # Adding a circle to the layout pool
         if "_CIRCLE" not in LayoutPool:
             c = make_circle(0, 0, 1, layer=0, to_poly=True, vertices=12)
             LayoutPool["_CIRCLE"] = c
             _BoundingBoxPool["_CIRCLE"] = Box(-1, -1, 2, 2)
 
-    def addToMainCell(self, geom_group: GeomGroup):
-        """Adds a geometry to the main cell.
+    def addToMainCell(self, geom_group: GeomGroup) -> None:
+        """Add a geometry to the main cell.
 
         Parameters
         ----------
-        geom_group : samplemaker.shapes.GeomGroup
+        geom_group : GeomGroup
             The geometry to be added.
 
         Returns
         -------
-        None.
+        None
 
         """
         if self.mainsymbol not in LayoutPool:
@@ -903,26 +955,27 @@ class Mask:
         else:
             LayoutPool[self.mainsymbol] += geom_group
 
-    def addCell(self, cellname: str, geom_group: GeomGroup):
-        """Adds a new cell to the GDS structure and assigns a geometry to it.
+    def addCell(self, cellname: str, geom_group: GeomGroup) -> None:
+        """Add a new cell to the GDS structure and assigns a geometry to it.
 
         Parameters
         ----------
         cellname : str
             The name of the cell.
-        geom_group : samplemaker.shapes.GeomGroup
+        geom_group : GeomGroup
             The geometry to be added.
 
         Returns
         -------
-        None.
+        None
 
         """
         LayoutPool[cellname] = geom_group
 
     def getCell(self, cellname: str) -> GeomGroup:
-        """Returns a reference to the GeomGroup correspondin to the cellname.
-        Note: if you modify the geometry, it will be also modified in the mask.
+        """Get a reference to the GeomGroup corresponding to the cellname.
+
+        Note: if you modify the cell geometry, it will also be modified in the mask.
 
         Parameters
         ----------
@@ -941,7 +994,7 @@ class Mask:
 
         return LayoutPool[cellname]
 
-    def __export_cache(self):
+    def __export_cache(self) -> None:
         print("Storing objects in cache file...")
         cachefile = open(self.name + ".cache", "wb")
         # Note that we do not need the full geometry, as we will just reload
@@ -963,7 +1016,7 @@ class Mask:
         cachefile.close()
         print("Done.")
 
-    def __import_cache(self):
+    def __import_cache(self) -> None:
         try:
             with open(self.name + ".cache", "rb") as cachefile:
                 print("Loading cache data...")
@@ -983,7 +1036,7 @@ class Mask:
         except OSError:
             pass
 
-    def __cleanup_cellref(self):
+    def __cleanup_cellref(self) -> None:
         # Remove useless references
         reflist = LayoutPool[self.mainsymbol].get_sref_list()
         reflist.add(self.mainsymbol)
@@ -1005,12 +1058,12 @@ class Mask:
             _DeviceLocalParamPool.pop(hsh, None)
             _DevicePool.pop(hsh, None)
 
-    def exportGDS(self):
+    def exportGDS(self) -> None:
         """Finalize the mask, perform cache operations, if any, and write to GDS.
 
         Returns
         -------
-        None.
+        None
 
         """
         self.__cleanup_cellref()
@@ -1032,7 +1085,7 @@ class Mask:
         if self.cache:
             self.__export_cache()
 
-    def importGDS(self, filename: str):
+    def importGDS(self, filename: str) -> None:
         """Import the full mask from GDS file.
 
         Parameters
@@ -1042,7 +1095,7 @@ class Mask:
 
         Returns
         -------
-        None.
+        None
 
         """
         self.clear()
@@ -1074,7 +1127,7 @@ class Mask:
                 if isinstance(e, SRef):
                     e.group = LayoutPool[e.cellname]
 
-    def addMarkers(self, markerset: "MarkerSet"):
+    def addMarkers(self, markerset: "MarkerSet") -> None:
         """Add a marker set to the mask.
 
         Parameters
@@ -1084,7 +1137,7 @@ class Mask:
 
         Returns
         -------
-        None.
+        None
 
         """
         g = markerset.get_geom()
@@ -1095,7 +1148,7 @@ class Mask:
 
     def addWriteField(
         self, wf_size: float, x0: float, y0: float, passes: int = 1, shift: float = 0
-    ):
+    ) -> None:
         """Add a square writefield centered in x0,y0.
 
         Parameters
@@ -1113,7 +1166,7 @@ class Mask:
 
         Returns
         -------
-        None.
+        None
 
         """
         self.writefields += [(wf_size, x0, y0, passes, shift)]
@@ -1127,7 +1180,7 @@ class Mask:
         Ny: int,
         passes: int = 1,
         shift: float = 0,
-    ):
+    ) -> None:
         """Create a grid Nx x Ny of writefields with given size and position.
 
         Parameters
@@ -1149,7 +1202,7 @@ class Mask:
 
         Returns
         -------
-        None.
+        None
 
         """
         for i in range(Nx):
@@ -1177,8 +1230,8 @@ class Mask:
 
     def addDeviceTable(
         self, device_table: DeviceTable, x0: float, y0: float, cell: str = ""
-    ):
-        """Adds a `DeviceTable` to the layout.
+    ) -> None:
+        """Add a `DeviceTable` to the layout.
 
         Parameters
         ----------
@@ -1193,7 +1246,7 @@ class Mask:
 
         Returns
         -------
-        None.
+        None
 
         """
         geoms = device_table.get_geometries()
