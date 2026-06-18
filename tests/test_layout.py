@@ -484,7 +484,7 @@ class TestDeviceTable:
     ) -> None:
         tab = smlay.DeviceTable(dummy_device, 1, 2, {}, {})
 
-        original_build = getattr(tab, "_DeviceTable__build_geomarray")
+        original_build = tab._DeviceTable__build_geomarray
 
         def _build_with_incompatible_ports() -> None:
             original_build()
@@ -510,7 +510,7 @@ class TestDeviceTable:
         tab.set_linked_ports(row_linkports=(("io", "io"),))
         tab.set_aligned_ports(align_rows=True, align_columns=False)
 
-        original_build = getattr(tab, "_DeviceTable__build_geomarray")
+        original_build = tab._DeviceTable__build_geomarray
 
         def _build_with_vertical_ports() -> None:
             original_build()

@@ -269,7 +269,7 @@ def WaveguideConnect(
     else:
         p1 = deepcopy(port1)
         seq = []
-        for i in range(4):
+        for _ in range(4):
             res = __connect_step(p1, port2, rad)
             seq += res[1]
             if res[0]:

@@ -1000,7 +1000,7 @@ class Mask:
         try:
             with open(self.name + ".cache", "rb") as cachefile:
                 print("Loading cache data...")
-                data = pickle.load(cachefile)
+                data = pickle.load(cachefile)  # noqa: S301, to be replaced
                 print("Done.")
                 for key in data[0].keys():
                     LayoutPool[key] = data[0][key]

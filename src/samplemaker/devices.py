@@ -1542,7 +1542,7 @@ def registerDevicesInModule(module_name: str) -> None:
     None
 
     """
-    for name, obj in inspect.getmembers(sys.modules[module_name]):
+    for _, obj in inspect.getmembers(sys.modules[module_name]):
         if inspect.isclass(obj):
             # Recursively check bases for Device
             baseobj = obj.__bases__[0]
@@ -1648,13 +1648,13 @@ def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel") -> None:
         #    scale = bb.height
         g.scale(0, 0, 100 / scale, 100 / scale)
 
-        for g in g.group:
-            if isinstance(g, Poly):
-                bb = g.bounding_box()
+        for g_member in g.group:
+            if isinstance(g_member, Poly):
+                bb = g_member.bounding_box()
                 if bb.width < 2 and bb.height < 0.2:
                     continue
-                x = g.data[0::2]
-                y = g.data[1::2]
+                x = g_member.data[0::2]
+                y = g_member.data[1::2]
                 for i in range(len(x) - 1):
                     if (x[i + 1] - x[i]) ** 2 + (y[i + 1] - y[i]) ** 2 > 0.2:
                         f.write(
@@ -1673,7 +1673,7 @@ def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel") -> None:
         # f.write("<Offsetlabel 0 -50 -50>\n")
         f.write("<Netlist spice>\n")
         f.write("$devicename ")
-        for pname, port in dev._ports.items():
+        for pname in dev._ports:
             f.write(f"{pname} $node({pname}) ")
         f.write(". ")
         for p in oj._p:
