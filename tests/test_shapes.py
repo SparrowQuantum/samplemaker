@@ -1327,7 +1327,10 @@ class TestArc:
         assert isinstance(g, sp.GeomGroup)
         assert len(g.group) == 1
         assert isinstance(g.group[0], sp.Poly)
-        assert g.group[0].layer == arc_obj.layer
+        poly = g.group[0]
+        assert poly.layer == arc_obj.layer
+        poly_ypts = poly.data[1::2]
+        assert np.all(poly_ypts >= arc_obj.y0)
 
     def test_to_polygon_autosplit(self, arc_obj: sp.Arc) -> None:
         n_segments = 8
@@ -1337,6 +1340,9 @@ class TestArc:
         assert len(g.group) == n_segments
         assert all(isinstance(poly, sp.Poly) for poly in g.group)
         assert all(poly.layer == arc_obj.layer for poly in g.group)
+        for poly in g.group:
+            poly_ypts = poly.data[1::2]
+            assert np.all(poly_ypts >= arc_obj.y0)
 
 
 class TestGeomGroup:

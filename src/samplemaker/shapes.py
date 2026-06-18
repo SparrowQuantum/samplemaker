@@ -3686,11 +3686,12 @@ class Arc(Ring):
         if autosplit:
             for i in range(Npts - 1):
                 p1 = Poly(
-                    ypts=np.append(
+                    # FIXME: Swap kwargs
+                    xpts=np.append(
                         xpts1[i : (i + 2)],
                         xpts2[(-Npts + 1 + i) : (-Npts - 1 + i) : -1],
                     ),
-                    xpts=np.append(
+                    ypts=np.append(
                         ypts1[i : (i + 2)],
                         ypts2[(-Npts + 1 + i) : (-Npts - 1 + i) : -1],
                     ),
