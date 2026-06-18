@@ -148,7 +148,6 @@ def test_gdsrecord_attributes() -> None:
     assert record.data == b"payload"
 
 
-@pytest.mark.xfail(strict=True, reason="GDSRecord data defaults to a string, not bytes")
 def test_gdsrecord_attributes_default_data() -> None:
     record = GDSRecord(size=10, rectype=1, datatype=2, bheader=b"\x00\x0a\x01\x02")
     assert record.size == 10
@@ -173,7 +172,6 @@ def test_gdsrecord_to_binary_non_empty_record_returns_header_plus_data() -> None
     assert record.to_binary() == header + payload
 
 
-@pytest.mark.xfail(strict=True, reason="GDSReader.buf should be bytes, not str")
 def test_gdsreader_init_sets_default_state(gds_reader: GDSReader) -> None:
     assert gds_reader.buf == b""  # Returns "" here
     assert gds_reader.ptr == 0
