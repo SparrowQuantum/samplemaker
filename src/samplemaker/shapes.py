@@ -95,13 +95,7 @@ class GeomGroup:
     """
 
     def __init__(self) -> None:
-        """Create an empty GeomGroup with no elements.
-
-        Returns
-        -------
-        None
-
-        """
+        """Create an empty GeomGroup with no elements."""
         self.group = list()
 
     def __add__(self, other: "GeomGroup") -> "GeomGroup":
@@ -1452,10 +1446,6 @@ class Box:
             width of the box.
         height : float
             height of the box.
-
-        Returns
-        -------
-        None
 
         """
         self.llx = llx

@@ -324,10 +324,6 @@ class BaseWaveguideSequencer(smseq.Sequencer):
         seq : list[list[Any]]
             The sequence to be executed.
 
-        Returns
-        -------
-        None
-
         """
         opts = BaseWaveguideOptions()
         state = BaseWaveguideState()

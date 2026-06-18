@@ -63,20 +63,14 @@ class GDSReader:
     """GDS input class."""
 
     def __init__(self) -> None:
-        """Initialize the GDS reader.
-
-        Returns
-        -------
-        None
-
-        """
+        """Initialize the GDS reader."""
         self.buf = b""
         self.ptr = 0
         self.celldata: dict[str, bytes] = dict()  # store binary GDS celldata
 
     @staticmethod
     def __read_rec(f: BufferedReader) -> GDSRecord | bool:
-        # Reads next record in file
+        """Read next record in file."""
         header = f.read(4)
         if not header or len(header) < 4:
             return False

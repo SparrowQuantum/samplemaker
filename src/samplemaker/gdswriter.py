@@ -28,10 +28,6 @@ class GDSWriter:
             Number of points to use for round elements (ellipses, rings, arcs). The
             default is 32.
 
-        Returns
-        -------
-        None
-
         """
         self.circleres = circleres
         self.arcres = arcres

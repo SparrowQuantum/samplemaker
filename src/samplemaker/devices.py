@@ -479,13 +479,7 @@ class Device:
     """
 
     def __init__(self) -> None:
-        """Initialize a Device. Should never be called by the user.
-
-        Returns
-        -------
-        None
-
-        """
+        """Initialize a Device. Should never be called by the user."""
         self._p = {}
         self._pdescr = {}
         self._ptype = {}  # stores the type of the parameter
@@ -1042,10 +1036,6 @@ class NetListEntry:
         params : dict[str, Any]
             A dictionary of parameters to be used when creating the device.
 
-        Returns
-        -------
-        None
-
         """
         self.devname = devname
         self.x0 = x0
@@ -1099,10 +1089,6 @@ class NetList:
             The netlist name.
         entry_list : list[NetListEntry]
             list of `NetListEntry` objects.
-
-        Returns
-        -------
-        None
 
         """
         self.name: str = name

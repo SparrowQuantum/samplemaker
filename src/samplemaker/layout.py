@@ -129,10 +129,6 @@ class Marker:
         y0 : float, optional
             Position of the marker, y-coordinate, by default 0.
 
-        Returns
-        -------
-        None
-
         """
         self.name = name
         self.dev = dev
@@ -185,10 +181,6 @@ class MarkerSet(Marker):
             X-distance between two markers, by default 1000.
         ydist : float, optional
             Y-distance between two markers, by default 1000.
-
-        Returns
-        -------
-        None
 
         """
         super().__init__(name, dev, x0, y0)
@@ -295,10 +287,6 @@ class DeviceTableAnnotations:
             Render header on top of the table, by default True.
         below : bool, optional
             Render header on the bottom of the table, by default True.
-
-        Returns
-        -------
-        None
 
         """
         self.colfmt = colfmt
@@ -455,10 +443,6 @@ class DeviceTable:
             listed. Multiple parameters can be swept simultaneously.
         colvars : dict[str, Sequence]
             Same as rowvars but controls the parameters being changed along columns.
-
-        Returns
-        -------
-        None
 
         """
         self.dev = deepcopy(dev)  # A prebuilt device with preset parameters
@@ -873,10 +857,6 @@ class Mask:
         ----------
         name : str
             Name of the mask.
-
-        Returns
-        -------
-        None
 
         """
         self.name = name

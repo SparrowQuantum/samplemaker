@@ -218,10 +218,6 @@ class SequencerState:
         * '__YC__': Stores the current y-coordinate when calling 'CENTER'
         * 'STORED': Stores the current position when calling 'STORE'
 
-        Returns
-        -------
-        None
-
         """
         self.state: STATE_TYPE = dict()
         self.state["x"] = 0
@@ -258,10 +254,6 @@ class Sequencer:
             SequencerState object with the initial state of the sequencer.
         seq_dictionary : COMMANDS_DICT_TYPE
             The dictionary with instructions.
-
-        Returns
-        -------
-        None
 
         """
         self.seq = seq

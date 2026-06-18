@@ -65,10 +65,6 @@ class Crystal:
             2D list of parameter values of the lattice sites. Should be of the form
             params[pindex,site_index], by default [].
 
-        Returns
-        -------
-        None.
-
         """
         xpts = [] if xpts is None else xpts
         ypts = [] if ypts is None else ypts
@@ -88,7 +84,7 @@ class Crystal:
 
         Returns
         -------
-        None.
+        None
 
         """
         if len(index) > 0:
@@ -124,7 +120,7 @@ class Crystal:
 
         Returns
         -------
-        None.
+        None
 
         """
         if len(index) > 0:
@@ -153,7 +149,7 @@ class Crystal:
 
         Returns
         -------
-        None.
+        None
 
         """
         self.params[pindex, index] = pvalues
@@ -201,7 +197,7 @@ class Crystal:
 
         Returns
         -------
-        None.
+        None
 
         """
         self.remove_at_index(self.coord_to_index(crystal.xpts, crystal.ypts))
@@ -216,7 +212,7 @@ class Crystal:
 
         Returns
         -------
-        None.
+        None
 
         """
         self.xpts = np.append(self.xpts, crystal.xpts)

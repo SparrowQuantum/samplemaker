@@ -107,7 +107,7 @@ def GeomView(grp: GeomGroup) -> None:
 
     Returns
     -------
-    None.
+    None
 
     """
     plt.close("all")
@@ -168,7 +168,7 @@ def DeviceInspect(devcl: Device | type[Device]) -> None:
 
     Returns
     -------
-    None.
+    None
 
     """
     global _ViewerCurrentDevice
