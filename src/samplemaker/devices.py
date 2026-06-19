@@ -501,9 +501,8 @@ class Device:
             if isinstance(value, dict):
                 newdict = self.__flatdict(value, parent_str + key + "::")
                 flatdict.update(newdict)
-            else:
-                if not isinstance(value, list):
-                    flatdict[parent_str + key] = value
+            elif not isinstance(value, list):
+                flatdict[parent_str + key] = value
         return flatdict
 
     def __hash__(self) -> int:
@@ -798,11 +797,9 @@ class Device:
                 self._p[p] = self._ptype[p](val)
         if clip_in_range:
             for p, val in self._p.items():
-                if val < self._prange[p][0]:
-                    val = self._prange[p][0]
-                if val > self._prange[p][1]:
-                    val = self._prange[p][1]
-                self._p[p] = val
+                v = max(val, self._prange[p][0])
+                v = min(v, self._prange[p][1])
+                self._p[p] = v
         return self._p
 
     def get_port(self, port_name: str) -> DevicePort:
@@ -1161,7 +1158,9 @@ class NetList:
         self.paths[port_name] = coords
 
     @classmethod
-    def ImportCircuit(cls, file_name: str, circuit_name: str = "") -> Self:
+    def ImportCircuit(
+        cls, file_name: str, circuit_name: str = ""
+    ) -> Self | dict[str, Self]:
         """Generate a NetList object from a circuit file.
 
         The input is a text file with circuit description similar to the
@@ -1178,7 +1177,7 @@ class NetList:
 
         Returns
         -------
-        NetList
+        NetList | dict[str, NetList]
             The NetList with the imported circuit.
 
         """
@@ -1389,6 +1388,142 @@ class Circuit(Device):
         if param_name == "NETLIST":
             self._update_parameters()
 
+    def _build_device_geometry(
+        self,
+        nle: NetListEntry,
+        instance_number: int,
+    ) -> tuple[GeomGroup, dict[str, DevicePort]]:
+        if nle.devname not in _DeviceList:
+            msg = f"No device named {nle.devname} found."
+            raise ValueError(msg)
+
+        dev = _DeviceList[nle.devname].build()
+        dev.use_references = self.use_references
+
+        # Force sequencer reset if has _seq subfield.
+        # This keeps device behavior independent from prior sequencer state.
+        if hasattr(dev, "_seq"):
+            dev._seq.reset()
+
+        dev._p = self._p[f"dev_{nle.devname}_{instance_number:d}"]
+        dev._x0 = nle.x0
+        dev._y0 = nle.y0
+        dev.set_angle(math.radians(nle.rot))
+        return dev.run(), dev._ports
+
+    def _collect_mapped_ports(
+        self,
+        nle: NetListEntry,
+        geom: GeomGroup,
+        device_ports: dict[str, DevicePort],
+        input_ports: dict[str, DevicePort],
+        output_ports: dict[str, DevicePort],
+    ) -> None:
+        for devport, conn_name in nle.portmap.items():
+            if devport not in device_ports:
+                msg = (
+                    f"Could not find port named {devport} in {nle.devname} as it was "
+                    f"not defined by device."
+                )
+                raise ValueError(msg)
+
+            port = device_ports[devport]
+            port._geometry = geom
+            port._parentports = device_ports
+            if conn_name in input_ports:
+                output_ports[conn_name] = port
+            else:
+                input_ports[conn_name] = port
+
+    def _align_ports(
+        self,
+        aligned_ports: Sequence[str],
+        input_ports: dict[str, DevicePort],
+        output_ports: dict[str, DevicePort],
+    ) -> None:
+        for portname in aligned_ports:
+            if not (portname in input_ports and portname in output_ports):
+                continue
+
+            # port2 is always slave to port1
+            port1 = input_ports[portname]
+            port2 = output_ports[portname]
+            if port1.dx() != 0 and port2.dx() != 0:
+                ydiff = port2.y0 - port1.y0
+                port2._geometry.translate(0, -ydiff)
+                for parent_port in port2._parentports.values():
+                    parent_port.y0 -= ydiff
+            if port1.dy() != 0 and port2.dy() != 0:
+                xdiff = port2.x0 - port1.x0
+                port2._geometry.translate(-xdiff, 0)
+                for parent_port in port2._parentports.values():
+                    parent_port.x0 -= xdiff
+
+    def _connect_via_path(
+        self,
+        start_port: DevicePort,
+        end_port: DevicePort,
+        path_points: list[float],
+        portname: str,
+    ) -> GeomGroup:
+        if len(path_points) % 3 > 0:
+            msg = (
+                f"Specified path for wire {portname} "
+                f"should include 3 values for each point (x,y,angle)"
+            )
+            raise ValueError(msg)
+
+        geometry = GeomGroup()
+        current_port = deepcopy(start_port)
+        for idx in range(0, len(path_points), 3):
+            next_port = deepcopy(current_port)
+            next_port.x0 = path_points[idx]
+            next_port.y0 = path_points[idx + 1]
+            next_port.set_angle(math.radians(path_points[idx + 2]))
+            next_port.bf = not next_port.bf
+            geometry += start_port.connector_function(current_port, next_port)
+            next_port.bf = not next_port.bf
+            current_port = deepcopy(next_port)
+
+        geometry += start_port.connector_function(current_port, end_port)
+        return geometry
+
+    def _connect_ports(
+        self,
+        g: GeomGroup,
+        input_ports: dict[str, DevicePort],
+        output_ports: dict[str, DevicePort],
+        external_ports: Sequence[str],
+        paths: dict[str, list[float]],
+    ) -> GeomGroup:
+        for portname, input_port in input_ports.items():
+            if portname in output_ports:
+                output_port = output_ports[portname]
+                if input_port.connector_function != output_port.connector_function:
+                    msg = f"Incompatible ports for connection named {portname}"
+                    raise IncompatiblePortError(msg)
+
+                if portname in paths:
+                    g += self._connect_via_path(
+                        start_port=input_port,
+                        end_port=output_port,
+                        path_points=paths[portname],
+                        portname=portname,
+                    )
+                else:
+                    g += input_port.connector_function(input_port, output_port)
+            elif portname in external_ports:
+                input_port._geometry = GeomGroup()
+                input_port._parentports = {}
+                port = deepcopy(input_port)
+                port.name = portname
+                self._localp["external_ports"][portname] = port
+            else:
+                # Stacklevel=3 to point at code calling self.run() and not this method.
+                msg = f"Port {portname} is unconnected."
+                warnings.warn(msg, UserWarning, stacklevel=3)
+        return g
+
     def geom(self) -> GeomGroup:
         """Draws the entire circuit.
 
@@ -1403,107 +1538,22 @@ class Circuit(Device):
         aligned_ports = self._p["NETLIST"].aligned_ports
         paths = self._p["NETLIST"].paths
 
-        input_ports = {}
-        output_ports = {}
-        # Instantiate all devices
         g = GeomGroup()
-        i = 1
-        for nle in netlist:
-            if nle.devname not in _DeviceList:
-                msg = f"No device named {nle.devname} found."
-                raise ValueError(msg)
-
-            dev = _DeviceList[nle.devname].build()
-            dev.use_references = self.use_references
-            # Force sequencer reset if has _seq subfield
-            # Note: this is needed to force the device to behave as if it does
-            # not enter in a sequencer
-            if hasattr(dev, "_seq"):
-                dev._seq.reset()
-            # Set all parameter from Netlist hierarchy
-            dev._p = self._p[f"dev_{nle.devname}_{i:d}"]
-            i += 1
-            dev._x0 = nle.x0
-            dev._y0 = nle.y0
-            dev.set_angle(math.radians(nle.rot))
-            geom = dev.run()
+        input_ports: dict[str, DevicePort] = {}
+        output_ports: dict[str, DevicePort] = {}
+        for instance_number, nle in enumerate(netlist, start=1):
+            geom, device_ports = self._build_device_geometry(nle, instance_number)
             g += geom
-            for devport, conn_name in nle.portmap.items():
-                port = dev.get_port(devport)
-                port._geometry = geom
-                port._parentports = dev._ports
-                if conn_name in input_ports:
-                    output_ports[conn_name] = port
-                else:
-                    input_ports[conn_name] = port
+            self._collect_mapped_ports(
+                nle=nle,
+                geom=geom,
+                device_ports=device_ports,
+                input_ports=input_ports,
+                output_ports=output_ports,
+            )
 
-        # Now we align ports
-        for portname in aligned_ports:
-            if not (portname in input_ports and portname in output_ports):
-                continue
-
-            # port 2 is always slave to port1
-            port1 = input_ports[portname]
-            port2 = output_ports[portname]
-            if port1.dx() != 0 and port2.dx() != 0:
-                # align y-values
-                ydiff = port2.y0 - port1.y0
-                port2._geometry.translate(0, -ydiff)
-                for pp in port2._parentports.values():
-                    pp.y0 -= ydiff
-            if port1.dy() != 0 and port2.dy() != 0:
-                # align x values
-                xdiff = port2.x0 - port1.x0
-                port2._geometry.translate(-xdiff, 0)
-                for pp in port2._parentports.values():
-                    pp.x0 -= xdiff
-
-        # Now we run connectors
-        for portname, port1 in input_ports.items():
-            if portname in output_ports:
-                port2 = output_ports[portname]
-                if port1.connector_function != port2.connector_function:
-                    msg = f"Incompatible ports for connection named {portname}"
-                    raise IncompatiblePortError(msg)
-
-                if portname not in paths:
-                    g += port1.connector_function(port1, port2)
-                    continue
-
-                # Force connector between virtual points
-                pts = paths[portname]
-                if len(pts) % 3 > 0:
-                    msg = (
-                        f"Specified path for wire {portname} "
-                        f"should include 3 values for each point (x,y,angle)"
-                    )
-                    raise ValueError(msg)
-
-                portx = deepcopy(port1)
-                for i in range(0, len(pts), 3):
-                    print(f"Connecting {pts[i]} {pts[i + 1]}")
-                    portx.x0 = pts[i]
-                    portx.y0 = pts[i + 1]
-                    portx.set_angle(math.radians(pts[i + 2]))
-                    portx.bf = not portx.bf
-                    g += port1.connector_function(port1, portx)
-                    portx.bf = not portx.bf
-                    port1 = deepcopy(portx)
-
-                g += portx.connector_function(portx, port2)
-
-            elif portname in external_ports:
-                port1._geometry = GeomGroup()
-                port1._parentports = {}
-                p1 = deepcopy(port1)
-                p1.name = portname
-                self._localp["external_ports"][portname] = p1
-            else:
-                # Stacklevel=3 to point at code calling self.run() and not this method.
-                msg = f"Port {portname} is unconnected."
-                warnings.warn(msg, UserWarning, stacklevel=3)
-
-        return g
+        self._align_ports(aligned_ports, input_ports, output_ports)
+        return self._connect_ports(g, input_ports, output_ports, external_ports, paths)
 
     def ports(self) -> None:
         """Add external ports that are not connected in the netlist.
@@ -1618,7 +1668,7 @@ def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel") -> None:
             oj.initialize()
             oj.parameters()
             oj.ports()
-            if (oj._name == "X") or (oj._name == "TABLE"):
+            if oj._name in {"X", "TABLE"}:
                 continue
 
             f.write(f"<Component {devobj.__name__}>\n")

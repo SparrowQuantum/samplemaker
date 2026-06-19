@@ -64,8 +64,9 @@ extend-select = [
     "NPY",  # Numpy specific rules
     "UP",   # Pyupgrade
     "F",    # pyflakes
+    "PL",   # pylint
 ]
-ignore = ["D203", "D213", "PLR2004", "PLR0913"]
+ignore = ["D203", "D213", "PLR2004", "PLR091"]
 
 [tool.ruff.lint.extend-per-file-ignores]
 "tests/*" = ["D1", "S101", "ARG"]

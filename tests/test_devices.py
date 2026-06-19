@@ -352,7 +352,7 @@ class TestNetList:
         ]
         circuit_file.write_text("\n".join(lines))
         all_circuits = smdev.NetList.ImportCircuit(str(circuit_file))
-
+        assert isinstance(all_circuits, dict)
         assert set(all_circuits.keys()) == {"CHILD", "TOP"}
         top = all_circuits["TOP"]
         assert top.entry_list[0].devname == "X"
@@ -384,7 +384,7 @@ class TestNetList:
         ]
         circuit_file.write_text("\n".join(lines))
         netlist = smdev.NetList.ImportCircuit(str(circuit_file), "MAIN")
-
+        assert isinstance(netlist, smdev.NetList)
         assert netlist.aligned_ports == ["wire1", "wire2"]
         assert netlist.paths["wire1"] == [0.0, 0.0, 0, 5.0, 5.0, 90, 10.0, 5.0, 180]
         assert len(netlist.entry_list) == 1
@@ -555,6 +555,69 @@ class TestCircuit:
         assert captured[0][3] == pytest.approx(0.0)
         assert captured[1][0] == pytest.approx(10.0)
         assert captured[1][1] == pytest.approx(0.0)
+
+    def test_run_routes_connector_through_multiple_virtual_path_points(
+        self,
+        dummy_device_list: dict[str, type[smdev.Device]],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _ = dummy_device_list
+        captured: list[tuple[float, float, float, float]] = []
+
+        def _capture_connector(
+            port1: smdev.DevicePort, port2: smdev.DevicePort
+        ) -> GeomGroup:
+            captured.append((port1.x0, port1.y0, port2.x0, port2.y0))
+            return GeomGroup()
+
+        monkeypatch.setattr(dm, "_dummy_connector", _capture_connector)
+
+        netlist_entries = [
+            smdev.NetListEntry(
+                "TESTLIB_DUMMY_CONNECTOR", 0.0, 0.0, "E", {"io": "w1"}, {}
+            ),
+            smdev.NetListEntry(
+                "TESTLIB_DUMMY_CONNECTOR", 20.0, 0.0, "W", {"io": "w1"}, {}
+            ),
+        ]
+        netlist = smdev.NetList("multi_path_route", netlist_entries)
+        netlist.set_path("w1", [10.0, 0.0, 0.0, 10.0, 5.0, 90])
+
+        circuit = smdev.Circuit.build()
+        circuit.set_param("NETLIST", netlist)
+        _ = circuit.run()
+
+        assert len(captured) == 3
+        assert captured[0][2] == pytest.approx(10.0)
+        assert captured[0][3] == pytest.approx(0.0)
+        assert captured[1][0] == pytest.approx(10.0)
+        assert captured[1][1] == pytest.approx(0.0)
+        assert captured[1][2] == pytest.approx(10.0)
+        assert captured[1][3] == pytest.approx(5.0)
+        assert captured[2][0] == pytest.approx(10.0)
+        assert captured[2][1] == pytest.approx(5.0)
+
+    def test_run_resets_sequencer(
+        self,
+        simple_netlist: smdev.NetList,
+        dummy_device_list: dict[str, type[smdev.Device]],
+    ) -> None:
+        captured: list[bool] = []
+
+        def _capture_reset() -> None:
+            captured.append(True)
+
+        seq = BaseWaveguideSequencer([])
+        seq.reset = _capture_reset
+        dev = dummy_device_list["TESTLIB_DUMMY_CONNECTOR"]
+        dev._seq = seq
+
+        circuit = smdev.Circuit.build()
+        circuit.set_param("NETLIST", simple_netlist)
+        circuit.run()
+
+        # Two devices in the netlist, so should be reset twice
+        assert captured == [True, True]
 
 
 class TestDeviceLibraryExports:

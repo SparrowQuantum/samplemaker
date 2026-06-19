@@ -679,14 +679,10 @@ class DeviceTable:
                 self.pos_xy[j][i][1] = -by
                 bboxes[j][i].llx -= bx
                 bboxes[j][i].lly -= by
-                if bboxes[j][i].urx() > x_extrR[i]:
-                    x_extrR[i] = bboxes[j][i].urx()
-                if bboxes[j][i].ury() > y_extrT[j]:
-                    y_extrT[j] = bboxes[j][i].ury()
-                if bboxes[j][i].llx < x_extrL[i]:
-                    x_extrL[i] = bboxes[j][i].llx
-                if bboxes[j][i].lly < y_extrB[j]:
-                    y_extrB[j] = bboxes[j][i].lly
+                x_extrR[i] = max(x_extrR[i], bboxes[j][i].urx())
+                y_extrT[j] = max(y_extrT[j], bboxes[j][i].ury())
+                x_extrL[i] = min(x_extrL[i], bboxes[j][i].llx)
+                y_extrB[j] = min(y_extrB[j], bboxes[j][i].lly)
 
         sx = [(x_extrR[i - 1] - x_extrL[i] + min_dist_x) for i in range(1, self.ncol)]
         sy = [(y_extrT[j - 1] - y_extrB[j] + min_dist_y) for j in range(1, self.nrow)]

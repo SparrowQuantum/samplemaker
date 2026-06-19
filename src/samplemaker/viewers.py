@@ -49,9 +49,9 @@ def __get_geom_patches(grp: GeomGroup) -> list:
             warnings.warn(msg, stacklevel=3, category=UserWarning)
         elif isinstance(geom, smsh.Ring):
             gpl = geom.to_polygon()
-            geom = gpl.group[0]
-            n = int(len(geom.data) / 2)
-            xy = np.reshape(geom.data, (n, 2))
+            g = gpl.group[0]
+            n = int(len(g.data) / 2)
+            xy = np.reshape(g.data, (n, 2))
             tmpp = Polygon(xy, closed=True)
             tmpp.set_facecolor(lcolor)
             patches.append(tmpp)
@@ -139,6 +139,21 @@ def __update_scrollbar(_val: float) -> None:
     ax.figure.canvas.draw_idle()
 
 
+def _build_device(devcl: Device | type[Device]) -> Device:
+    if isinstance(devcl, Device):
+        dev = devcl.build()  # Device copy with default parameters
+        for param, value in devcl._p.items():
+            dev.set_param(param, value)
+    elif isinstance(devcl, type) and issubclass(devcl, Device):
+        dev = devcl.build()
+    else:
+        msg = "DeviceInspect only accepts Device classes or Device instances."
+        raise TypeError(msg)
+
+    dev.use_references = False
+    return dev
+
+
 def DeviceInspect(devcl: Device | type[Device]) -> None:
     """Interactive display of devices defined from `samplemaker.devices`.
 
@@ -160,21 +175,11 @@ def DeviceInspect(devcl: Device | type[Device]) -> None:
     None
 
     """
-    global _ViewerCurrentDevice
-    global _ViewerCurrentSliders
-    global _ViewerCurrentAxes
+    global _ViewerCurrentDevice  # noqa: PLW0603
+    global _ViewerCurrentSliders  # noqa: PLW0603
+    global _ViewerCurrentAxes  # noqa: PLW0603
 
-    if isinstance(devcl, Device):
-        dev = devcl.build()  # Device copy with default parameters
-        for param, value in devcl._p.items():
-            dev.set_param(param, value)
-    elif isinstance(devcl, type) and issubclass(devcl, Device):
-        dev = devcl.build()
-    else:
-        msg = "DeviceInspect only accepts Device classes or Device instances."
-        raise TypeError(msg)
-
-    dev.use_references = False
+    dev = _build_device(devcl)
     _ViewerCurrentDevice = dev
     g = dev.run()
 
