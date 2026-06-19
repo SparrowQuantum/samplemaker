@@ -5,8 +5,8 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "samplemaker-sparrow"
 authors = [
-    { name = "Leonardo Midolo", email = "midolo@nbi.ku.dk"},
-    { name = "Jeppe Roulund", email = "jeppe.roulund@sparrowquantum.com"}
+    { name = "Leonardo Midolo", email = "midolo@nbi.ku.dk" },
+    { name = "Jeppe Roulund", email = "jeppe.roulund@sparrowquantum.com" },
 ]
 description = "Lithographic mask design package"
 readme = "README.md"
@@ -14,11 +14,7 @@ requires-python = ">=3.11,<3.15"
 license-files = ["LICENSE.md"]
 license = "BSD-3-Clause"
 version = "5.4.8"
-dependencies = [
-    "asteval>=1.0.9",
-    "matplotlib>=3.10.5",
-    "numpy==2.*",
-]
+dependencies = ["asteval>=1.0.9", "matplotlib>=3.10.5", "numpy==2.*"]
 classifiers = [
     "Programming Language :: C++",
     "Programming Language :: Python",
@@ -42,22 +38,22 @@ extend-exclude = ["tutorials/*"]
 
 [tool.ruff.lint]
 extend-select = [
-    "D", # Pydocstyle
-    "E", # Pycodestyle errors
-    "W", # Pycodestyle warnings
-    "ANN", # flake8-annotations
-    "BLE", # flake8-blind-except
-    "B", # flake8-bugbear
-    "S", # flake8-bandit
-    "A", # flake8-builtins
-    "C4", # flake8-comprehensions
+    "D",    # Pydocstyle
+    "E",    # Pycodestyle errors
+    "W",    # Pycodestyle warnings
+    "ANN",  # flake8-annotations
+    "BLE",  # flake8-blind-except
+    "B",    # flake8-bugbear
+    "S",    # flake8-bandit
+    "A",    # flake8-builtins
+    "C4",   # flake8-comprehensions
     "T100", # flake8-debugger
-    "EM", # flake8-errmsg
-    "FIX", # flake8-fixme
-    "I", # isort
-    "NPY", # Numpy specific rules
-    "UP", # Pyupgrade
-    ]
+    "EM",   # flake8-errmsg
+    "FIX",  # flake8-fixme
+    "I",    # isort
+    "NPY",  # Numpy specific rules
+    "UP",   # Pyupgrade
+]
 ignore = ["D203", "D213"]
 
 [tool.ruff.lint.extend-per-file-ignores]
@@ -84,13 +80,7 @@ before-all = "brew install boost"
 
 [tool.cibuildwheel.windows]
 environment = { BOOST_ROOT = "C:/vcpkg/installed/x64-windows" }
-before-all = [
-    "vcpkg install boost-polygon:x64-windows",
-]
+before-all = ["vcpkg install boost-polygon:x64-windows"]
 
 [dependency-groups]
-dev = [
-    "pytest==9.0.2",
-    "pytest-cov==7.1.0",
-    "ruff==0.15.1",
-]
+dev = ["pytest==9.0.2", "pytest-cov==7.1.0", "ruff==0.15.1"]
