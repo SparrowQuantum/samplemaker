@@ -8,6 +8,7 @@ object in the `samplemaker.layout` submodule.
 import math
 import struct
 import time
+from pathlib import Path as _Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -221,7 +222,7 @@ class GDSWriter:
                 "Please close it before opening a new one."
             )
             raise ValueError(msg)
-        self.fid = open(filename, "wb")  # noqa: SIM115
+        self.fid = _Path(filename).open("wb")  # noqa: SIM115
         # Write header
         lt = time.localtime(time.time())
         buf = np.array(

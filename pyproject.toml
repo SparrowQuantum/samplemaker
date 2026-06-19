@@ -59,11 +59,13 @@ extend-select = [
     "SIM",  # flake8-simplify
     "TC",   # flake8-type-checking
     "ARG",  # flake8-unused-arguments
+    "PTH",  # flake8-use-pathlib
     "I",    # isort
     "NPY",  # Numpy specific rules
     "UP",   # Pyupgrade
+    "F",    # pyflakes
 ]
-ignore = ["D203", "D213"]
+ignore = ["D203", "D213", "PLR2004", "PLR0913"]
 
 [tool.ruff.lint.extend-per-file-ignores]
 "tests/*" = ["D1", "S101", "ARG"]

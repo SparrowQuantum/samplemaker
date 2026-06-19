@@ -187,6 +187,7 @@ import sys
 import warnings
 from collections.abc import Sequence
 from copy import deepcopy
+from pathlib import Path as _Path
 from typing import Any, Self
 
 import numpy as np
@@ -1182,7 +1183,7 @@ class NetList:
 
         """
         # Import all netlists
-        with open(file_name) as f:
+        with _Path(file_name).open() as f:
             current_netlist = ""
             current_entrylist = []
             current_align = []
@@ -1458,8 +1459,7 @@ class Circuit(Device):
                     pp.x0 -= xdiff
 
         # Now we run connectors
-        for portname in input_ports:
-            port1 = input_ports[portname]
+        for portname, port1 in input_ports.items():
             if portname in output_ports:
                 port2 = output_ports[portname]
                 if port1.connector_function != port2.connector_function:
@@ -1612,7 +1612,7 @@ def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel") -> None:
     None
 
     """
-    with open(filename, "w") as f:
+    with _Path(filename).open("w") as f:
         for devobj in _DeviceList.values():
             oj = devobj()
             oj.initialize()

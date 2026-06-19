@@ -9,6 +9,7 @@ import math
 import struct
 from copy import deepcopy
 from io import BufferedReader
+from pathlib import Path as _Path
 
 import numpy as np
 
@@ -281,7 +282,7 @@ class GDSReader:
         None
 
         """
-        with open(filename, "rb") as f:
+        with _Path(filename).open("rb") as f:
             self.buf = f.read()
 
         bgnstr = -1

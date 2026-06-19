@@ -267,7 +267,9 @@ def BaseWaveguideT(
 
 
 def BaseWaveguideOFF(
-    args: smseq.ARGS_TYPE, state: smseq.STATE_TYPE, options: smseq.OPTIONS_TYPE  # noqa: ARG001
+    args: smseq.ARGS_TYPE,
+    state: smseq.STATE_TYPE,
+    options: smseq.OPTIONS_TYPE,  # noqa: ARG001
 ) -> GeomGroup:
     """Offset the waveguide (jumps left or right of waveguide).
 

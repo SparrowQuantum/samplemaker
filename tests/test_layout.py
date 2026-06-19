@@ -798,7 +798,7 @@ class TestMask:
 
         themask._Mask__export_cache()
         expected_filepath = tmp_cwd_dir / f"{name}.cache"
-        assert os.path.isfile(expected_filepath)
+        assert Path(expected_filepath).is_file()
 
         themask.clear()
         assert "EXTRA" not in LayoutPool
@@ -820,4 +820,4 @@ class TestMask:
         assert bbox.width == 1
         assert bbox.height == 1
 
-        os.remove(expected_filepath)
+        Path(expected_filepath).unlink()

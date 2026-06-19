@@ -113,9 +113,6 @@ def GeomView(grp: GeomGroup) -> None:
 
 
 def __update_scrollbar(_val: float) -> None:
-    global _ViewerCurrentDevice
-    global _ViewerCurrentSliders
-    global _ViewerCurrentAxes
     dev = _ViewerCurrentDevice
     ax = _ViewerCurrentAxes
     if dev is None or ax is None:

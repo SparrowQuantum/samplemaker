@@ -74,14 +74,18 @@ COMMANDS_DICT_TYPE: TypeAlias = dict[str, _CMD_DICT_VAL_TYPE]
 
 
 def __changeState(
-    args: ARGS_TYPE, state: STATE_TYPE, options: OPTIONS_TYPE  # noqa: ARG001
+    args: ARGS_TYPE,
+    state: STATE_TYPE,
+    options: OPTIONS_TYPE,  # noqa: ARG001
 ) -> GeomGroup:
     state[args[0]] = args[1]
     return GeomGroup()
 
 
 def __centerState(
-    args: ARGS_TYPE, state: STATE_TYPE, options: OPTIONS_TYPE  # noqa: ARG001
+    args: ARGS_TYPE,
+    state: STATE_TYPE,
+    options: OPTIONS_TYPE,  # noqa: ARG001
 ) -> GeomGroup:
     state["__XC__"] = -state["x"] + args[0]
     state["__YC__"] = -state["y"] + args[1]
@@ -89,7 +93,9 @@ def __centerState(
 
 
 def __storeState(
-    args: ARGS_TYPE, state: STATE_TYPE, options: OPTIONS_TYPE  # noqa: ARG001
+    args: ARGS_TYPE,  # noqa: ARG001
+    state: STATE_TYPE,
+    options: OPTIONS_TYPE,  # noqa: ARG001
 ) -> GeomGroup:
     state["STORED"] += [[state["x"], state["y"]]]
     return GeomGroup()

@@ -71,6 +71,7 @@ import math
 import pathlib
 from collections.abc import Collection, Sequence
 from copy import deepcopy
+from pathlib import Path as _Path
 from typing import Self
 
 import numpy as np
@@ -3712,7 +3713,7 @@ class Arc(Ring):
 # Load fonts and store the glyphs
 # Maybe we should place this somewhere else
 caps = {}
-with open(_STENCIL_FONT_PATH, encoding=_STENCIL_FONT_ENCODING) as f:
+with _Path(_STENCIL_FONT_PATH).open(encoding=_STENCIL_FONT_ENCODING) as f:
     c = "a"
     for line in f:
         test = line.rstrip("\n").split(" ")
@@ -3723,8 +3724,7 @@ with open(_STENCIL_FONT_PATH, encoding=_STENCIL_FONT_ENCODING) as f:
             nums = list(map(float, test))
             caps[c] += nums
 
-for i in caps:
-    data = caps[i]
+for i, data in caps.items():
     gl = GeomGroup()
     xpts = []
     ypts = []

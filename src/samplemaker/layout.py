@@ -92,6 +92,7 @@ import math
 import pickle  # for caching
 from collections.abc import Sequence
 from copy import deepcopy
+from pathlib import Path as _Path
 
 from samplemaker import (
     LayoutPool,
@@ -988,13 +989,13 @@ class Mask:
             _DevicePool,
             _BoundingBoxPool,
         )
-        with open(self.name + ".cache", "wb") as cachefile:
+        with _Path(self.name + ".cache").open("wb") as cachefile:
             pickle.dump(data, cachefile)
         print("Done.")
 
     def __import_cache(self) -> None:
         try:
-            with open(self.name + ".cache", "rb") as cachefile:
+            with _Path(self.name + ".cache").open("rb") as cachefile:
                 print("Loading cache data...")
                 data = pickle.load(cachefile)  # noqa: S301, to be replaced
                 print("Done.")
