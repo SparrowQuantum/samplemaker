@@ -114,7 +114,7 @@ class TestMarkerSet:
     def test_markerset_init_raises_on_invalid_mset(self) -> None:
         name = "TestMarkerSet"
         dev = CrossMark.build()
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid mset value"):
             smlay.MarkerSet(name, dev, mset=0)
 
     @pytest.mark.xfail(

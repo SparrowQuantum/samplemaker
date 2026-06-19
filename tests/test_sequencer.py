@@ -65,7 +65,8 @@ class TestDefaultCommandList:
     def _eval_signature(
         self, value: tuple[int, Callable], num_args: int, expected_params: set[str]
     ) -> None:
-        assert isinstance(value, tuple) and len(value) == 2
+        assert isinstance(value, tuple)
+        assert len(value) == 2
 
         num_args_value, func = value
         assert num_args_value == num_args

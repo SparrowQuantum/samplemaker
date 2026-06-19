@@ -178,7 +178,7 @@ class TestDevice:
         assert h1 != h2 != h3
 
     @pytest.mark.parametrize(
-        "angle, expected_hv, expected_bf",
+        ("angle", "expected_hv", "expected_bf"),
         [
             (0, True, True),
             (math.pi / 2, False, True),
