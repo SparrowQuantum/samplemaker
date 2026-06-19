@@ -262,7 +262,7 @@ class Crystal:
         ypts = np.array([])
 
         if filled:
-            for i in range(0, N):
+            for i in range(N):
                 tmpc = cls.triangular_hexagonal(i, False)
                 xpts = np.append(xpts, tmpc.xpts)
                 ypts = np.append(ypts, tmpc.ypts)
@@ -362,14 +362,14 @@ class Crystal:
         Nx = math.ceil(Nx)
 
         for i in range(len(a)):
-            xchunk1 = startx + np.array(list(range(0, periods[i] + 1))) * a[i]
-            xchunk2 = startx + (0.5 + np.array(list(range(0, periods[i])))) * a[i]
+            xchunk1 = startx + np.array(list(range(periods[i] + 1))) * a[i]
+            xchunk2 = startx + (0.5 + np.array(list(range(periods[i])))) * a[i]
             startx = xchunk1[-1]
             x1 = np.append(x1, xchunk1)
             x2 = np.append(x2, xchunk2)
 
-        x1 = np.append(x1, startx + np.array(list(range(0, int(Nx - totalp + 1)))))
-        x2 = np.append(x2, startx + (0.5 + np.array(list(range(0, int(Nx - totalp))))))
+        x1 = np.append(x1, startx + np.array(list(range(int(Nx - totalp + 1)))))
+        x2 = np.append(x2, startx + (0.5 + np.array(list(range(int(Nx - totalp))))))
         x1 = np.append(x1, -x1[::-1])
         x2 = np.append(x2, -x2[::-1])
         x1 = np.sort(np.unique(x1))

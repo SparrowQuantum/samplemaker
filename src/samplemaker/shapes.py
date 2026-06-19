@@ -2038,7 +2038,7 @@ class Poly:
         y2 = p2.data[1::2]
         x3 = np.append(x, x)
         y3 = np.append(y, y)
-        for e in range(0, len(x)):
+        for e in range(len(x)):
             k = 0
             for w in range(e, e + len(x)):
                 if x2[k] == x3[w] and y2[k] == y3[w]:

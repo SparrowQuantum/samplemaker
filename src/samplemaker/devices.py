@@ -873,7 +873,6 @@ class Device:
         None
 
         """
-        pass
 
     def parameters(self) -> None:
         """Override this function in your device to define parameters of the device.
@@ -885,7 +884,6 @@ class Device:
         None
 
         """
-        pass
 
     def geom(self) -> GeomGroup:
         """Override this function in your device to generate the geometry of the device.

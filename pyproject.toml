@@ -50,6 +50,8 @@ extend-select = [
     "T100", # flake8-debugger
     "EM",   # flake8-errmsg
     "FIX",  # flake8-fixme
+    "INP",  # flake8-no-pep420
+    "PIE",  # flake8-pie
     "I",    # isort
     "NPY",  # Numpy specific rules
     "UP",   # Pyupgrade
