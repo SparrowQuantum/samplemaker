@@ -458,7 +458,7 @@ class DeviceTable:
         self.annotations = None
         self.use_references = True
         self.pos_xy = tuple([tuple([(0, 0) for _ in range(ncol)]) for _ in range(nrow)])
-        self._external_ports = dict()
+        self._external_ports = {}
         self._geometries = []
         self._portmap = []
         self._backup_dev = deepcopy(dev)  # Keep it to reset the whole thing
@@ -605,7 +605,7 @@ class DeviceTable:
 
     def __build_geomarray(self) -> None:
         dev = self.dev
-        self._portmap = [[dict() for _ in range(self.ncol)] for _ in range(self.nrow)]
+        self._portmap = [[{} for _ in range(self.ncol)] for _ in range(self.nrow)]
         self._geometries = [
             [GeomGroup() for _ in range(self.ncol)] for _ in range(self.nrow)
         ]
@@ -1093,7 +1093,7 @@ class Mask:
             if cname not in reflist:
                 mainsymbolcandidates.add(cname)
         if len(mainsymbolcandidates) == 1:
-            self.mainsymbol = [i for i in mainsymbolcandidates][0]
+            self.mainsymbol = list(mainsymbolcandidates)[0]
         else:
             nsubref = 0
             for cname in mainsymbolcandidates:

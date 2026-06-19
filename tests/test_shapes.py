@@ -502,7 +502,7 @@ class TestPath:
         xpts, ypts = poly_pts
         path_obj.rotate(0.0, 0.0, 90.0)
         expected_xpts = [-y for y in ypts]
-        expected_ypts = [x for x in xpts]
+        expected_ypts = list(xpts)
         assert path_obj.xpts == pytest.approx(expected_xpts)
         assert path_obj.ypts == pytest.approx(expected_ypts)
 

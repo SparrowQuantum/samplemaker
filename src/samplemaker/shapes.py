@@ -79,7 +79,7 @@ from asteval import Interpreter
 import samplemaker.resources.boopy as boopy
 from samplemaker import _BoundingBoxPool
 
-_glyphs = dict()
+_glyphs = {}
 
 _STENCIL_FONT_FILENAME = "sm_stencil_font.txt"
 _STENCIL_FONT_ENCODING = "ISO-8859-1"
@@ -97,7 +97,7 @@ class GeomGroup:
 
     def __init__(self) -> None:
         """Create an empty GeomGroup with no elements."""
-        self.group = list()
+        self.group = []
 
     def __add__(self, other: "GeomGroup") -> "GeomGroup":
         """Combine two geometry groups.
@@ -356,7 +356,7 @@ class GeomGroup:
             Dictionary containing per-type entity counts.
 
         """
-        cnt = dict()
+        cnt = {}
         lfgroup = self.group
         if layer_wise:
             lfgroup = [g for g in self.group if g.layer == layer]
@@ -406,7 +406,7 @@ class GeomGroup:
             Contains information on the group geometry.
 
         """
-        stat = dict()
+        stat = {}
         bb = self.bounding_box()
         layer_list = self.get_layer_list()
         stat["BoundingBox"] = {
@@ -3716,7 +3716,7 @@ class Arc(Ring):
 
 # Load fonts and store the glyphs
 # Maybe we should place this somewhere else
-caps = dict()
+caps = {}
 with open(_STENCIL_FONT_PATH, encoding=_STENCIL_FONT_ENCODING) as f:
     c = "a"
     for line in f:

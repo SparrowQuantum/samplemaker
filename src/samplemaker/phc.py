@@ -267,7 +267,7 @@ class Crystal:
                 xpts = np.append(xpts, tmpc.xpts)
                 ypts = np.append(ypts, tmpc.ypts)
         else:
-            th = np.array([e for e in range(0, 361, 60)])
+            th = np.array(list(range(0, 361, 60)))
             cx = N * np.cos(np.radians(th))
             cy = N * np.sin(np.radians(th))
             for i in range(6):
@@ -304,7 +304,7 @@ class Crystal:
         if Nx == 0 & Ny == 0:
             return cls(np.array([0]), np.array([0]), np.ones((Nparams, 1)))
 
-        x1 = np.array([e for e in range(-Nx, Nx + 1)])
+        x1 = np.array(list(range(-Nx, Nx + 1)))
         y1 = np.array([e * math.sqrt(3) for e in range(-Ny, Ny + 1)])
         x2 = np.array([e + 0.5 for e in range(-Nx, Nx)])
         y2 = np.array([math.sqrt(3) / 2 + math.sqrt(3) * e for e in range(-Ny, Ny)])
@@ -362,19 +362,19 @@ class Crystal:
         Nx = math.ceil(Nx)
 
         for i in range(len(a)):
-            xchunk1 = startx + np.array([e for e in range(0, periods[i] + 1)]) * a[i]
+            xchunk1 = startx + np.array(list(range(0, periods[i] + 1))) * a[i]
             xchunk2 = (
-                startx + (0.5 + np.array([e for e in range(0, periods[i])])) * a[i]
+                startx + (0.5 + np.array(list(range(0, periods[i])))) * a[i]
             )
             startx = xchunk1[-1]
             x1 = np.append(x1, xchunk1)
             x2 = np.append(x2, xchunk2)
 
         x1 = np.append(
-            x1, startx + np.array([e for e in range(0, int(Nx - totalp + 1))])
+            x1, startx + np.array(list(range(0, int(Nx - totalp + 1))))
         )
         x2 = np.append(
-            x2, startx + (0.5 + np.array([e for e in range(0, int(Nx - totalp))]))
+            x2, startx + (0.5 + np.array(list(range(0, int(Nx - totalp)))))
         )
         x1 = np.append(x1, -x1[::-1])
         x2 = np.append(x2, -x2[::-1])

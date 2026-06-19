@@ -66,7 +66,7 @@ class GDSReader:
         """Initialize the GDS reader."""
         self.buf = b""
         self.ptr = 0
-        self.celldata: dict[str, bytes] = dict()  # store binary GDS celldata
+        self.celldata: dict[str, bytes] = {}  # store binary GDS celldata
 
     @staticmethod
     def __read_rec(f: BufferedReader) -> GDSRecord | bool:

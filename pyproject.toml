@@ -45,12 +45,14 @@ extend-select = [
     "D", # Pydocstyle
     "E", # Pycodestyle errors
     "W", # Pycodestyle warnings
-    "I", # isort
     "ANN", # flake8-annotations
-    "S", # flake8-bandit
-    "NPY", # Numpy specific rules
     "BLE", # flake8-blind-except
     "B", # flake8-bugbear
+    "S", # flake8-bandit
+    "A", # flake8-builtins
+    "C4", # flake8-comprehensions
+    "I", # isort
+    "NPY", # Numpy specific rules
     "UP", # Pyupgrade
     ]
 ignore = ["D203", "D213"]
