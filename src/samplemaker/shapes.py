@@ -752,7 +752,7 @@ class GeomGroup:
                 polys += self.group[i].to_polygon()
             elif isinstance(g, Arc):
                 polys += self.group[i].to_polygon(Npts_arc, split_arc)
-            elif isinstance(g, Ring):  # Also covers Ellipse
+            elif isinstance(g, Ellipse):  # Also covers Ring
                 polys += self.group[i].to_polygon(Npts_arc)
             elif isinstance(g, Circle):
                 polys += self.group[i].to_polygon(Npts_circ)

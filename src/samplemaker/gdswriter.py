@@ -446,6 +446,4 @@ class GDSWriter:
 
     def __del__(self) -> None:
         """Destructor to ensure the file stream is closed."""
-        if self.fid is not None:
-            self.fid.close()
-            self.fid = None
+        self.close_library()
