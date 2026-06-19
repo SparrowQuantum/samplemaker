@@ -376,7 +376,7 @@ class GeomGroup:
                 if isinstance(g, SRef):
                     subcnt = g.group.__entity_count(recursive, layer_wise, layer)
                     if type(g) is ARef:
-                        for e in subcnt.keys():
+                        for e in subcnt:
                             subcnt[e] *= g.ncols * g.nrows
                     for name in cnt:
                         cnt[name] += subcnt[name]
@@ -759,20 +759,14 @@ class GeomGroup:
         polys = GeomGroup()
         for i in range(len(self.group)):
             g = self.group[i]
-            if isinstance(g, Poly):
+            if isinstance(g, (Poly, Text, Path)):
                 polys += self.group[i].to_polygon()
-            elif isinstance(g, Text):
-                polys += self.group[i].to_polygon()
-            elif isinstance(g, Path):
-                polys += self.group[i].to_polygon()
-            elif isinstance(g, Circle):
-                polys += self.group[i].to_polygon(Npts_circ)
-            elif isinstance(g, Ellipse):
-                polys += self.group[i].to_polygon(Npts_arc)
-            elif isinstance(g, Ring):
-                polys += self.group[i].to_polygon(Npts_arc)
             elif isinstance(g, Arc):
                 polys += self.group[i].to_polygon(Npts_arc, split_arc)
+            elif isinstance(g, Ring):  # Also covers Ellipse
+                polys += self.group[i].to_polygon(Npts_arc)
+            elif isinstance(g, Circle):
+                polys += self.group[i].to_polygon(Npts_circ)
 
         self.group[:] = [g for g in self.group if isinstance(g, SRef)]
         self.group = self.group + polys.group
@@ -835,9 +829,8 @@ class GeomGroup:
 
         """
         for i in range(len(self.group)):
-            if isinstance(self.group[i], SRef):
-                if self.group[i].point_inside(x, y):
-                    return True
+            if isinstance(self.group[i], SRef) and self.group[i].point_inside(x, y):
+                return True
         return False
 
     def keep_refs_only(self) -> None:

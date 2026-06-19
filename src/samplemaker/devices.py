@@ -908,10 +908,7 @@ class Device:
         if self.use_references:
             # Check if it is in the device pool
             hsh = self.__hash__()
-            if "NETLIST" in self._p:
-                srefname = self._p["NETLIST"].name
-            else:
-                srefname = self._name
+            srefname = self._p["NETLIST"].name if "NETLIST" in self._p else self._name
             if srefname not in _DeviceCountPool:
                 _DeviceCountPool[srefname] = 0
 
@@ -960,7 +957,7 @@ class Device:
         None
 
         """
-        if "_ports_" in self._localp.keys():
+        if "_ports_" in self._localp:
             for p in self._localp["_ports_"].values():
                 self.addport(deepcopy(p))
 
@@ -1441,7 +1438,7 @@ class Circuit(Device):
 
         # Now we align ports
         for portname in aligned_ports:
-            if not (portname in input_ports.keys() and portname in output_ports.keys()):
+            if not (portname in input_ports and portname in output_ports):
                 continue
 
             # port 2 is always slave to port1
@@ -1461,7 +1458,7 @@ class Circuit(Device):
                     pp.x0 -= xdiff
 
         # Now we run connectors
-        for portname in input_ports.keys():
+        for portname in input_ports:
             port1 = input_ports[portname]
             if portname in output_ports:
                 port2 = output_ports[portname]
@@ -1615,72 +1612,70 @@ def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel") -> None:
     None
 
     """
-    f = open(filename, "w")
-    for devobj in _DeviceList.values():
-        oj = devobj()
-        oj.initialize()
-        oj.parameters()
-        oj.ports()
-        if (oj._name == "X") or (oj._name == "TABLE"):
-            continue
+    with open(filename, "w") as f:
+        for devobj in _DeviceList.values():
+            oj = devobj()
+            oj.initialize()
+            oj.parameters()
+            oj.ports()
+            if (oj._name == "X") or (oj._name == "TABLE"):
+                continue
 
-        f.write(f"<Component {devobj.__name__}>\n")
-        f.write("<Description>\n {oj._description} \n</Description>\n")
-        f.write("<Parameter>\n")
-        for p, val in oj._p.items():
-            valstring = " ".join(map(str, [val]))
-            valstring = valstring.replace("<", "-").replace(">", "-")
-            f.write("<string " + p + " " + valstring + ">\n")
-        f.write("</Parameter>\n")
-        f.write("<Prefix " + oj._name + ">\n")
-        # f.write("<Label>\n$devicename\n</Label>\n")
+            f.write(f"<Component {devobj.__name__}>\n")
+            f.write("<Description>\n {oj._description} \n</Description>\n")
+            f.write("<Parameter>\n")
+            for p, val in oj._p.items():
+                valstring = " ".join(map(str, [val]))
+                valstring = valstring.replace("<", "-").replace(">", "-")
+                f.write("<string " + p + " " + valstring + ">\n")
+            f.write("</Parameter>\n")
+            f.write("<Prefix " + oj._name + ">\n")
+            # f.write("<Label>\n$devicename\n</Label>\n")
 
-        f.write("<Symbol>\n")
-        dev = oj.build()
-        g = dev.run()
-        g = g.flatten()
-        # bb = g.bounding_box()
-        scale = 1
-        # scale = bb.width
-        # if bb.height>bb.width:
-        #    scale = bb.height
-        g.scale(0, 0, 100 / scale, 100 / scale)
+            f.write("<Symbol>\n")
+            dev = oj.build()
+            g = dev.run()
+            g = g.flatten()
+            # bb = g.bounding_box()
+            scale = 1
+            # scale = bb.width
+            # if bb.height>bb.width:
+            #    scale = bb.height
+            g.scale(0, 0, 100 / scale, 100 / scale)
 
-        for g_member in g.group:
-            if isinstance(g_member, Poly):
-                bb = g_member.bounding_box()
-                if bb.width < 2 and bb.height < 0.2:
-                    continue
-                x = g_member.data[0::2]
-                y = g_member.data[1::2]
-                for i in range(len(x) - 1):
-                    if (x[i + 1] - x[i]) ** 2 + (y[i + 1] - y[i]) ** 2 > 0.2:
-                        f.write(
-                            f"<Line {int(x[i])} {int(y[i])} "
-                            f"{int(x[i + 1])} {int(y[i + 1])} wire>\n"
-                        )
+            for g_member in g.group:
+                if isinstance(g_member, Poly):
+                    bb = g_member.bounding_box()
+                    if bb.width < 2 and bb.height < 0.2:
+                        continue
+                    x = g_member.data[0::2]
+                    y = g_member.data[1::2]
+                    for i in range(len(x) - 1):
+                        if (x[i + 1] - x[i]) ** 2 + (y[i + 1] - y[i]) ** 2 > 0.2:
+                            f.write(
+                                f"<Line {int(x[i])} {int(y[i])} "
+                                f"{int(x[i + 1])} {int(y[i + 1])} wire>\n"
+                            )
 
-        dev.ports()
-        for pname, port in dev._ports.items():
-            f.write(
-                f"<Port {int(port.x0 * 100 / scale)} "
-                f"{int(port.y0 * 100 / scale)} {pname}>\n"
-            )
+            dev.ports()
+            for pname, port in dev._ports.items():
+                f.write(
+                    f"<Port {int(port.x0 * 100 / scale)} "
+                    f"{int(port.y0 * 100 / scale)} {pname}>\n"
+                )
 
-        f.write("</Symbol>\n")
-        # f.write("<Offsetlabel 0 -50 -50>\n")
-        f.write("<Netlist spice>\n")
-        f.write("$devicename ")
-        for pname in dev._ports:
-            f.write(f"{pname} $node({pname}) ")
-        f.write(". ")
-        for p in oj._p:
-            f.write(f"{p} ${p} ")
+            f.write("</Symbol>\n")
+            # f.write("<Offsetlabel 0 -50 -50>\n")
+            f.write("<Netlist spice>\n")
+            f.write("$devicename ")
+            for pname in dev._ports:
+                f.write(f"{pname} $node({pname}) ")
+            f.write(". ")
+            for p in oj._p:
+                f.write(f"{p} ${p} ")
 
-        f.write("\n</Netlist>\n")
-        f.write("</Component>\n")
-
-    f.close()
+            f.write("\n</Netlist>\n")
+            f.write("</Component>\n")
 
 
 # The function below is work in progress

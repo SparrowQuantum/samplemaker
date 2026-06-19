@@ -973,7 +973,6 @@ class Mask:
 
     def __export_cache(self) -> None:
         print("Storing objects in cache file...")
-        cachefile = open(self.name + ".cache", "wb")
         # Note that we do not need the full geometry, as we will just reload
         # it from the GDS file. So we keep the references only.
         # We might, however, need to re-compute the bounding boxes
@@ -989,8 +988,8 @@ class Mask:
             _DevicePool,
             _BoundingBoxPool,
         )
-        pickle.dump(data, cachefile)
-        cachefile.close()
+        with open(self.name + ".cache", "wb") as cachefile:
+            pickle.dump(data, cachefile)
         print("Done.")
 
     def __import_cache(self) -> None:
@@ -999,16 +998,16 @@ class Mask:
                 print("Loading cache data...")
                 data = pickle.load(cachefile)  # noqa: S301, to be replaced
                 print("Done.")
-                for key in data[0].keys():
+                for key in data[0]:
                     LayoutPool[key] = data[0][key]
                 LayoutPool.pop(self.mainsymbol, None)
-                for key in data[1].keys():
+                for key in data[1]:
                     _DeviceCountPool[key] = data[1][key]
-                for key in data[2].keys():
+                for key in data[2]:
                     _DeviceLocalParamPool[key] = data[2][key]
-                for key in data[3].keys():
+                for key in data[3]:
                     _DevicePool[key] = data[3][key]
-                for key in data[4].keys():
+                for key in data[4]:
                     _BoundingBoxPool[key] = data[4][key]
         except OSError:
             pass
@@ -1020,7 +1019,7 @@ class Mask:
 
         unref = []
         unref_hsh = []
-        for ref in LayoutPool.keys():
+        for ref in LayoutPool:
             if ref not in reflist:
                 unref += [ref]
 
