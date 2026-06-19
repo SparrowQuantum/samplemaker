@@ -8,11 +8,14 @@ object in the `samplemaker.layout` submodule.
 import math
 import struct
 import time
-from io import BufferedWriter
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 import samplemaker.shapes as smsh
+
+if TYPE_CHECKING:
+    from io import BufferedWriter
 
 
 class GDSWriter:

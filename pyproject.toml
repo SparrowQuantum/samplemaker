@@ -57,6 +57,7 @@ extend-select = [
     "RSE",  # flake8-raise
     "RET",  # flake8-return
     "SIM",  # flake8-simplify
+    "TC",   # flake8-type-checking
     "I",    # isort
     "NPY",  # Numpy specific rules
     "UP",   # Pyupgrade
