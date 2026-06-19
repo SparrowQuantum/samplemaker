@@ -1924,7 +1924,8 @@ class Poly:
         code = compile(keep_str, "<string>", "eval")
         for name in code.co_names:
             if name not in allowed_names:
-                raise NameError(f"Use of expression {name} not allowed")
+                msg = f"Use of expression {name} not allowed"
+                raise NameError(msg)
 
         #        g.group[:] = [sflat.group[i] for i,val in enumerate(sel) if val]
         #       return g

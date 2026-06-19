@@ -52,6 +52,7 @@ extend-select = [
     "A", # flake8-builtins
     "C4", # flake8-comprehensions
     "T100", # flake8-debugger
+    "EM", # flake8-errmsg
     "I", # isort
     "NPY", # Numpy specific rules
     "UP", # Pyupgrade
