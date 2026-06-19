@@ -201,7 +201,7 @@ class MarkerSet(Marker):
         g = self.dev.run()
         sref = g.group[0]
         if self.mset == 2:
-            aref = make_aref(
+            return make_aref(
                 self.x0,
                 self.y0,
                 sref.cellname,
@@ -213,10 +213,8 @@ class MarkerSet(Marker):
                 0,
                 self.ydist,
             )
-            return aref
-
         if self.mset == 4:
-            aref = make_aref(
+            return make_aref(
                 self.x0,
                 self.y0,
                 sref.cellname,
@@ -228,7 +226,6 @@ class MarkerSet(Marker):
                 0,
                 self.ydist,
             )
-            return aref
         return g
 
 

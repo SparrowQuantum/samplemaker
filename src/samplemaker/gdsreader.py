@@ -55,8 +55,7 @@ class GDSRecord:
         """
         if self.size == 4:
             return self.bheader
-        else:
-            return self.bheader + self.data
+        return self.bheader + self.data
 
 
 class GDSReader:

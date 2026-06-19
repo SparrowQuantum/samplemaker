@@ -51,41 +51,37 @@ def __connectable_facing(
                 if abs(dy) < 1e-3:
                     # will use straight line
                     return True, [["S", abs(dx)]]
-                else:
-                    # will create a C bend
-                    slen = (abs(dx) - 2 * rad) / 2
-                    if slen < 0:
-                        return True, [["C", port1.dx() * dy, abs(dx) / 2]]
-                    else:
-                        return True, [
-                            ["S", slen],
-                            ["C", port1.dx() * dy, rad],
-                            ["S", slen],
-                        ]
+                # will create a C bend
+                slen = (abs(dx) - 2 * rad) / 2
+                if slen < 0:
+                    return True, [["C", port1.dx() * dy, abs(dx) / 2]]
+                return True, [
+                    ["S", slen],
+                    ["C", port1.dx() * dy, rad],
+                    ["S", slen],
+                ]
         return False, []
-    else:  # Case2 : port 1 is vertical
-        if abs(dx) < 2 * rad:
-            # the y offset is small enough to use a C bend
-            dysign = 1
-            if abs(dy) != 0:
-                dysign = dy / abs(dy)
-            if port1.dy() + port2.dy() == 0 and dysign == port1.dy():
-                # facing each other checks
-                if abs(dx) < 1e-3:
-                    # will use straight line
-                    return True, [["S", abs(dy)]]
-                else:
-                    # will create a C bend
-                    slen = (abs(dy) - 2 * rad) / 2
-                    if slen < 0:
-                        return True, [["C", -port1.dy() * dx, abs(dy) / 2]]
-                    else:
-                        return True, [
-                            ["S", slen],
-                            ["C", -port1.dy() * dx, rad],
-                            ["S", slen],
-                        ]
-        return False, []
+    # Case2 : port 1 is vertical
+    if abs(dx) < 2 * rad:
+        # the y offset is small enough to use a C bend
+        dysign = 1
+        if abs(dy) != 0:
+            dysign = dy / abs(dy)
+        if port1.dy() + port2.dy() == 0 and dysign == port1.dy():
+            # facing each other checks
+            if abs(dx) < 1e-3:
+                # will use straight line
+                return True, [["S", abs(dy)]]
+            # will create a C bend
+            slen = (abs(dy) - 2 * rad) / 2
+            if slen < 0:
+                return True, [["C", -port1.dy() * dx, abs(dy) / 2]]
+            return True, [
+                ["S", slen],
+                ["C", -port1.dy() * dx, rad],
+                ["S", slen],
+            ]
+    return False, []
 
 
 def __connectable_bend(
@@ -140,8 +136,7 @@ def __connectable_bend(
         res = __connectable_facing(p1, port2, rad)
         seq = [["S", s1], ["B", det * 90, rad]] + res[1]
         return True, seq
-    else:
-        return False, []
+    return False, []
 
 
 def __connect_step(
@@ -222,10 +217,9 @@ def __connect_step(
         port1.BL(rad)
         port1.fix()
         return False, (seq + [["B", 90, rad]])
-    else:
-        port1.BR(rad)
-        port1.fix()
-        return False, (seq + [["B", -90, rad]])
+    port1.BR(rad)
+    port1.fix()
+    return False, (seq + [["B", -90, rad]])
 
 
 def WaveguideConnect(
@@ -266,14 +260,13 @@ def WaveguideConnect(
     if res[0]:
         # print("connectable")
         return True, res[1]
-    else:
-        p1 = deepcopy(port1)
-        seq = []
-        for _ in range(4):
-            res = __connect_step(p1, port2, rad)
-            seq += res[1]
-            if res[0]:
-                return True, seq
+    p1 = deepcopy(port1)
+    seq = []
+    for _ in range(4):
+        res = __connect_step(p1, port2, rad)
+        seq += res[1]
+        if res[0]:
+            return True, seq
 
     return False, []
 

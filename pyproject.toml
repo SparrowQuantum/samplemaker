@@ -54,6 +54,8 @@ extend-select = [
     "PIE",  # flake8-pie
     "PYI",  # flake8-pyi
     "PT",   # flake8-pytest-style
+    "RSE",  # flake8-raise
+    "RET",  # flake8-return
     "I",    # isort
     "NPY",  # Numpy specific rules
     "UP",   # Pyupgrade

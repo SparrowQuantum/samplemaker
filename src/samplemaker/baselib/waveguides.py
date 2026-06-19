@@ -363,8 +363,7 @@ def BaseWaveguideConnector(port1: DevicePort, port2: DevicePort) -> GeomGroup:
         g = so.run()
         g.rotate_translate(port1.x0, port1.y0, math.degrees(port1.angle()))
         return g
-    else:
-        return GeomGroup()
+    return GeomGroup()
 
 
 # Now let's create a new DevicePort with a connector function

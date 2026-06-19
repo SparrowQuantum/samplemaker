@@ -301,7 +301,7 @@ def test_make_phc_uses_scaled_coordinates_and_translates() -> None:
     ) -> GeomGroup | int:
         if params == "test":
             return 1
-        elif isinstance(params, str):
+        if isinstance(params, str):
             msg = "Unexpected params value in custom_cellfun."
             raise ValueError(msg)
         calls.append((x, y, params))
@@ -352,7 +352,7 @@ def test_make_phc_inpoly_filters_sites() -> None:
     ) -> GeomGroup | int:
         if params == "test":
             return 1
-        elif isinstance(params, str):
+        if isinstance(params, str):
             msg = "Unexpected params value in custom_cellfun."
             raise ValueError(msg)
         return sm.make_circle(x, y, params[0], layer=3)

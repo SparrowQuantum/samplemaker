@@ -808,7 +808,7 @@ class GeomGroup:
                 else:
                     polys += convp
                 continue
-            elif isinstance(self.group[i], SRef):
+            if isinstance(self.group[i], SRef):
                 if include_refs:
                     self.group[i].group.poly_to_circle(thresh, vcount)
                 continue
