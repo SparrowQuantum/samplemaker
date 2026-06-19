@@ -37,10 +37,6 @@ def __get_geom_patches(grp: GeomGroup) -> list:
             tmpp = Polygon(xy, closed=True)
             tmpp.set_facecolor(lcolor)
             patches.append(tmpp)
-        elif isinstance(geom, smsh.Circle):
-            tmpc = Circle((geom.x0, geom.y0), geom.r)
-            tmpc.set_facecolor(lcolor)
-            patches.append(tmpc)
         elif isinstance(geom, smsh.Path):
             xy = np.transpose([geom.xpts, geom.ypts])
             tmpp = Polygon(xy, closed=False)
@@ -51,10 +47,6 @@ def __get_geom_patches(grp: GeomGroup) -> list:
             # stacklevel=3 to point to calling function, not this one.
             msg = "text display is not supported, please convert to polygon first."
             warnings.warn(msg, stacklevel=3, category=UserWarning)
-        elif isinstance(geom, smsh.Ellipse):
-            tmpe = Ellipse((geom.x0, geom.y0), geom.r * 2, geom.r1 * 2, angle=geom.rot)
-            tmpe.set_facecolor(lcolor)
-            patches.append(tmpe)
         elif isinstance(geom, smsh.Ring):
             gpl = geom.to_polygon()
             geom = gpl.group[0]
@@ -63,14 +55,14 @@ def __get_geom_patches(grp: GeomGroup) -> list:
             tmpp = Polygon(xy, closed=True)
             tmpp.set_facecolor(lcolor)
             patches.append(tmpp)
-        elif isinstance(geom, smsh.Arc):
-            gpl = geom.to_polygon()
-            geom = gpl.group[0]
-            n = int(len(geom.data) / 2)
-            xy = np.reshape(geom.data, (n, 2))
-            tmpp = Polygon(xy, closed=True)
-            tmpp.set_facecolor(lcolor)
-            patches.append(tmpp)
+        elif isinstance(geom, smsh.Ellipse):
+            tmpe = Ellipse((geom.x0, geom.y0), geom.r * 2, geom.r1 * 2, angle=geom.rot)
+            tmpe.set_facecolor(lcolor)
+            patches.append(tmpe)
+        elif isinstance(geom, smsh.Circle):
+            tmpc = Circle((geom.x0, geom.y0), geom.r)
+            tmpc.set_facecolor(lcolor)
+            patches.append(tmpc)
         elif isinstance(geom, smsh.SRef):
             msg = "SRef and ARef display is not supported, please flatten first."
             warnings.warn(msg, stacklevel=3, category=UserWarning)
