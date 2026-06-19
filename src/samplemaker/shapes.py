@@ -75,6 +75,7 @@ from typing import Self
 
 import numpy as np
 from asteval import Interpreter
+from numpy.typing import ArrayLike
 
 import samplemaker.resources.boopy as boopy
 from samplemaker import _BoundingBoxPool
@@ -117,7 +118,7 @@ class GeomGroup:
         gg.group = self.group + other.group
         return gg
 
-    def add(self, geom: "Poly | SRef | Path | Text") -> None:
+    def add(self, geom: "Poly | SRef | Path | Text | Circle") -> None:
         """Add a shape to the group.
 
         Parameters
@@ -434,10 +435,10 @@ class GeomGroup:
             The box representing the bounding box of the geometry.
 
         """
-        if len(self.group) != 0:
-            bb = self.group[0].bounding_box()
-
-        for geom in self.group:
+        if len(self.group) == 0:
+            return Box(0, 0, 0, 0)
+        bb = self.group[0].bounding_box()
+        for geom in self.group[1:]:
             bb.combine(geom.bounding_box())
         return bb
 
@@ -587,22 +588,22 @@ class GeomGroup:
         Returns
         -------
         GeomGroup
-            A geometry group containing the elments that satisfy the criteria.
+            A geometry group containing the elements that satisfy the criteria.
 
         """
         allowed_names = {
-            "A": "Polygon area",
-            "P": "Polygon perimeter",
-            "W": "Bounding box width",
-            "H": "Bounding box height",
-            "L": "Layer",
-            "T": "Type",
-            "x": "X position, center or reference pos",
-            "y": "Y position, center or reference pos",
-            "llx": "lower left x position of the bb",
-            "lly": "lower left y position of the bb",
-            "urx": "upper right x position of the bb",
-            "ury": "upper right y position of the bb",
+            "A",  # Polygon area
+            "P",  # Polygon perimeter
+            "W",  # Bounding box width
+            "H",  # Bounding box height
+            "L",  # Layer
+            "T",  # Type
+            "x",  # X position, center or reference pos
+            "y",  # Y position, center or reference pos
+            "llx",  # Lower left x position of the bb
+            "lly",  # Lower left y position of the bb
+            "urx",  # Upper right x position of the bb
+            "ury",  # Upper right y position of the bb
         }
         code = compile(query_str, "<string>", "eval")
         sflat = self
@@ -610,6 +611,7 @@ class GeomGroup:
             sflat = self.flatten()
         # Pre-allocate Bounding boxes
         bbs = [g.bounding_box() for g in sflat.group]
+        usersyms = {}
         for name in code.co_names:
             if name not in allowed_names:
                 msg = f"Use of expression {name} not allowed"
@@ -618,35 +620,35 @@ class GeomGroup:
             # Prepare the local variable dictionary
 
             if name == "A":  # Prepare area array
-                allowed_names[name] = np.array([g.area() for g in sflat.group])
+                usersyms[name] = np.array([g.area() for g in sflat.group])
             if name == "P":  # Prepare area array
-                allowed_names[name] = np.array([g.perimeter() for g in sflat.group])
+                usersyms[name] = np.array([g.perimeter() for g in sflat.group])
             if name == "L":  # Prepare layer array
-                allowed_names[name] = np.array([g.layer for g in sflat.group])
+                usersyms[name] = np.array([g.layer for g in sflat.group])
             if name == "W":  # Prepare width array
-                allowed_names[name] = np.array([b.width for b in bbs])
+                usersyms[name] = np.array([b.width for b in bbs])
             if name == "H":  # Prepare height array
-                allowed_names[name] = np.array([b.height for b in bbs])
+                usersyms[name] = np.array([b.height for b in bbs])
             if name == "x" or name == "y":  # Prepare centroid array
-                allowed_names["x"] = np.array([g.centroid()[0] for g in sflat.group])
-                allowed_names["y"] = np.array([g.centroid()[1] for g in sflat.group])
+                usersyms["x"] = np.array([g.centroid()[0] for g in sflat.group])
+                usersyms["y"] = np.array([g.centroid()[1] for g in sflat.group])
             if name == "llx":  # Prepare LL array
-                allowed_names["llx"] = np.array([b.llx for b in bbs])
+                usersyms["llx"] = np.array([b.llx for b in bbs])
             if name == "lly":  # Prepare LL array
-                allowed_names["lly"] = np.array([b.lly for b in bbs])
+                usersyms["lly"] = np.array([b.lly for b in bbs])
             if name == "urx":  # Prepare UR array
-                allowed_names["urx"] = np.array([b.urx() for b in bbs])
+                usersyms["urx"] = np.array([b.urx() for b in bbs])
             if name == "ury":  # Prepare UR array
-                allowed_names["ury"] = np.array([b.ury() for b in bbs])
+                usersyms["ury"] = np.array([b.ury() for b in bbs])
             if name == "T":  # Prepare type array
-                allowed_names[name] = np.array(
+                usersyms[name] = np.array(
                     [str(g.__class__.__name__) for g in sflat.group]
                 )
 
         # Now execute
         g = GeomGroup()
-        aeval = Interpreter(usersyms=allowed_names, raise_errors=True)
-        sel = aeval(query_str)
+        aeval = Interpreter(usersyms=usersyms, raise_errors=True)
+        sel: np.ndarray = aeval(query_str)  # type: ignore
         g.group[:] = [sflat.group[i] for i, val in enumerate(sel) if val]
         return g
 
@@ -1584,16 +1586,14 @@ class Box:
 class Poly:
     """Closed polygon represented by interleaved coordinate data."""
 
-    def __init__(
-        self, xpts: Sequence[float], ypts: Sequence[float], layer: int
-    ) -> None:
+    def __init__(self, xpts: ArrayLike, ypts: ArrayLike, layer: int) -> None:
         """Initialize a polygon from x/y coordinates.
 
         Parameters
         ----------
-        xpts : Sequence[float]
+        xpts : ArrayLike
             Polygon x coordinates.
-        ypts : Sequence[float]
+        ypts : ArrayLike
             Polygon y coordinates.
         layer : int
             Layer number.
@@ -1602,14 +1602,14 @@ class Poly:
         self.layer = layer
         self.set_points(xpts, ypts)
 
-    def set_points(self, xpts: Sequence[float], ypts: Sequence[float]) -> None:
+    def set_points(self, xpts: ArrayLike, ypts: ArrayLike) -> None:
         """Set polygon points from x and y coordinate arrays.
 
         Parameters
         ----------
-        xpts : Sequence[float]
+        xpts : ArrayLike
             Polygon x coordinates.
-        ypts : Sequence[float]
+        ypts : ArrayLike
             Polygon y coordinates.
 
         Returns
@@ -1620,7 +1620,9 @@ class Poly:
         # Note: only for polygon class, we store the points in GDS format,
         # already scaled to nanometers and as X0,Y0,X1,Y1,X2,Y2...
         # rdata = np.round_((np.array([xpts,ypts])*1000)).astype(int)
-        rdata = np.array([xpts, ypts], dtype="float64")
+        xvals = np.asarray(xpts, dtype=np.float64).reshape(-1)
+        yvals = np.asarray(ypts, dtype=np.float64).reshape(-1)
+        rdata = np.array([xvals, yvals], dtype="float64")
         self.data = np.transpose(rdata).reshape(-1)
         self.data = np.append(self.data, self.data[0:2])
         self.Npts = math.floor(self.data.size / 2)
@@ -1666,7 +1668,7 @@ class Poly:
 
         """
         self.data = idata.astype("float64") / 1000
-        self.Npts = self.data.size / 2
+        self.Npts = math.floor(self.data.size / 2)
 
     def translate(self, dx: float, dy: float) -> None:
         """Translate the polygon.
@@ -2160,11 +2162,11 @@ class Path:
             Layer number.
 
         """
-        self.xpts = xpts
-        self.ypts = ypts
+        self.xpts = list(xpts)
+        self.ypts = list(ypts)
         self.width = width
         self.layer = layer
-        self.Npts = len(xpts)
+        self.Npts = len(self.xpts)
 
     def translate(self, dx: float, dy: float) -> None:
         """Translate the path.
@@ -2379,7 +2381,7 @@ class Path:
             p1.set_points(
                 [-w / 2, w / 2, w / 2, -w / 2], [-w / 2, -w / 2, w / 2, w / 2]
             )
-            p1.translate(x, y)
+            p1.translate(x[0], y[0])
 
         if self.Npts == 2:
             ang1 = math.atan2(y[1] - y[0], x[1] - x[0])
