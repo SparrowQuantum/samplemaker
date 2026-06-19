@@ -69,9 +69,9 @@ to save memory and computation time. For example
 
 import math
 import pathlib
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from copy import deepcopy
-from typing import Collection, Self
+from typing import Self
 
 import numpy as np
 from asteval import Interpreter

@@ -41,7 +41,18 @@ Repository = "https://github.com/SparrowQuantum/samplemaker.git"
 extend-exclude = ["tutorials/*"]
 
 [tool.ruff.lint]
-extend-select = ["D", "E", "W", "I", "ANN", "S", "NPY", "BLE", "B"]
+extend-select = [
+    "D", # Pydocstyle
+    "E", # Pycodestyle errors
+    "W", # Pycodestyle warnings
+    "I", # isort
+    "ANN", # flake8-annotations
+    "S", # flake8-bandit
+    "NPY", # Numpy specific rules
+    "BLE", # flake8-blind-except
+    "B", # flake8-bugbear
+    "UP", # Pyupgrade
+    ]
 ignore = ["D203", "D213"]
 
 [tool.ruff.lint.extend-per-file-ignores]

@@ -1,8 +1,8 @@
 """Unit tests for the samplemaker.layout module."""
 
 import os
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 import pytest
 
