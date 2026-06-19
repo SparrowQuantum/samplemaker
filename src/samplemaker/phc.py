@@ -420,7 +420,7 @@ def make_phc(
     x0: float,
     y0: float,
     cellfun: CELLFUN_TYPE = __circ_cellfun__,
-    name: str = "",
+    name: str = "",  # noqa: ARG001
 ) -> GeomGroup:
     """Create a photonic crystal geometry.
 
@@ -471,7 +471,7 @@ def make_phc_inpoly(
     x0: float,
     y0: float,
     cellfun: CELLFUN_TYPE = __circ_cellfun__,
-    name: str = "",
+    name: str = "",  # noqa: ARG001
 ) -> GeomGroup:
     """Create a photonic crystal geometry clipped inside a polygon area.
 

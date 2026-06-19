@@ -58,6 +58,7 @@ extend-select = [
     "RET",  # flake8-return
     "SIM",  # flake8-simplify
     "TC",   # flake8-type-checking
+    "ARG",  # flake8-unused-arguments
     "I",    # isort
     "NPY",  # Numpy specific rules
     "UP",   # Pyupgrade
@@ -65,7 +66,7 @@ extend-select = [
 ignore = ["D203", "D213"]
 
 [tool.ruff.lint.extend-per-file-ignores]
-"tests/*" = ["D1", "S101"]
+"tests/*" = ["D1", "S101", "ARG"]
 
 [tool.scikit-build]
 minimum-version = "0.11.6"
