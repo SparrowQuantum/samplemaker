@@ -153,9 +153,9 @@ class GDSWriter:
         self.__write_string(sref.cellname, 0x1206)
         self.__write_strans(sref.mag, sref.angle, sref.mirror)
         self.__write_data(struct.pack(">2H", 12, 0x1003))
-        self.__write_data(
-            struct.pack(">2i", int(round(sref.x0 * 1000)), int(round(sref.y0 * 1000)))
-        )
+        rounded_x0 = round(float(sref.x0) * 1000)
+        rounded_y0 = round(float(sref.y0) * 1000)
+        self.__write_data(struct.pack(">2i", rounded_x0, rounded_y0))
         self.__write_data(struct.pack(">2H", 4, 0x1100))
 
     def __write_aref(self, aref: smsh.ARef) -> None:
@@ -168,9 +168,9 @@ class GDSWriter:
             )
         )
         self.__write_data(struct.pack(">2H", 28, 0x1003))
-        self.__write_data(
-            struct.pack(">2i", int(round(aref.x0 * 1000)), int(round(aref.y0 * 1000)))
-        )
+        rounded_x0 = round(float(aref.x0) * 1000)
+        rounded_y0 = round(float(aref.y0) * 1000)
+        self.__write_data(struct.pack(">2i", rounded_x0, rounded_y0))
         self.__write_data(
             struct.pack(
                 ">2i",

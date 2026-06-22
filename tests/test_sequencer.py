@@ -436,14 +436,14 @@ class TestSequencer:
     def test_run_raises_for_invalid_command(self) -> None:
         seq = [["INVALID_CMD", 1, 2]]
         sequencer = FakeSequencer(seq)
-        with pytest.raises(ValueError, match="Command INVALID_CMD does not exist."):
+        with pytest.raises(ValueError, match=r"Command INVALID_CMD does not exist."):
             sequencer.run()
 
     def test_run_raises_for_wrong_number_of_arguments(self) -> None:
         seq = [["STATE", "x"]]  # STATE expects 2 arguments
         sequencer = FakeSequencer(seq)
         with pytest.raises(
-            ValueError, match="Wrong number of arguments for command STATE."
+            ValueError, match=r"Wrong number of arguments for command STATE."
         ):
             sequencer.run()
 
