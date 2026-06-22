@@ -606,7 +606,7 @@ class GeomGroup:
         # Now execute
         g = GeomGroup()
         aeval = Interpreter(usersyms=usersyms, raise_errors=True)
-        sel: np.ndarray = aeval(query_str)  # type: ignore
+        sel: np.ndarray = aeval(query_str)  # type: ignore[assignment]
         g.group[:] = [sflat.group[i] for i, val in enumerate(sel) if val]
         return g
 
