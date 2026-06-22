@@ -1,5 +1,4 @@
-"""
-This module contains the base classes for generating re-usable device classes.
+"""Base classes for generating re-usable device classes.
 
 The Device class
 ----------------
@@ -159,7 +158,9 @@ The `NetList` class speficies a circuit layout. To specify a Netlist, you need t
 provide a list of entries via the class `NetListEntry`. A single entry of the netlist
 correspond to a device name (which should be registered) position, and connectivity:
 
-    entry1 = NetListEntry("MYDEVICE", 0, 0, "E", {"port1":"inA","port2":"inB"}, {"length":16})
+    portmap = {"port1":"inA","port2":"inB"}
+    params = {"length":16}
+    entry1 = NetListEntry("MYDEVICE", 0, 0, "E", portmap, params)
 
 In the above example MYDEVICE will be placed in 0,0 facing East ("E") and his parameter
 "length" will be set to 16. Additionally the named DevicePort "port1" has been assigned
@@ -184,7 +185,10 @@ import inspect
 import math
 import sys
 import warnings
+from collections.abc import Sequence
 from copy import deepcopy
+from pathlib import Path as _Path
+from typing import Any, Self
 
 import numpy as np
 
@@ -201,13 +205,28 @@ from samplemaker.shapes import GeomGroup, Poly
 
 
 class IncompatiblePortError(RuntimeError):
-    """
-    Exception raised when trying to link incompatible ports.
-    """
+    """Exception raised when trying to link incompatible ports."""
 
 
 class DevicePort:
-    def __init__(self, x0, y0, horizontal, forward):
+    """Class that defines a device port."""
+
+    def __init__(self, x0: float, y0: float, horizontal: bool, forward: bool) -> None:
+        """Initialize a device port.
+
+        Parameters
+        ----------
+        x0 : float
+            The x-coordinate of the port.
+        y0 : float
+            The y-coordinate of the port.
+        horizontal : bool
+            Whether the port is horizontal or vertical. If True, the port points in the
+            east/west direction. If False, the port points in the north/south direction.
+        forward : bool
+            Whether the port points in the positive coordinate direction.
+
+        """
         self.x0 = x0
         self.y0 = y0
         self.__px = x0
@@ -223,28 +242,64 @@ class DevicePort:
         self._parentports = {}
         self.connector_function = None
 
-    def set_name(self, name):
+    def set_name(self, name: str) -> None:
+        """Set the name of the device port.
+
+        Parameters
+        ----------
+        name : str
+            The name of the port.
+
+        """
         self.name = name
 
-    def angle(self):
+    def angle(self) -> float:
+        """Get the angle of the port in radians.
+
+        Returns
+        -------
+        float
+            The orientation of the port in radians (east = zero).
+
+        """
         return math.pi * (3 - (self.hv + self.bf * 2)) / 2
 
-    def set_angle(self, angle):
+    def set_angle(self, angle: float) -> None:
+        """Set the port orientation by specifying the angle in radians.
+
+        Parameters
+        ----------
+        angle : float
+            The orientation of the port in radians.
+
+        Returns
+        -------
+        None
+
+        """
         i = round(3 - angle * 2 / math.pi) % 4
         self.hv = i % 2 == 1
         self.bf = math.floor(i / 2) == 1
 
-    def printangle(self):
-        if self.hv and self.bf:
-            print("E")
-        if self.hv and not self.bf:
-            print("W")
-        if not self.hv and self.bf:
-            print("N")
-        if not self.hv and not self.bf:
-            print("S")
+    def printangle(self) -> None:
+        """Print the angle of the port as a string.
 
-    def angle_to_text(self):
+        Returns
+        -------
+        None
+
+        """
+        print(self.angle_to_text())
+
+    def angle_to_text(self) -> str:
+        """Get the angle as a string.
+
+        Returns
+        -------
+        str
+            The orientation of the port as a string ("N", "S", "W", or "E").
+
+        """
         if self.hv and self.bf:
             return "E"
         if self.hv and not self.bf:
@@ -253,14 +308,49 @@ class DevicePort:
             return "N"
         if not self.hv and not self.bf:
             return "S"
+        # Should never happen. We catch it anyway
+        msg = "Invalid port orientation."
+        raise RuntimeError(msg)
 
-    def dx(self):
+    def dx(self) -> float:
+        """Get the x component of the port orientation.
+
+        Returns
+        -------
+        float
+            The x component of the port orientation.
+
+        """
         return self.hv * (2 * self.bf - 1)
 
-    def dy(self):
+    def dy(self) -> float:
+        """Get the y component of the port orientation.
+
+        Returns
+        -------
+        float
+            The y component of the port orientation.
+
+        """
         return (not self.hv) * (2 * self.bf - 1)
 
-    def rotate(self, x0, y0, angle):
+    def rotate(self, x0: float, y0: float, angle: float) -> None:
+        """Rotate the port around a point by a given angle.
+
+        Parameters
+        ----------
+        x0 : float
+            The x-coordinate of the point to rotate around.
+        y0 : float
+            The y-coordinate of the point to rotate around.
+        angle : float
+            The angle to rotate by, in degrees.
+
+        Returns
+        -------
+        None
+
+        """
         xc = self.x0 - x0
         yc = self.y0 - y0
         cost = math.cos(math.radians(angle))
@@ -269,11 +359,35 @@ class DevicePort:
         self.y0 = sint * xc + cost * yc + y0
         self.set_angle(self.angle() + math.radians(angle))
 
-    def S(self, amount):
+    def S(self, amount: float) -> None:
+        """Move the port straight by the given amount.
+
+        Parameters
+        ----------
+        amount : float
+            The distance to move the port.
+
+        Returns
+        -------
+        None
+
+        """
         self.x0 += self.dx() * amount
         self.y0 += self.dy() * amount
 
-    def BL(self, radius):
+    def BL(self, radius: float) -> None:
+        """Make a 90 degree left bend with the given radius.
+
+        Parameters
+        ----------
+        radius : float
+            The radius of the bend.
+
+        Returns
+        -------
+        None
+
+        """
         xc = self.x0 - self.dy() * radius
         yc = self.y0 + self.dx() * radius
         phi = self.angle() - math.pi / 2
@@ -281,7 +395,19 @@ class DevicePort:
         self.y0 = radius * math.sin(phi + math.pi / 2) + yc
         self.set_angle(self.angle() + math.pi / 2)
 
-    def BR(self, radius):
+    def BR(self, radius: float) -> None:
+        """Make a 90 degree right bend with the given radius.
+
+        Parameters
+        ----------
+        radius : float
+            The radius of the bend.
+
+        Returns
+        -------
+        None
+
+        """
         xc = self.x0 + self.dy() * radius
         yc = self.y0 - self.dx() * radius
         phi = self.angle() + math.pi / 2
@@ -289,34 +415,71 @@ class DevicePort:
         self.y0 = radius * math.sin(phi - math.pi / 2) + yc
         self.set_angle(self.angle() - math.pi / 2)
 
-    def reset(self):
+    def reset(self) -> None:
+        """Reset the port position and orientation to a fixed position.
+
+        If the `fix()` method was called before, the port will be reset to the position
+        and orientation at the time of the `fix()` call. Otherwise it will be reset to
+        the initial position and orientation when the port was created.
+
+        Returns
+        -------
+        None
+
+        """
         self.x0 = self.__px
         self.y0 = self.__py
         self.hv = self.__hv
         self.bf = self.__bf
 
-    def fix(self):
+    def fix(self) -> None:
+        """Fix the port position and orientation to the current values.
+
+        The port can then later be returned to this position and orientation by calling
+        the `reset()` method.
+
+        Returns
+        -------
+        None
+
+        """
         self.__px = self.x0
         self.__py = self.y0
         self.__hv = self.hv
         self.__bf = self.bf
 
-    def dist(self, other):
+    def dist(self, other: "DevicePort") -> float:
+        """Calculate the distance between two ports.
+
+        Parameters
+        ----------
+        other : DevicePort
+            The other port to calculate the distance to.
+
+        Returns
+        -------
+        float
+            The distance between the two ports.
+
+        """
         dx = other.x0 - self.x0
         dy = other.y0 - self.y0
         return math.sqrt(dx * dx + dy * dy)
 
 
 class Device:
-    def __init__(self):
-        """
-        Initializes a Device. Should never be called.
+    """Base class for devices.
 
-        Returns
-        -------
-        None.
+    To create a new device, inherit this class and re-implement the `initialize()`,
+    `parameters()`, and `geom()` geom methods. Optionally the `ports()` method can be
+    re-implemented if ports are defined outside the `geom()` method.
 
-        """
+    To instantiate a device, use the class method `Device.build()` which will return an
+    instance of the device ready to be rendered via the `run()` method.
+    """
+
+    def __init__(self) -> None:
+        """Initialize a Device. Should never be called by the user."""
         self._p = {}
         self._pdescr = {}
         self._ptype = {}  # stores the type of the parameter
@@ -332,18 +495,28 @@ class Device:
         self._description = "No description yet"
         self.use_references = True
 
-    def __flatdict(self, d, parent_str):
+    def __flatdict(self, d: dict[str, Any], parent_str: str) -> dict[str, Any]:
         flatdict = {}
         for key, value in d.items():
             if isinstance(value, dict):
                 newdict = self.__flatdict(value, parent_str + key + "::")
                 flatdict.update(newdict)
-            else:
-                if not isinstance(value, list):
-                    flatdict[parent_str + key] = value
+            elif not isinstance(value, list):
+                flatdict[parent_str + key] = value
         return flatdict
 
-    def __hash__(self):
+    def __hash__(self) -> int:
+        """Hash function for the device.
+
+        Based on the device name, parameters and if a sequencer is used, the sequencer
+        options.
+
+        Returns
+        -------
+        int
+            The hash value of the device.
+
+        """
         if hasattr(self, "_seq"):
             fldict = self.__flatdict(self._seq.options, "")
             return hash(
@@ -352,9 +525,8 @@ class Device:
 
         return hash((frozenset(self._p.items()), self._name))
 
-    def angle(self):
-        """
-        Returns the orientation of the device in radians.
+    def angle(self) -> float:
+        """Return the orientation of the device in radians.
 
         Returns
         -------
@@ -364,9 +536,8 @@ class Device:
         """
         return math.pi * (3 - (self._hv + self._bf * 2)) / 2
 
-    def set_angle(self, angle: float):
-        """
-        Changes the orientation of the device
+    def set_angle(self, angle: float) -> None:
+        """Change the orientation of the device.
 
         Parameters
         ----------
@@ -375,16 +546,15 @@ class Device:
 
         Returns
         -------
-        None.
+        None
 
         """
         i = round(3 - angle * 2 / math.pi) % 4
         self._hv = i % 2 == 1
         self._bf = math.floor(i / 2) == 1
 
-    def set_position(self, x0: float, y0: float):
-        """
-        Changes the position of the device
+    def set_position(self, x0: float, y0: float) -> None:
+        """Change the position of the device.
 
         Parameters
         ----------
@@ -395,15 +565,14 @@ class Device:
 
         Returns
         -------
-        None.
+        None
 
         """
         self._x0 = x0
         self._y0 = y0
 
-    def addport(self, port: DevicePort):
-        """
-        Call this from the ports() method to add a port to the device.
+    def addport(self, port: DevicePort) -> None:
+        """Call this from the ports() method to add a port to the device.
 
         Parameters
         ----------
@@ -412,7 +581,7 @@ class Device:
 
         Returns
         -------
-        None.
+        None
 
         """
         self._ports[port.name] = port
@@ -420,13 +589,12 @@ class Device:
     def addparameter(
         self,
         param_name: str,
-        default_value,
+        default_value: Any,  # noqa: ANN401
         param_description: str,
         param_type: type = float,
         param_range: tuple[float, float] = (0, np.inf),
-    ):
-        """
-        Call this from the parameters() method to add a parameter to the device.
+    ) -> None:
+        """Call this from the parameters() method to add a parameter to the device.
 
         Parameters
         ----------
@@ -437,14 +605,20 @@ class Device:
         param_description : str
             A text describing the parameters.
         param_type : TYPE, optional
-            The type of the parameter. The default is float.
+            The type of the parameter, by default float.
         param_range : tuple, optional
-            A tuple specifying the min and max value of the parameter . The default is
+            A tuple specifying the min and max value of the parameter , by default
             (0,np.inf).
 
         Returns
         -------
-        None.
+        None
+
+        Raises
+        ------
+        ValueError
+             If the parameter name contains a ":" character. This is a special character
+             used by the `Circuit` class.
 
         """
         if param_name.find(":") != -1:
@@ -458,32 +632,36 @@ class Device:
     def addlocalparameter(
         self,
         param_name: str,
-        default_value,
+        default_value: Any,  # noqa: ANN401
         param_description: str,
         param_type: type = float,
         param_range: tuple[float, float] = (0, np.inf),
-    ):
-        """
-        Defines a local parameter that is only used within the class and not
-        controllable from outside.
+    ) -> None:
+        """Define a local parameter that is only used within the class.
 
         Parameters
         ----------
         param_name : str
             The parameter name.
-        default_value : TYPE
+        default_value : Any
             The value of the paramter.
         param_description : str
             Description of the parameter.
-        param_type : TYPE, optional
-            The type of the paramter. The default is float.
+        param_type : type, optional
+            The type of the paramter, by default float.
         param_range : tuple, optional
-            A tuple specifying the min and max value of the parameter . The default is
+            A tuple specifying the min and max value of the parameter , by default
             (0,np.inf).
 
         Returns
         -------
-        None.
+        None
+
+        Raises
+        ------
+        ValueError
+             If the parameter name contains a ":" character. This is a special character
+             used by the `Circuit` class.
 
         """
         if param_name.find(":") != -1:
@@ -494,11 +672,14 @@ class Device:
         self._ptype[param_name] = param_type
         self._prange[param_name] = param_range
 
-    def addlocalport(self, port: DevicePort):
-        """
-        Same as local parameter, but allows creating ports from the geom() function.
-        If you need some info from the geom() function to create ports just add local
-        ports and they will be automatically added to ports by the port() function.
+    def addlocalport(self, port: DevicePort) -> None:
+        """Add a local port.
+
+        Local ports are ports defined from the `geom()` method as opposed to an
+        overridden `ports()` method.
+
+        If you need some info from the `geom()` function to create ports just add local
+        ports and they will be automatically added to ports by the `ports()` function.
 
         Parameters
         ----------
@@ -507,14 +688,13 @@ class Device:
 
         Returns
         -------
-        None.
+        None
 
         """
         self._localp["_ports_"][port.name] = port
 
-    def get_localport(self, portname: str):
-        """
-        Returns the local port (i.e. within the geom() function.)
+    def get_localport(self, portname: str) -> DevicePort:
+        """Get the local port (i.e. within the geom() function.).
 
         Parameters
         ----------
@@ -523,8 +703,13 @@ class Device:
 
         Returns
         -------
-        port: DevicePort
-            The port (empty if it does not exists).
+        DevicePort
+            The port.
+
+        Raises
+        ------
+        ValueError
+            If the port is not defined by the device.
 
         """
         lports = self._localp["_ports_"]
@@ -536,9 +721,8 @@ class Device:
             raise ValueError(msg)
         return lports[portname]
 
-    def remove_localport(self, portname: str):
-        """
-        Removes a local port.
+    def remove_localport(self, portname: str) -> None:
+        """Remove a local port.
 
         Parameters
         ----------
@@ -547,27 +731,31 @@ class Device:
 
         Returns
         -------
-        None.
+        None
 
         """
         lports = self._localp["_ports_"]
         if portname in lports:
             self._localp["_ports_"].pop(portname)
 
-    def set_param(self, param_name: str, value):
-        """
-        Change a paramter. To be called after build().
+    def set_param(self, param_name: str, value: Any) -> None:  # noqa: ANN401
+        """Change a paramter. To be called after build().
 
         Parameters
         ----------
         param_name : str
             The parameter to be changed.
-        value : TYPE
+        value : Any
             The new value of the parameter.
 
         Returns
         -------
-        None.
+        None
+
+        Raises
+        ------
+        ValueError
+            If the parameter is not defined by the device.
 
         """
         param_hier = param_name.split("::")
@@ -584,20 +772,23 @@ class Device:
                 )
                 raise ValueError(msg)
 
-    def get_params(self, cast_types: bool = True, clip_in_range: bool = True) -> dict:
-        """
-        To be called by geom() functions. Returns the dictionary with all parameters.
+    def get_params(
+        self, cast_types: bool = True, clip_in_range: bool = True
+    ) -> dict[str, Any]:
+        """Return the dictionary with all parameters.
+
+        Should be called by geom() functions.
 
         Parameters
         ----------
         cast_types : bool, optional
-            Attempts to do a type-cast on the parameter. The default is True.
+            Attempts to do a type-cast on the parameter, by default True.
         clip_in_range : bool, optional
-            Clips the value in the range specified. The default is True.
+            Clips the value in the range specified, by default True.
 
         Returns
         -------
-        dict
+        dict[str, Any]
             A dictionary with the parameter value map.
 
         """
@@ -606,16 +797,13 @@ class Device:
                 self._p[p] = self._ptype[p](val)
         if clip_in_range:
             for p, val in self._p.items():
-                if val < self._prange[p][0]:
-                    val = self._prange[p][0]
-                if val > self._prange[p][1]:
-                    val = self._prange[p][1]
-                self._p[p] = val
+                v = max(val, self._prange[p][0])
+                v = min(v, self._prange[p][1])
+                self._p[p] = v
         return self._p
 
-    def get_port(self, port_name: str):
-        """
-        Should not be called by user. Returns the named port.
+    def get_port(self, port_name: str) -> DevicePort:
+        """Get a named port.
 
         Parameters
         ----------
@@ -625,7 +813,12 @@ class Device:
         Returns
         -------
         DevicePort
-            The DevicePort object associated to the port (empty if does not exist).
+            The DevicePort object associated to the port.
+
+        Raises
+        ------
+        ValueError
+            If the port is not defined by the device.
 
         """
         if port_name not in self._ports:
@@ -636,9 +829,8 @@ class Device:
             raise ValueError(msg)
         return self._ports[port_name]
 
-    def set_name(self, name: str):
-        """
-        Sets the device name (should be called from initialize).
+    def set_name(self, name: str) -> None:
+        """Set the device name (should be called from initialize).
 
         Parameters
         ----------
@@ -647,77 +839,74 @@ class Device:
 
         Returns
         -------
-        None.
+        None
 
         """
         self._name = name
 
-    def set_description(self, descr: str):
-        """
-        Sets the device description (should be called from initialize)
+    def set_description(self, descr: str) -> None:
+        """Set the device description (should be called from initialize).
 
         Parameters
         ----------
         descr : str
-            the device description.
+            The device description.
 
         Returns
         -------
-        None.
+        None
 
         """
         self._description = descr
 
-    def initialize(self):
-        """
-        Re-implement this function in your device to initialize and set the device name
+    def initialize(self) -> None:
+        """Override this function in your device to initialize and set the device name.
+
+        Should call `set_name()` and `set_description()`.
+        If a sequencer is needed in the `geom()` method it should also be defined here
+        as `self._seq`.
 
         Returns
         -------
-        None.
+        None
 
         """
-        pass
 
-    def parameters(self):
-        """
-        Re-implement this function to define parameters of the device
+    def parameters(self) -> None:
+        """Override this function in your device to define parameters of the device.
+
+        Should call the `add_parameter()` method to define parameters.
 
         Returns
         -------
-        None.
+        None
 
         """
-        pass
 
-    def geom(self):
-        """
-        Re-implement this function to generate the geometry of the device.
+    def geom(self) -> GeomGroup:
+        """Override this function in your device to generate the geometry of the device.
 
         Returns
         -------
-        None.
+        GeomGroup
+            The geometry of the device.
 
         """
-        pass
+        return GeomGroup()
 
-    def run(self):
-        """
-        Runs the device and generates a geometry.
+    def run(self) -> GeomGroup:
+        """Run the device and generate the geometry.
 
         Returns
         -------
-        g : samplemaker.shapes.GeomGroup
+        GeomGroup
             The geometry of the device.
 
         """
         if self.use_references:
             # Check if it is in the device pool
             hsh = self.__hash__()
-            if "NETLIST" in self._p:
-                srefname = self._p["NETLIST"].name
-            else:
-                srefname = self._name
+            srefname = self._p["NETLIST"].name if "NETLIST" in self._p else self._name
             if srefname not in _DeviceCountPool:
                 _DeviceCountPool[srefname] = 0
 
@@ -742,10 +931,10 @@ class Device:
         else:
             g = self.geom()
             g.rotate_translate(self._x0, self._y0, math.degrees(self.angle()))
-            # g.rotate(0,0,math.degrees(self.angle()))
-            # g.translate(self._x0,self._y0)
 
-        self.ports()  # this will get the proper local parameters as if self.geom() ran properly
+        # this will get the proper local parameters as if self.geom() ran properly:
+        self.ports()
+
         # Now rotate/translate all ports
         for port in self._ports.values():
             port.rotate(0, 0, math.degrees(self.angle()))
@@ -753,25 +942,26 @@ class Device:
             port.y0 += self._y0
         return g
 
-    def ports(self):
-        """
-        Re-implement this to define ports.
-        If localports are used via the geom() function do not re-implement.
+    def ports(self) -> None:
+        """Add ports to the device.
+
+        Called automatically when the device is built/run.
+
+        Override this to define ports. Do not override if localports are used via the
+        geom() function.
 
         Returns
         -------
-        None.
+        None
 
         """
-        if "_ports_" in self._localp.keys():
+        if "_ports_" in self._localp:
             for p in self._localp["_ports_"].values():
                 self.addport(deepcopy(p))
-        pass
 
     @staticmethod
-    def build_registered(name: str):
-        """
-        Builds a device from the pool of registered device names.
+    def build_registered(name: str) -> "Device":
+        """Build a device from the pool of registered device names.
 
         Parameters
         ----------
@@ -790,13 +980,12 @@ class Device:
         return _DeviceList[name].build()
 
     @classmethod
-    def build(cls):
-        """
-        Class method to build a device.
+    def build(cls) -> Self:
+        """Class method to build a device.
 
         Returns
         -------
-        device : Device
+        Self
             Instance of the Device ready to be rendered via the run() method.
 
         """
@@ -808,11 +997,18 @@ class Device:
 
 
 class NetListEntry:
+    """Class that defines a single entry in a netlist."""
+
     def __init__(
-        self, devname: str, x0: float, y0: float, rot: str, portmap: dict, params: dict
-    ):
-        """
-        Defines a single entry in a NetList.
+        self,
+        devname: str,
+        x0: float,
+        y0: float,
+        rot: str,
+        portmap: dict[str, str],
+        params: dict[str, Any],
+    ) -> None:
+        """Initialize a netlist entry.
 
         Parameters
         ----------
@@ -825,14 +1021,12 @@ class NetListEntry:
         rot : str
             String that defines the orientation of the device (can only be "N", "S",
             "W" or "E").
-        portmap : dict
-            A dictionary that associates a port in the device to a wire.
-        params : dict
+        portmap : dict[str, str]
+            A dictionary that associates a port in the device to a wire. The keys of
+            the dictionary are the port names defined in the device and the values are
+            the wire names. Wires with the same name will be connected together.
+        params : dict[str, Any]
             A dictionary of parameters to be used when creating the device.
-
-        Returns
-        -------
-        None.
 
         """
         self.devname = devname
@@ -848,7 +1042,17 @@ class NetListEntry:
         self.portmap = portmap
         self.params = params
 
-    def __hash__(self):
+    def __hash__(self) -> int:
+        """Hash function for the netlist entry.
+
+        Based on the device name, position, orientation, portmap and parameters.
+
+        Returns
+        -------
+        int
+            The hash value of the netlist entry.
+
+        """
         return hash(
             (
                 self.devname,
@@ -862,29 +1066,40 @@ class NetListEntry:
 
 
 class NetList:
-    def __init__(self, name: str, entry_list: list[NetListEntry]):
-        """
-        Creates a new NetList for circuit generation.
+    """Defines a netlist for drawing a circuit.
+
+    This is a helper class used with the `Circuit` that defines the devices present in
+    the circuit as well as how they are connected, both internally and externally.
+    """
+
+    def __init__(self, name: str, entry_list: list[NetListEntry]) -> None:
+        """Initialize a NetList for circuit generation.
 
         Parameters
         ----------
         name : str
             The netlist name.
-        entry_list : list
+        entry_list : list[NetListEntry]
             list of `NetListEntry` objects.
+
+        """
+        self.name: str = name
+        self.entry_list: list[NetListEntry] = entry_list
+        self.external_ports: Sequence[str] = []
+        self.aligned_ports: Sequence[str] = []
+        self.paths: dict[str, list[float]] = {}
+
+    def __hash__(self) -> int:
+        """Hash function for the netlist.
+
+        Based on the netlist name, entry list, external ports and aligned ports.
 
         Returns
         -------
-        None.
+        int
+            The hash value of the netlist.
 
         """
-        self.name = name
-        self.entry_list = entry_list
-        self.external_ports = []
-        self.aligned_ports = []
-        self.paths = {}
-
-    def __hash__(self):
         return hash(
             (
                 self.name,
@@ -894,62 +1109,60 @@ class NetList:
             )
         )
 
-    def set_external_ports(self, ext_ports: list):
-        """
-        Define a list of wires (list of strings) that should be
-        connected outside the circuit.
+    def set_external_ports(self, ext_ports: Sequence[str]) -> None:
+        """Define a list of wires that should be connected outside the circuit.
 
         Parameters
         ----------
-        ext_ports : list
-            A list of strings with the wires assigned to ports in the netlist entry.
+        ext_ports : Sequence[str]
+            A sequence of strings with the wires assigned to ports in the netlist entry.
 
         Returns
         -------
-        None.
+        None
 
         """
         self.external_ports = ext_ports
 
-    def set_aligned_ports(self, aligned_ports: list):
-        """
-        Define a list of wires (list of strings) that should be
-        aligned with each other
+    def set_aligned_ports(self, aligned_ports: Sequence[str]) -> None:
+        """Define a list of wires that should be aligned with each other.
 
         Parameters
         ----------
-        aligned_ports : list
-             A list of strings with the wires assigned to ports in the netlist entry.
+        aligned_ports : Sequence[str]
+             A sequence of strings with the wires assigned to ports in the netlist
+             entry.
 
         Returns
         -------
-        None.
+        None
 
         """
         self.aligned_ports = aligned_ports
 
-    def set_path(self, port_name: str, coords: list):
-        """
-        Define a specific path that a wire should follow.
+    def set_path(self, port_name: str, coords: list[float]) -> None:
+        """Define a specific path that a wire should follow.
 
         Parameters
         ----------
         port_name : str
             The name of the wire.
-        coords : list
+        coords : list[float]
             list of coordinates, x1, y1, x2, y2... that the wire should follow.
 
         Returns
         -------
-        None.
+        None
 
         """
         self.paths[port_name] = coords
 
     @classmethod
-    def ImportCircuit(cls, file_name: str, circuit_name: str = ""):
-        """
-        Generates a NetList object from a circuit file.
+    def ImportCircuit(
+        cls, file_name: str, circuit_name: str = ""
+    ) -> Self | dict[str, Self]:
+        """Generate a NetList object from a circuit file.
+
         The input is a text file with circuit description similar to the
         SPICE netlist format (yet with some important differences).
         Check the tutorials for examples.
@@ -958,18 +1171,18 @@ class NetList:
         ----------
         file_name : str
             The circuit filename.
-        circuit_name : str. optional
-            The subcircuit to load inside the circuit file, if empty the entire
-            circuit structure is read.
+        circuit_name : str, optional
+            The subcircuit to load inside the circuit file, by default "", which reads
+            the entire circuit structure.
 
         Returns
         -------
-        NetList
+        NetList | dict[str, NetList]
             The NetList with the imported circuit.
 
         """
         # Import all netlists
-        with open(file_name) as f:
+        with _Path(file_name).open() as f:
             current_netlist = ""
             current_entrylist = []
             current_align = []
@@ -1058,7 +1271,27 @@ class NetList:
 
 
 class Circuit(Device):
-    def __flatdict(self, d, parent_str):
+    """A Circuit is a Device that generates its geometry from a NetList.
+
+    The netlist is a parameter of the circuit and can be changed after building the
+    device by calling
+
+        cir_dev.set_param("NETLIST", new_netlist)
+
+    which will automatically add the parameters associated with the devices in the
+    netlist to the circuit parameters. They can then be set by calling
+
+        cir_dev.set_param("dev_MYDEVICE_1::length", 12)
+
+    In this example we set parameter "length" of the first instance of MYDEVICE to 12.
+    The format is "dev_%devicename_%number", where %devicename is the registered device
+    name and %number is the device entrylist number (starting from 1).
+
+    Like the `Device` class the final geometry can be generated by calling the `run()`
+    method.
+    """
+
+    def __flatdict(self, d: dict[str, Any], parent_str: str) -> dict[str, Any]:
         flatdict = {}
         for key, value in d.items():
             if isinstance(value, dict):
@@ -1068,28 +1301,36 @@ class Circuit(Device):
                 flatdict[parent_str + key] = value
         return flatdict
 
-    def __hash__(self):
-        flatdict = self.__flatdict(self._p, "")
-        return hash((frozenset(flatdict.items()), self._name))
+    def __hash__(self) -> int:
+        """Hash function for the circuit.
 
-    def initialize(self):
-        """
-        Names the Circuit as 'X' to be referred in other circuits
+        Based on the NETLIST parameter and the device name.
 
         Returns
         -------
-        None.
+        int
+            The hash value of the circuit.
+
+        """
+        flatdict = self.__flatdict(self._p, "")
+        return hash((frozenset(flatdict.items()), self._name))
+
+    def initialize(self) -> None:
+        """Name the Circuit as 'X' to be referred in other circuits.
+
+        Returns
+        -------
+        None
 
         """
         self._name = "X"
 
-    def parameters(self):
-        """
-        Defines the parameter NETLIST taking a `NetList` object as input.
+    def parameters(self) -> None:
+        """Define the parameter NETLIST taking a `NetList` object as input.
 
         Returns
         -------
-        None.
+        None
 
         """
         self.addparameter(
@@ -1103,7 +1344,7 @@ class Circuit(Device):
             param_description="Locally store the ports that connect to the circuit",
         )
 
-    def update_parameters(self):
+    def _update_parameters(self) -> None:
         netlist = self._p["NETLIST"].entry_list
         for i, nle in enumerate(netlist):
             if nle.devname not in _DeviceList:
@@ -1119,10 +1360,11 @@ class Circuit(Device):
                 param_description=f"Device parameters for {nle.devname}",
             )
 
-    def set_param(self, param_name: str, value):
-        """
-        Sets the value of a parameter. In a Circuit, you can refer to
-        individual device parameters by using the following convention:
+    def set_param(self, param_name: str, value: Any) -> None:  # noqa: ANN401
+        """Set the value of a parameter.
+
+        In a Circuit, you can refer to individual device parameters by using the
+        following convention:
 
             dev.set_param("dev_MYDEVICE_1::length", 12)
 
@@ -1133,26 +1375,161 @@ class Circuit(Device):
         Parameters
         ----------
         param_name : str
-            Parameter name.
-        value :
-            Value.
+            The name of the parameter to be set.
+        value : Any
+            The new value of the parameter.
 
         Returns
         -------
-        None.
+        None
 
         """
         super().set_param(param_name, value)
         if param_name == "NETLIST":
-            self.update_parameters()
+            self._update_parameters()
 
-    def geom(self):
-        """
-        Draws the entire circuit.
+    def _build_device_geometry(
+        self,
+        nle: NetListEntry,
+        instance_number: int,
+    ) -> tuple[GeomGroup, dict[str, DevicePort]]:
+        if nle.devname not in _DeviceList:
+            msg = f"No device named {nle.devname} found."
+            raise ValueError(msg)
+
+        dev = _DeviceList[nle.devname].build()
+        dev.use_references = self.use_references
+
+        # Force sequencer reset if has _seq subfield.
+        # This keeps device behavior independent from prior sequencer state.
+        if hasattr(dev, "_seq"):
+            dev._seq.reset()
+
+        dev._p = self._p[f"dev_{nle.devname}_{instance_number:d}"]
+        dev._x0 = nle.x0
+        dev._y0 = nle.y0
+        dev.set_angle(math.radians(nle.rot))
+        return dev.run(), dev._ports
+
+    def _collect_mapped_ports(
+        self,
+        nle: NetListEntry,
+        geom: GeomGroup,
+        device_ports: dict[str, DevicePort],
+        input_ports: dict[str, DevicePort],
+        output_ports: dict[str, DevicePort],
+    ) -> None:
+        for devport, conn_name in nle.portmap.items():
+            if devport not in device_ports:
+                msg = (
+                    f"Could not find port named {devport} in {nle.devname} as it was "
+                    f"not defined by device."
+                )
+                raise ValueError(msg)
+
+            port = device_ports[devport]
+            port._geometry = geom
+            port._parentports = device_ports
+            if conn_name in input_ports:
+                output_ports[conn_name] = port
+            else:
+                input_ports[conn_name] = port
+
+    def _align_ports(
+        self,
+        aligned_ports: Sequence[str],
+        input_ports: dict[str, DevicePort],
+        output_ports: dict[str, DevicePort],
+    ) -> None:
+        for portname in aligned_ports:
+            if not (portname in input_ports and portname in output_ports):
+                continue
+
+            # port2 is always slave to port1
+            port1 = input_ports[portname]
+            port2 = output_ports[portname]
+            if port1.dx() != 0 and port2.dx() != 0:
+                ydiff = port2.y0 - port1.y0
+                port2._geometry.translate(0, -ydiff)
+                for parent_port in port2._parentports.values():
+                    parent_port.y0 -= ydiff
+            if port1.dy() != 0 and port2.dy() != 0:
+                xdiff = port2.x0 - port1.x0
+                port2._geometry.translate(-xdiff, 0)
+                for parent_port in port2._parentports.values():
+                    parent_port.x0 -= xdiff
+
+    def _connect_via_path(
+        self,
+        start_port: DevicePort,
+        end_port: DevicePort,
+        path_points: list[float],
+        portname: str,
+    ) -> GeomGroup:
+        if len(path_points) % 3 > 0:
+            msg = (
+                f"Specified path for wire {portname} "
+                f"should include 3 values for each point (x,y,angle)"
+            )
+            raise ValueError(msg)
+
+        geometry = GeomGroup()
+        current_port = deepcopy(start_port)
+        for idx in range(0, len(path_points), 3):
+            next_port = deepcopy(current_port)
+            next_port.x0 = path_points[idx]
+            next_port.y0 = path_points[idx + 1]
+            next_port.set_angle(math.radians(path_points[idx + 2]))
+            next_port.bf = not next_port.bf
+            geometry += start_port.connector_function(current_port, next_port)
+            next_port.bf = not next_port.bf
+            current_port = deepcopy(next_port)
+
+        geometry += start_port.connector_function(current_port, end_port)
+        return geometry
+
+    def _connect_ports(
+        self,
+        g: GeomGroup,
+        input_ports: dict[str, DevicePort],
+        output_ports: dict[str, DevicePort],
+        external_ports: Sequence[str],
+        paths: dict[str, list[float]],
+    ) -> GeomGroup:
+        for portname, input_port in input_ports.items():
+            if portname in output_ports:
+                output_port = output_ports[portname]
+                if input_port.connector_function != output_port.connector_function:
+                    msg = f"Incompatible ports for connection named {portname}"
+                    raise IncompatiblePortError(msg)
+
+                if portname in paths:
+                    g += self._connect_via_path(
+                        start_port=input_port,
+                        end_port=output_port,
+                        path_points=paths[portname],
+                        portname=portname,
+                    )
+                else:
+                    g += input_port.connector_function(input_port, output_port)
+            elif portname in external_ports:
+                input_port._geometry = GeomGroup()
+                input_port._parentports = {}
+                port = deepcopy(input_port)
+                port.name = portname
+                self._localp["external_ports"][portname] = port
+            else:
+                # Stacklevel=3 to point at code calling self.run() and not this method.
+                msg = f"Port {portname} is unconnected."
+                warnings.warn(msg, UserWarning, stacklevel=3)
+        return g
+
+    def geom(self) -> GeomGroup:
+        """Draws the entire circuit.
 
         Returns
         -------
-        g : samplemaker.shapes.GeomGroup
+        GeomGroup
             The entire circuit geometry including connectors.
 
         """
@@ -1161,116 +1538,29 @@ class Circuit(Device):
         aligned_ports = self._p["NETLIST"].aligned_ports
         paths = self._p["NETLIST"].paths
 
-        input_ports = {}
-        output_ports = {}
-        # Instantiate all devices
         g = GeomGroup()
-        i = 1
-        for nle in netlist:
-            if nle.devname not in _DeviceList:
-                msg = f"No device named {nle.devname} found."
-                raise ValueError(msg)
-
-            dev = _DeviceList[nle.devname].build()
-            dev.use_references = self.use_references
-            # Force sequencer reset if has _seq subfield
-            # Note: this is needed to force the device to behave as if it does
-            # not enter in a sequencer
-            if hasattr(dev, "_seq"):
-                dev._seq.reset()
-            # Set all parameter from Netlist hierarchy
-            dev._p = self._p[f"dev_{nle.devname}_{i:d}"]
-            i += 1
-            dev._x0 = nle.x0
-            dev._y0 = nle.y0
-            dev.set_angle(math.radians(nle.rot))
-            geom = dev.run()
+        input_ports: dict[str, DevicePort] = {}
+        output_ports: dict[str, DevicePort] = {}
+        for instance_number, nle in enumerate(netlist, start=1):
+            geom, device_ports = self._build_device_geometry(nle, instance_number)
             g += geom
-            for devport, conn_name in nle.portmap.items():
-                port = dev.get_port(devport)
-                port._geometry = geom
-                port._parentports = dev._ports
-                if conn_name in input_ports:
-                    output_ports[conn_name] = port
-                else:
-                    input_ports[conn_name] = port
+            self._collect_mapped_ports(
+                nle=nle,
+                geom=geom,
+                device_ports=device_ports,
+                input_ports=input_ports,
+                output_ports=output_ports,
+            )
 
-        # Now we align ports
-        for portname in aligned_ports:
-            if not (portname in input_ports.keys() and portname in output_ports.keys()):
-                continue
+        self._align_ports(aligned_ports, input_ports, output_ports)
+        return self._connect_ports(g, input_ports, output_ports, external_ports, paths)
 
-            # port 2 is always slave to port1
-            port1 = input_ports[portname]
-            port2 = output_ports[portname]
-            if port1.dx() != 0 and port2.dx() != 0:
-                # align y-values
-                ydiff = port2.y0 - port1.y0
-                port2._geometry.translate(0, -ydiff)
-                for pp in port2._parentports.values():
-                    pp.y0 -= ydiff
-            if port1.dy() != 0 and port2.dy() != 0:
-                # align x values
-                xdiff = port2.x0 - port1.x0
-                port2._geometry.translate(-xdiff, 0)
-                for pp in port2._parentports.values():
-                    pp.x0 -= xdiff
-
-        # Now we run connectors
-        for portname in input_ports.keys():
-            port1 = input_ports[portname]
-            if portname in output_ports:
-                port2 = output_ports[portname]
-                if port1.connector_function != port2.connector_function:
-                    msg = f"Incompatible ports for connection named {portname}"
-                    raise IncompatiblePortError(msg)
-
-                if portname not in paths:
-                    g += port1.connector_function(port1, port2)
-                    continue
-
-                # Force connector between virtual points
-                pts = paths[portname]
-                if len(pts) % 3 > 0:
-                    msg = (
-                        f"Specified path for wire {portname} "
-                        f"should include 3 values for each point (x,y,angle)"
-                    )
-                    raise ValueError(msg)
-
-                portx = deepcopy(port1)
-                for i in range(0, len(pts), 3):
-                    print(f"Connecting {pts[i]} {pts[i + 1]}")
-                    portx.x0 = pts[i]
-                    portx.y0 = pts[i + 1]
-                    portx.set_angle(math.radians(pts[i + 2]))
-                    portx.bf = not portx.bf
-                    g += port1.connector_function(port1, portx)
-                    portx.bf = not portx.bf
-                    port1 = deepcopy(portx)
-
-                g += portx.connector_function(portx, port2)
-
-            elif portname in external_ports:
-                port1._geometry = GeomGroup()
-                port1._parentports = {}
-                p1 = deepcopy(port1)
-                p1.name = portname
-                self._localp["external_ports"][portname] = p1
-            else:
-                # Stacklevel=3 to point at code calling self.run() and not this method.
-                msg = f"Port {portname} is unconnected."
-                warnings.warn(msg, UserWarning, stacklevel=3)
-
-        return g
-
-    def ports(self):
-        """
-        Adds external ports that are not connected in the netlist.
+    def ports(self) -> None:
+        """Add external ports that are not connected in the netlist.
 
         Returns
         -------
-        None.
+        None
 
         """
         ext_ports = self._localp["external_ports"]
@@ -1281,11 +1571,11 @@ class Circuit(Device):
 _DeviceList: dict[str, type[Device]] = {"X": Circuit}
 
 
-def registerDevicesInModule(module_name: str):
-    """
-    To be called at the end of a python module containing device classes
-    that inherit the `Device` class. It will register the device names in a
-    global database.
+def registerDevicesInModule(module_name: str) -> None:
+    """Register the device names in a global variable.
+
+    To be called at the end of a python module containing device classes that inherit
+    the `Device` class.
 
     Parameters
     ----------
@@ -1294,10 +1584,10 @@ def registerDevicesInModule(module_name: str):
 
     Returns
     -------
-    None.
+    None
 
     """
-    for name, obj in inspect.getmembers(sys.modules[module_name]):
+    for _, obj in inspect.getmembers(sys.modules[module_name]):
         if inspect.isclass(obj):
             # Recursively check bases for Device
             baseobj = obj.__bases__[0]
@@ -1314,11 +1604,11 @@ def registerDevicesInModule(module_name: str):
                 print(f"Loaded {oj._name}: {oj._description}")
 
 
-def CreateDeviceLibrary(devname: str, params: dict, filename: str):
-    """
-    Generates a GDS file with a re-usable GDS-format device.
+def CreateDeviceLibrary(devname: str, params: dict, filename: str) -> None:
+    """Generate a GDS file with a re-usable GDS-format device.
+
     Also exports ports as text element in GDS.
-    Flattens everything
+    Flattens everything.
 
     Parameters
     ----------
@@ -1331,7 +1621,7 @@ def CreateDeviceLibrary(devname: str, params: dict, filename: str):
 
     Returns
     -------
-    None.
+    None
 
     """
     dev = Device.build_registered(devname)
@@ -1355,88 +1645,87 @@ def CreateDeviceLibrary(devname: str, params: dict, filename: str):
     gdsw.close_library()
 
 
-def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel"):
-    """
-    Generates a Layout Editor library file (LEL) containing the Devices currently
-    loaded on the Device List. The library file can be used in combination with
-    Layout Editor Schematic to produce spice netlists for circuit design.
+def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel") -> None:
+    """Generate a Layout Editor library file (LEL).
+
+    This file contains the Devices currently loaded on the Device List. The library file
+    can be used in combination with Layout Editor Schematic to produce spice netlists
+    for circuit design.
 
     Parameters
     ----------
     filename : str, optional
-        The library filename with .lel extension. The default is "SampleMakerLibrary.lel".
+        The library filename with .lel extension, by default "SampleMakerLibrary.lel".
 
     Returns
     -------
-    None.
+    None
 
     """
-    f = open(filename, "w")
-    for devobj in _DeviceList.values():
-        oj = devobj()
-        oj.initialize()
-        oj.parameters()
-        oj.ports()
-        if (oj._name == "X") or (oj._name == "TABLE"):
-            continue
+    with _Path(filename).open("w") as f:
+        for devobj in _DeviceList.values():
+            oj = devobj()
+            oj.initialize()
+            oj.parameters()
+            oj.ports()
+            if oj._name in {"X", "TABLE"}:
+                continue
 
-        f.write(f"<Component {devobj.__name__}>\n")
-        f.write("<Description>\n {oj._description} \n</Description>\n")
-        f.write("<Parameter>\n")
-        for p, val in oj._p.items():
-            valstring = " ".join(map(str, [val]))
-            valstring = valstring.replace("<", "-").replace(">", "-")
-            f.write("<string " + p + " " + valstring + ">\n")
-        f.write("</Parameter>\n")
-        f.write("<Prefix " + oj._name + ">\n")
-        # f.write("<Label>\n$devicename\n</Label>\n")
+            f.write(f"<Component {devobj.__name__}>\n")
+            f.write("<Description>\n {oj._description} \n</Description>\n")
+            f.write("<Parameter>\n")
+            for p, val in oj._p.items():
+                valstring = " ".join(map(str, [val]))
+                valstring = valstring.replace("<", "-").replace(">", "-")
+                f.write("<string " + p + " " + valstring + ">\n")
+            f.write("</Parameter>\n")
+            f.write("<Prefix " + oj._name + ">\n")
+            # f.write("<Label>\n$devicename\n</Label>\n")
 
-        f.write("<Symbol>\n")
-        dev = oj.build()
-        g = dev.run()
-        g = g.flatten()
-        # bb = g.bounding_box()
-        scale = 1
-        # scale = bb.width
-        # if bb.height>bb.width:
-        #    scale = bb.height
-        g.scale(0, 0, 100 / scale, 100 / scale)
+            f.write("<Symbol>\n")
+            dev = oj.build()
+            g = dev.run()
+            g = g.flatten()
+            # bb = g.bounding_box()
+            scale = 1
+            # scale = bb.width
+            # if bb.height>bb.width:
+            #    scale = bb.height
+            g.scale(0, 0, 100 / scale, 100 / scale)
 
-        for g in g.group:
-            if isinstance(g, Poly):
-                bb = g.bounding_box()
-                if bb.width < 2 and bb.height < 0.2:
-                    continue
-                x = g.data[0::2]
-                y = g.data[1::2]
-                for i in range(len(x) - 1):
-                    if (x[i + 1] - x[i]) ** 2 + (y[i + 1] - y[i]) ** 2 > 0.2:
-                        f.write(
-                            f"<Line {int(x[i])} {int(y[i])} "
-                            f"{int(x[i + 1])} {int(y[i + 1])} wire>\n"
-                        )
+            for g_member in g.group:
+                if isinstance(g_member, Poly):
+                    bb = g_member.bounding_box()
+                    if bb.width < 2 and bb.height < 0.2:
+                        continue
+                    x = g_member.data[0::2]
+                    y = g_member.data[1::2]
+                    for i in range(len(x) - 1):
+                        if (x[i + 1] - x[i]) ** 2 + (y[i + 1] - y[i]) ** 2 > 0.2:
+                            f.write(
+                                f"<Line {int(x[i])} {int(y[i])} "
+                                f"{int(x[i + 1])} {int(y[i + 1])} wire>\n"
+                            )
 
-        dev.ports()
-        for pname, port in dev._ports.items():
-            f.write(
+            dev.ports()
+            port_info = (
                 f"<Port {int(port.x0 * 100 / scale)} "
                 f"{int(port.y0 * 100 / scale)} {pname}>\n"
+                for pname, port in dev._ports.items()
             )
+            f.writelines(port_info)
 
-        f.write("</Symbol>\n")
-        # f.write("<Offsetlabel 0 -50 -50>\n")
-        f.write("<Netlist spice>\n")
-        f.write("$devicename ")
-        for pname, port in dev._ports.items():
-            f.write(f"{pname} $node({pname}) ")
-        f.write(". ")
-        for p in oj._p:
-            f.write(f"{p} ${p} ")
+            f.write("</Symbol>\n")
+            # f.write("<Offsetlabel 0 -50 -50>\n")
+            f.write("<Netlist spice>\n")
+            f.write("$devicename ")
+            f.writelines(f"{pname} $node({pname}) " for pname in dev._ports)
+            f.write(". ")
+            for p in oj._p:
+                f.write(f"{p} ${p} ")
 
-        f.write("\n</Netlist>\n")
-        f.write("</Component>\n")
-
-    f.close()
+            f.write("\n</Netlist>\n")
+            f.write("</Component>\n")
 
 
 # The function below is work in progress

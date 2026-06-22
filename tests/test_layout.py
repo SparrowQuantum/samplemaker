@@ -1,8 +1,8 @@
 """Unit tests for the samplemaker.layout module."""
 
 import os
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 import pytest
 
@@ -114,7 +114,7 @@ class TestMarkerSet:
     def test_markerset_init_raises_on_invalid_mset(self) -> None:
         name = "TestMarkerSet"
         dev = CrossMark.build()
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid mset value"):
             smlay.MarkerSet(name, dev, mset=0)
 
     @pytest.mark.xfail(
@@ -484,7 +484,7 @@ class TestDeviceTable:
     ) -> None:
         tab = smlay.DeviceTable(dummy_device, 1, 2, {}, {})
 
-        original_build = getattr(tab, "_DeviceTable__build_geomarray")
+        original_build = tab._DeviceTable__build_geomarray
 
         def _build_with_incompatible_ports() -> None:
             original_build()
@@ -510,7 +510,7 @@ class TestDeviceTable:
         tab.set_linked_ports(row_linkports=(("io", "io"),))
         tab.set_aligned_ports(align_rows=True, align_columns=False)
 
-        original_build = getattr(tab, "_DeviceTable__build_geomarray")
+        original_build = tab._DeviceTable__build_geomarray
 
         def _build_with_vertical_ports() -> None:
             original_build()
@@ -798,7 +798,7 @@ class TestMask:
 
         themask._Mask__export_cache()
         expected_filepath = tmp_cwd_dir / f"{name}.cache"
-        assert os.path.isfile(expected_filepath)
+        assert Path(expected_filepath).is_file()
 
         themask.clear()
         assert "EXTRA" not in LayoutPool
@@ -820,4 +820,4 @@ class TestMask:
         assert bbox.width == 1
         assert bbox.height == 1
 
-        os.remove(expected_filepath)
+        Path(expected_filepath).unlink()

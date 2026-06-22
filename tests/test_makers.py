@@ -6,7 +6,7 @@ from samplemaker import makers as sm
 from samplemaker import shapes as sp
 
 
-@pytest.mark.parametrize("x0, y0", [(-1.0, 3.0), (0.0, 0.0), (2.0, -2.0)])
+@pytest.mark.parametrize(("x0", "y0"), [(-1.0, 3.0), (0.0, 0.0), (2.0, -2.0)])
 def test_make_dot(x0: float, y0: float) -> None:
     dot = sm.make_dot(x0, y0)
     assert isinstance(dot, sp.Dot)
@@ -29,8 +29,8 @@ def test_make_poly() -> None:
 
     poly_xpts = poly.data[0::2]
     poly_ypts = poly.data[1::2]
-    expected_xpts = xpts + [xpts[0]]
-    expected_ypts = ypts + [ypts[0]]
+    expected_xpts = [*xpts, xpts[0]]
+    expected_ypts = [*ypts, ypts[0]]
     assert poly_xpts == pytest.approx(expected_xpts)
     assert poly_ypts == pytest.approx(expected_ypts)
 
@@ -112,7 +112,8 @@ def test_make_path_to_poly_nondefault_layer() -> None:
 
 
 @pytest.mark.parametrize(
-    "numkey,expected_posu,expected_posv", [(1, 0, 2), (4, 0, 1), (5, 1, 1), (9, 2, 0)]
+    ("numkey", "expected_posu", "expected_posv"),
+    [(1, 0, 2), (4, 0, 1), (5, 1, 1), (9, 2, 0)],
 )
 def test_make_text(numkey: int, expected_posu: int, expected_posv: int) -> None:
     x0 = 0.0
@@ -500,7 +501,7 @@ def test_make_rounded_rect_noncenter_numkey() -> None:
 
 
 @pytest.mark.parametrize(
-    "xpts,ypts,widths",
+    ("xpts", "ypts", "widths"),
     [
         ([1.0], [2.0], [0.6]),
         ([0.0, 3.0], [0.0, 0.0], [0.4, 0.8]),

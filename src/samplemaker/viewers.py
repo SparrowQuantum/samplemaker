@@ -1,5 +1,4 @@
-"""
-Basic functions to plot and inspect geometries.
+"""Basic functions to plot and inspect geometries.
 
 These are very basic plotting functions to speed up the development of masks
 and circuits. They can be used instead of writing and opening GDS files external
@@ -24,7 +23,7 @@ _ViewerCurrentDevice: Device | None = None
 _ViewerCurrentAxes: plt.Axes | None = None
 
 
-def __get_geom_patches(grp: GeomGroup):
+def __get_geom_patches(grp: GeomGroup) -> list:
     prop_cycle = plt.rcParams["axes.prop_cycle"]
     colors = prop_cycle.by_key()["color"]
     patches = []
@@ -38,10 +37,6 @@ def __get_geom_patches(grp: GeomGroup):
             tmpp = Polygon(xy, closed=True)
             tmpp.set_facecolor(lcolor)
             patches.append(tmpp)
-        elif isinstance(geom, smsh.Circle):
-            tmpc = Circle((geom.x0, geom.y0), geom.r)
-            tmpc.set_facecolor(lcolor)
-            patches.append(tmpc)
         elif isinstance(geom, smsh.Path):
             xy = np.transpose([geom.xpts, geom.ypts])
             tmpp = Polygon(xy, closed=False)
@@ -52,40 +47,36 @@ def __get_geom_patches(grp: GeomGroup):
             # stacklevel=3 to point to calling function, not this one.
             msg = "text display is not supported, please convert to polygon first."
             warnings.warn(msg, stacklevel=3, category=UserWarning)
+        elif isinstance(geom, smsh.Ring):
+            gpl = geom.to_polygon()
+            g = gpl.group[0]
+            n = int(len(g.data) / 2)
+            xy = np.reshape(g.data, (n, 2))
+            tmpp = Polygon(xy, closed=True)
+            tmpp.set_facecolor(lcolor)
+            patches.append(tmpp)
         elif isinstance(geom, smsh.Ellipse):
             tmpe = Ellipse((geom.x0, geom.y0), geom.r * 2, geom.r1 * 2, angle=geom.rot)
             tmpe.set_facecolor(lcolor)
             patches.append(tmpe)
-        elif isinstance(geom, smsh.Ring):
-            gpl = geom.to_polygon()
-            geom = gpl.group[0]
-            n = int(len(geom.data) / 2)
-            xy = np.reshape(geom.data, (n, 2))
-            tmpp = Polygon(xy, closed=True)
-            tmpp.set_facecolor(lcolor)
-            patches.append(tmpp)
-        elif isinstance(geom, smsh.Arc):
-            gpl = geom.to_polygon()
-            geom = gpl.group[0]
-            n = int(len(geom.data) / 2)
-            xy = np.reshape(geom.data, (n, 2))
-            tmpp = Polygon(xy, closed=True)
-            tmpp.set_facecolor(lcolor)
-            patches.append(tmpp)
+        elif isinstance(geom, smsh.Circle):
+            tmpc = Circle((geom.x0, geom.y0), geom.r)
+            tmpc.set_facecolor(lcolor)
+            patches.append(tmpc)
         elif isinstance(geom, smsh.SRef):
             msg = "SRef and ARef display is not supported, please flatten first."
             warnings.warn(msg, stacklevel=3, category=UserWarning)
     return patches
 
 
-def _get_port_patches(port: DevicePort):
+def _get_port_patches(port: DevicePort) -> list:
     if port.name == "":
         return []
     tpath = TextPath((port.x0, port.y0), port.name, size=1)
     return [Arrow(port.x0, port.y0, port.dx(), port.dy()), PathPatch(tpath)]
 
 
-def __get_device_ports_patches(dev: Device):
+def __get_device_ports_patches(dev: Device) -> list:
     patches = []
     for port in dev._ports.values():
         patches += _get_port_patches(port)
@@ -93,9 +84,8 @@ def __get_device_ports_patches(dev: Device):
     return patches
 
 
-def GeomView(grp: GeomGroup):
-    """
-    Plot a geometry in a matplotlib window.
+def GeomView(grp: GeomGroup) -> None:
+    """Plot a geometry in a matplotlib window.
 
     Only polygons and circles are displayed. Most elements are either ignored or
     converted to polygon.
@@ -109,11 +99,11 @@ def GeomView(grp: GeomGroup):
 
     Returns
     -------
-    None.
+    None
 
     """
     plt.close("all")
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
     patches = __get_geom_patches(grp)
     p = PatchCollection(patches, match_original=True)
     ax.add_collection(p)
@@ -122,10 +112,7 @@ def GeomView(grp: GeomGroup):
     plt.show()
 
 
-def __update_scrollbar(_val):
-    global _ViewerCurrentDevice
-    global _ViewerCurrentSliders
-    global _ViewerCurrentAxes
+def __update_scrollbar(_val: float) -> None:
     dev = _ViewerCurrentDevice
     ax = _ViewerCurrentAxes
     if dev is None or ax is None:
@@ -152,9 +139,23 @@ def __update_scrollbar(_val):
     ax.figure.canvas.draw_idle()
 
 
-def DeviceInspect(devcl: Device | type[Device]):
-    """
-    Interactive display of devices defined from `samplemaker.devices`.
+def _build_device(devcl: Device | type[Device]) -> Device:
+    if isinstance(devcl, Device):
+        dev = devcl.build()  # Device copy with default parameters
+        for param, value in devcl._p.items():
+            dev.set_param(param, value)
+    elif isinstance(devcl, type) and issubclass(devcl, Device):
+        dev = devcl.build()
+    else:
+        msg = "DeviceInspect only accepts Device classes or Device instances."
+        raise TypeError(msg)
+
+    dev.use_references = False
+    return dev
+
+
+def DeviceInspect(devcl: Device | type[Device]) -> None:
+    """Interactive display of devices defined from `samplemaker.devices`.
 
     If a device class is provided, the device is rendered using its default
     parameter values. If a device instance is provided, the device is rendered
@@ -171,30 +172,20 @@ def DeviceInspect(devcl: Device | type[Device]):
 
     Returns
     -------
-    None.
+    None
 
     """
-    global _ViewerCurrentDevice
-    global _ViewerCurrentSliders
-    global _ViewerCurrentAxes
+    global _ViewerCurrentDevice  # noqa: PLW0603
+    global _ViewerCurrentSliders  # noqa: PLW0603
+    global _ViewerCurrentAxes  # noqa: PLW0603
 
-    if isinstance(devcl, Device):
-        dev = devcl.build()  # Device copy with default parameters
-        for param, value in devcl._p.items():
-            dev.set_param(param, value)
-    elif isinstance(devcl, type) and issubclass(devcl, Device):
-        dev = devcl.build()
-    else:
-        msg = "DeviceInspect only accepts Device classes or Device instances."
-        raise TypeError(msg)
-
-    dev.use_references = False
+    dev = _build_device(devcl)
     _ViewerCurrentDevice = dev
     g = dev.run()
 
     plt.close("all")
 
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
     _ViewerCurrentAxes = ax
 
     patches = __get_geom_patches(g)

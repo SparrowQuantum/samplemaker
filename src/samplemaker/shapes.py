@@ -1,6 +1,6 @@
-"""
-Shape classes supported by the GDS format and most lithography systems / pattern
-generators.
+"""Shape classes.
+
+Supported by the GDS format and most lithography systems / pattern generators.
 
 Basic shapes in `samplemaker`
 -----------------------------
@@ -69,15 +69,19 @@ to save memory and computation time. For example
 
 import math
 import pathlib
+from collections.abc import Collection, Sequence
 from copy import deepcopy
-from typing import Collection
+from pathlib import Path as _Path
+from typing import Self
 
 import numpy as np
+from asteval import Interpreter
+from numpy.typing import ArrayLike
 
-import samplemaker.resources.boopy as boopy
 from samplemaker import _BoundingBoxPool
+from samplemaker.resources import boopy
 
-_glyphs = dict()
+_glyphs = {}
 
 _STENCIL_FONT_FILENAME = "sm_stencil_font.txt"
 _STENCIL_FONT_ENCODING = "ISO-8859-1"
@@ -87,20 +91,18 @@ _STENCIL_FONT_PATH = (
 
 
 class GeomGroup:
-    def __init__(self):
-        """
-        Create an empty GeomGroup with no elements
+    """A group of geometry elements.
 
-        Returns
-        -------
-        None.
+    The group can contain primitive shapes (for example :class:`Poly`, :class:`Path`,
+    :class:`Circle`) and hierarchical references (:class:`SRef`, :class:`ARef`).
+    """
 
-        """
-        self.group = list()
+    def __init__(self) -> None:
+        """Create an empty GeomGroup with no elements."""
+        self.group = []
 
     def __add__(self, other: "GeomGroup") -> "GeomGroup":
-        """
-        Combine two geometries
+        """Combine two geometry groups.
 
         Parameters
         ----------
@@ -109,7 +111,7 @@ class GeomGroup:
 
         Returns
         -------
-        gg : GeomGroup
+        GeomGroup
             The resulting GeomGroup.
 
         """
@@ -117,49 +119,48 @@ class GeomGroup:
         gg.group = self.group + other.group
         return gg
 
-    def add(self, geom):
-        """
-        Add a shape to the group (deprecated)
+    def add(self, geom: "Poly | SRef | Path | Text | Circle") -> None:
+        """Add a shape to the group.
 
         Parameters
         ----------
-        geom : Any geometry object
+        geom : Poly | SRef | Path | Text
             The geometry to be added.
 
         Returns
         -------
-        None.
+        None
 
         """
         self.group.append(geom)
 
-    def copy(self) -> "GeomGroup":
-        """
-        Make a deep copy of the object.
+    def copy(self) -> Self:
+        """Make a deep copy of the object.
 
         Returns
         -------
-        GeomGroup
-            A detached copy of self.
+        Self
+            A copy of the group.
 
         """
         return deepcopy(self)
 
     def flatten(self, layer_list: Collection[int] | None = None) -> "GeomGroup":
-        """
-        Flatten the entire group. Turns all SREF and AREF objects in flattened objects.
-        All references to cell are removed. A new flattened group is returned and no
-        changes are made to the calling object.
+        """Flatten the entire group.
+
+        Turns all SREF and AREF objects in flattened objects. All references to cell
+        are removed. A new flattened group is returned and no changes are made to the
+        calling object.
 
         Parameters
         ----------
-        layer_list : set[int], optional
+        layer_list : Collection[int], optional
             A set of layers that should be used when flattening. All layers are
             flattened by default.
 
         Returns
         -------
-        g : GeomGroup
+        GeomGroup
             A detached copy of the flattened geometry.
 
         """
@@ -175,15 +176,15 @@ class GeomGroup:
                 g.add(deepcopy(geom))
         return g
 
-    def get_sref_list(self):
-        """
-        Return a unique list of strings with the structures referenced by the object
-        (recursively).
+    def get_sref_list(self) -> set[str]:
+        """Get a set of cell names referenced in the group.
+
+        This method is recursive.
 
         Returns
         -------
-        sref_list : set
-            The complete reference list.
+        sref_list : set[str]
+            The complete reference set.
 
         """
         sref_list = set()
@@ -194,12 +195,11 @@ class GeomGroup:
         return sref_list
 
     def get_layer_list(self) -> set[int]:
-        """
-        Return a unique set of int with the layers in the object (recursively).
+        """Return a set containing the layers in the group.
 
         Returns
         -------
-        layer_list: set
+        layer_list: set[int]
             The complete layer list.
 
         """
@@ -212,9 +212,8 @@ class GeomGroup:
 
         return layer_list
 
-    def translate(self, dx: float, dy: float):
-        """
-        Shift the entire geometry by dx and dy.
+    def translate(self, dx: float, dy: float) -> Self:
+        """Shift the entire geometry by dx and dy.
 
         Parameters
         ----------
@@ -225,18 +224,18 @@ class GeomGroup:
 
         Returns
         -------
-        Reference to the the object.
+        Self
+            Reference to the object.
 
         """
         for geom in self.group:
             geom.translate(dx, dy)
         return self
 
-    def rotate_translate(self, dx: float, dy: float, rot: float):
-        """
-        First rotate around 0,0 and then translate by dx,dy.
-        It is typically
-        faster than using rotate() followed by translate()
+    def rotate_translate(self, dx: float, dy: float, rot: float) -> Self:
+        """Rotate the group around 0,0 and then translate by dx,dy.
+
+        Typically faster than using rotate() followed by translate().
 
         Parameters
         ----------
@@ -249,16 +248,16 @@ class GeomGroup:
 
         Returns
         -------
-        Reference to the the object.
+        GeomGroup
+            Reference to the object.
 
         """
         for geom in self.group:
             geom.rotate_translate(dx, dy, rot)
         return self
 
-    def rotate(self, x0: float, y0: float, rot: float):
-        """
-        Rotate the geometry around x0,y0 by a given angle.
+    def rotate(self, x0: float, y0: float, rot: float) -> Self:
+        """Rotate the geometry around x0,y0 by a given angle.
 
         Parameters
         ----------
@@ -271,16 +270,16 @@ class GeomGroup:
 
         Returns
         -------
-        Reference to the the object.
+        Self
+            Reference to the object.
 
         """
         for geom in self.group:
             geom.rotate(x0, y0, rot)
         return self
 
-    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float):
-        """
-        Scale the geometry using x0,y0 as center
+    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> Self:
+        """Scale the geometry using x0,y0 as center.
 
         Parameters
         ----------
@@ -295,16 +294,16 @@ class GeomGroup:
 
         Returns
         -------
-        Reference to the the object.
+        Self
+            Reference to the object.
 
         """
         for geom in self.group:
             geom.scale(x0, y0, scale_x, scale_y)
         return self
 
-    def mirrorX(self, x0: float):
-        """
-        Mirror the geometry around x-axis
+    def mirrorX(self, x0: float) -> Self:
+        """Mirror the geometry around x-axis.
 
         Parameters
         ----------
@@ -313,16 +312,16 @@ class GeomGroup:
 
         Returns
         -------
-        Reference to the the object.
+        Self
+            Reference to the object.
 
         """
         for geom in self.group:
             geom.mirrorX(x0)
         return self
 
-    def mirrorY(self, y0: float):
-        """
-        Mirror the geometry around y-axis
+    def mirrorY(self, y0: float) -> Self:
+        """Mirror the geometry around y-axis.
 
         Parameters
         ----------
@@ -331,7 +330,8 @@ class GeomGroup:
 
         Returns
         -------
-        Reference to the the object.
+        Self
+            Reference to the object.
 
         """
         for geom in self.group:
@@ -341,7 +341,24 @@ class GeomGroup:
     def __entity_count(
         self, recursive: bool = True, layer_wise: bool = False, layer: int = 0
     ) -> dict:
-        cnt = dict()
+        """Count entities in the group, optionally recursively and per layer.
+
+        Parameters
+        ----------
+        recursive : bool, optional
+            If `True`, include elements inside references recursively.
+        layer_wise : bool, optional
+            If `True`, count only entities in `layer`.
+        layer : int, optional
+            Layer number used when `layer_wise` is `True`.
+
+        Returns
+        -------
+        dict
+            Dictionary containing per-type entity counts.
+
+        """
+        cnt = {}
         lfgroup = self.group
         if layer_wise:
             lfgroup = [g for g in self.group if g.layer == layer]
@@ -360,15 +377,14 @@ class GeomGroup:
                 if isinstance(g, SRef):
                     subcnt = g.group.__entity_count(recursive, layer_wise, layer)
                     if type(g) is ARef:
-                        for e in subcnt.keys():
+                        for e in subcnt:
                             subcnt[e] *= g.ncols * g.nrows
                     for name in cnt:
                         cnt[name] += subcnt[name]
         return cnt
 
-    def __str__(self):
-        """
-        Display basic geometry information (size and layers)
+    def __str__(self) -> str:
+        """Display basic geometry information (size and layers).
 
         Returns
         -------
@@ -384,9 +400,7 @@ class GeomGroup:
         return msg
 
     def info(self) -> dict:
-        """
-        Generate useful statistics on the group (element count, size) and return it in
-        a dict.
+        """Generate a dict of useful statistics on the group (element count, size).
 
         Returns
         -------
@@ -394,7 +408,7 @@ class GeomGroup:
             Contains information on the group geometry.
 
         """
-        stat = dict()
+        stat = {}
         bb = self.bounding_box()
         layer_list = self.get_layer_list()
         stat["BoundingBox"] = {
@@ -414,8 +428,7 @@ class GeomGroup:
         return stat
 
     def bounding_box(self) -> "Box":
-        """
-        Calculate the group bounding box.
+        """Calculate the group bounding box.
 
         Returns
         -------
@@ -423,18 +436,17 @@ class GeomGroup:
             The box representing the bounding box of the geometry.
 
         """
-        if len(self.group) != 0:
-            bb = self.group[0].bounding_box()
-
-        for geom in self.group:
+        if len(self.group) == 0:
+            return Box(0, 0, 0, 0)
+        bb = self.group[0].bounding_box()
+        for geom in self.group[1:]:
             bb.combine(geom.bounding_box())
         return bb
 
     def to_boxes(self, layer: int) -> "GeomGroup":
-        """
-        Generate a GeomGroup with the bounding boxes of each individual
-        geometry. It can be used to create a coarse overlay mask. Acts
-        on a single layer.
+        """Generate a GeomGroup with the bounding boxes of each individual geometry.
+
+        Can be used to create a coarse overlay mask. Acts on a single layer.
 
         Parameters
         ----------
@@ -444,8 +456,8 @@ class GeomGroup:
         Returns
         -------
         GeomGroup
-            A geometry group with the bounding boxes of each element in the
-            original group.
+            A geometry group with the bounding boxes of each element in the original
+            group.
 
         """
         bb = GeomGroup()
@@ -455,9 +467,8 @@ class GeomGroup:
         bb.set_layer(layer)
         return bb
 
-    def set_layer(self, layer: int):
-        """
-        Assign a new layer to all the shapes in the geometry
+    def set_layer(self, layer: int) -> Self:
+        """Assign a new layer to all the shapes in the geometry.
 
         Parameters
         ----------
@@ -466,7 +477,8 @@ class GeomGroup:
 
         Returns
         -------
-        Reference to the the object.
+        Self
+            Reference to the object.
 
         """
         for geom in self.group:
@@ -474,8 +486,7 @@ class GeomGroup:
         return self
 
     def select_layer(self, layer: int) -> "GeomGroup":
-        """
-        Create a new GeomGroup containing only shapes in a given layer.
+        """Create a new GeomGroup containing only shapes in a given layer.
 
         Parameters
         ----------
@@ -484,7 +495,7 @@ class GeomGroup:
 
         Returns
         -------
-        g : GeomGroup
+        GeomGroup
             A new GeomGroup object with elements of the selected layer.
 
         """
@@ -495,8 +506,7 @@ class GeomGroup:
         return g
 
     def select_layers(self, layers: list[int]) -> "GeomGroup":
-        """
-        Create a new GeomGroup containing only shapes in a list of layers.
+        """Create a new GeomGroup containing only shapes in a list of layers.
 
         Parameters
         ----------
@@ -505,7 +515,7 @@ class GeomGroup:
 
         Returns
         -------
-        g : GeomGroup
+        GeomGroup
             A new GeomGroup object with elements of the selected layer list.
 
         """
@@ -516,8 +526,7 @@ class GeomGroup:
         return g
 
     def deselect_layers(self, layers: list[int]) -> "GeomGroup":
-        """
-        Create a new GeomGroup containing only shapes that are not in layer list
+        """Create a new GeomGroup containing only shapes that are not in layer list.
 
         Parameters
         ----------
@@ -526,7 +535,7 @@ class GeomGroup:
 
         Returns
         -------
-        g : GeomGroup
+        GeomGroup
             A new GeomGroup object without elements of the selected layer.
 
         """
@@ -537,8 +546,7 @@ class GeomGroup:
         return g
 
     def select(self, query_str: str) -> "GeomGroup":
-        """
-        Perform a selection of the shapes (filtering) based on geometrical properties.
+        """Select shapes based on geometrical properties.
 
         The output GeomGroup contains only the elements that satisfy the conditions
         expressed in the query string. For example, to select only polygons with area
@@ -581,71 +589,62 @@ class GeomGroup:
         Returns
         -------
         GeomGroup
-            A geometry group containing the elments that satisfy the criteria.
+            A geometry group containing the elements that satisfy the criteria.
 
         """
-        allowed_names = {
-            "A": "Polygon area",
-            "P": "Polygon perimeter",
-            "W": "Bounding box width",
-            "H": "Bounding box height",
-            "L": "Layer",
-            "T": "Type",
-            "x": "X position, center or reference pos",
-            "y": "Y position, center or reference pos",
-            "llx": "lower left x position of the bb",
-            "lly": "lower left y position of the bb",
-            "urx": "upper right x position of the bb",
-            "ury": "upper right y position of the bb",
-        }
         code = compile(query_str, "<string>", "eval")
         sflat = self
         if self.get_sref_list():
             sflat = self.flatten()
         # Pre-allocate Bounding boxes
         bbs = [g.bounding_box() for g in sflat.group]
+        usersyms = {}
         for name in code.co_names:
-            if name not in allowed_names:
-                msg = f"Use of expression {name} not allowed"
-                raise NameError(msg)
-
             # Prepare the local variable dictionary
-
-            if name == "A":  # Prepare area array
-                allowed_names[name] = np.array([g.area() for g in sflat.group])
-            if name == "P":  # Prepare area array
-                allowed_names[name] = np.array([g.perimeter() for g in sflat.group])
-            if name == "L":  # Prepare layer array
-                allowed_names[name] = np.array([g.layer for g in sflat.group])
-            if name == "W":  # Prepare width array
-                allowed_names[name] = np.array([b.width for b in bbs])
-            if name == "H":  # Prepare height array
-                allowed_names[name] = np.array([b.height for b in bbs])
-            if name == "x" or name == "y":  # Prepare centroid array
-                allowed_names["x"] = np.array([g.centroid()[0] for g in sflat.group])
-                allowed_names["y"] = np.array([g.centroid()[1] for g in sflat.group])
-            if name == "llx":  # Prepare LL array
-                allowed_names["llx"] = np.array([b.llx for b in bbs])
-            if name == "lly":  # Prepare LL array
-                allowed_names["lly"] = np.array([b.lly for b in bbs])
-            if name == "urx":  # Prepare UR array
-                allowed_names["urx"] = np.array([b.urx() for b in bbs])
-            if name == "ury":  # Prepare UR array
-                allowed_names["ury"] = np.array([b.ury() for b in bbs])
-            if name == "T":  # Prepare type array
-                allowed_names[name] = np.array(
-                    [str(g.__class__.__name__) for g in sflat.group]
-                )
+            usersyms[name] = self._get_property_from_name(name, sflat, bbs)
 
         # Now execute
         g = GeomGroup()
-        sel = eval(code, {"__builtins__": {}}, allowed_names)
+        aeval = Interpreter(usersyms=usersyms, raise_errors=True)
+        sel: np.ndarray = aeval(query_str)  # type: ignore[assignment]
         g.group[:] = [sflat.group[i] for i, val in enumerate(sel) if val]
         return g
 
-    def find_matching_patterns(self, pattern: "GeomGroup", layer: int):
-        """
-        Find the position of a given repeating pattern in the geometry.
+    def _get_property_from_name(
+        self, name: str, sflat: "GeomGroup", bbs: list["Box"]
+    ) -> np.ndarray:
+        if name == "A":  # Prepare area array
+            return np.array([g.area() for g in sflat.group])
+        if name == "P":  # Prepare perimeter array
+            return np.array([g.perimeter() for g in sflat.group])
+        if name == "L":  # Prepare layer array
+            return np.array([g.layer for g in sflat.group])
+        if name == "W":  # Prepare width array
+            return np.array([b.width for b in bbs])
+        if name == "H":  # Prepare height array
+            return np.array([b.height for b in bbs])
+        if name == "x":  # Prepare centroid array
+            return np.array([g.centroid()[0] for g in sflat.group])
+        if name == "y":  # Prepare centroid array
+            return np.array([g.centroid()[1] for g in sflat.group])
+        if name == "llx":  # Prepare LL array
+            return np.array([b.llx for b in bbs])
+        if name == "lly":  # Prepare LL array
+            return np.array([b.lly for b in bbs])
+        if name == "urx":  # Prepare UR array
+            return np.array([b.urx() for b in bbs])
+        if name == "ury":  # Prepare UR array
+            return np.array([b.ury() for b in bbs])
+        if name == "T":  # Prepare type array
+            return np.array([str(g.__class__.__name__) for g in sflat.group])
+
+        msg = f"Use of expression {name} not allowed"
+        raise NameError(msg)
+
+    def find_matching_patterns(
+        self, pattern: "GeomGroup", layer: int
+    ) -> list[list[float]]:
+        """Find the position of a given repeating pattern in the geometry.
 
         User provides a pattern as a geom group. The pattern should not be
         disjoint (i.e. after boolean union, it should contain one element only)
@@ -658,13 +657,13 @@ class GeomGroup:
         Parameters
         ----------
         pattern : GeomGroup
-            The pattern to be searched. Must be a single connected polygon
+            The pattern to be searched. Must be a single connected polygon.
         layer : int
             The layer to perform the search on.
 
         Returns
         -------
-        res : list
+        list[list[float]]
             A list of coordinate pairs, corresponding to the location of the pattern.
 
         """
@@ -688,8 +687,7 @@ class GeomGroup:
         return res
 
     def get_area(self) -> float:
-        """
-        Calculate the total area of the group.
+        """Calculate the total area of the group.
 
         Returns
         -------
@@ -705,13 +703,12 @@ class GeomGroup:
                 area += self.group[i].area()
         return float(round(area * 1e6)) / 1e6
 
-    def path_to_poly(self):
-        """
-        Convert all path objects in the current group to polygons.
+    def path_to_poly(self) -> None:
+        """Convert all path objects in the current group to polygons.
 
         Returns
         -------
-        None.
+        None
 
         """
         paths = GeomGroup()
@@ -722,13 +719,12 @@ class GeomGroup:
         self.group[:] = [g for g in self.group if not isinstance(g, Path)]
         self.group = self.group + paths.group
 
-    def text_to_poly(self):
-        """
-        Convert all text objects in the current group to polygons.
+    def text_to_poly(self) -> None:
+        """Convert all text objects in the current group to polygons.
 
         Returns
         -------
-        None.
+        None
 
         """
         polys = GeomGroup()
@@ -741,57 +737,49 @@ class GeomGroup:
 
     def all_to_poly(
         self, Npts_circ: int = 12, Npts_arc: int = 32, split_arc: bool = False
-    ):
-        """
-        Convert all elements except for SRef and Aref to polygons.
+    ) -> None:
+        """Convert all elements except for SRef and Aref to polygons.
 
         Returns
         -------
-        None.
+        None
 
         """
-
         polys = GeomGroup()
         for i in range(len(self.group)):
             g = self.group[i]
-            if isinstance(g, Poly):
+            if isinstance(g, (Poly, Text, Path)):
                 polys += self.group[i].to_polygon()
-            elif isinstance(g, Text):
-                polys += self.group[i].to_polygon()
-            elif isinstance(g, Path):
-                polys += self.group[i].to_polygon()
-            elif isinstance(g, Circle):
-                polys += self.group[i].to_polygon(Npts_circ)
-            elif isinstance(g, Ellipse):
-                polys += self.group[i].to_polygon(Npts_arc)
-            elif isinstance(g, Ring):
-                polys += self.group[i].to_polygon(Npts_arc)
             elif isinstance(g, Arc):
                 polys += self.group[i].to_polygon(Npts_arc, split_arc)
+            elif isinstance(g, Ellipse):  # Also covers Ring
+                polys += self.group[i].to_polygon(Npts_arc)
+            elif isinstance(g, Circle):
+                polys += self.group[i].to_polygon(Npts_circ)
 
         self.group[:] = [g for g in self.group if isinstance(g, SRef)]
         self.group = self.group + polys.group
 
     def poly_to_circle(
         self, thresh: float = 0.95, vcount: int = 10, include_refs: bool = True
-    ):
-        """
-        Convert all polygons to circle, when they meet a circularity threshold and
-        a vertex count larger than the vcount parameter.
+    ) -> None:
+        """Conditionally convert all polygons to circle.
 
+        The polygons need to meet a circularity threshold and a vertex count larger than
+        the vcount parameter to be converted.
 
         Parameters
         ----------
         thresh : float, optional
-            Circularity threshold (1=perfect circle). The default is 0.95.
+            Circularity threshold (1=perfect circle), by default 0.95.
         vcount : int, optional
-            Minimum number of vertices to perform the conversion. The default is 10.
+            Minimum number of vertices to perform the conversion, by default 10.
         include_refs : bool, optional
-            Perform recursive conversion to SRefs and ARefs. The default is True
+            Perform recursive conversion to SRefs and ARefs, by default True.
 
         Returns
         -------
-        None.
+        None
 
         """
         polys = GeomGroup()
@@ -803,7 +791,7 @@ class GeomGroup:
                 else:
                     polys += convp
                 continue
-            elif isinstance(self.group[i], SRef):
+            if isinstance(self.group[i], SRef):
                 if include_refs:
                     self.group[i].group.poly_to_circle(thresh, vcount)
                 continue
@@ -814,8 +802,7 @@ class GeomGroup:
         self.group = self.group + polys.group
 
     def in_polygons(self, x: float, y: float) -> bool:
-        """
-        Check if a given coordinate is inside the GeomGroup polygons.
+        """Check if a given coordinate is inside the GeomGroup polygons.
 
         Parameters
         ----------
@@ -827,27 +814,38 @@ class GeomGroup:
         Returns
         -------
         bool
-            True if coorinate is inside the polygon.
+            True if coordinate is inside the polygon.
 
         """
         for i in range(len(self.group)):
-            if isinstance(self.group[i], SRef):
-                if self.group[i].point_inside(x, y):
-                    return True
+            if isinstance(self.group[i], SRef) and self.group[i].point_inside(x, y):
+                return True
         return False
 
-    def keep_refs_only(self):
-        """
-        Keep only the Sref and Aref (can be used to keep a skeleton of the structure)
+    def keep_refs_only(self) -> None:
+        """Keep only Sref and Aref objects in the group.
 
         Returns
         -------
-        Nothing
+        None
 
         """
         self.group[:] = [g for g in self.group if isinstance(g, SRef)]
 
-    def __get_boopy__(self, layer: int):
+    def __get_boopy__(self, layer: int) -> "boopy.PolyGroup":
+        """Build a boopy polygon group from polygons on a given layer.
+
+        Parameters
+        ----------
+        layer : int
+            Layer to extract.
+
+        Returns
+        -------
+        boopy.PolyGroup
+            Polygon group containing integer polygon data for `layer`.
+
+        """
         pg0 = boopy.PolyGroup()
         for i in range(len(self.group)):
             if isinstance(self.group[i], Poly) and self.group[i].layer == layer:
@@ -855,7 +853,21 @@ class GeomGroup:
                 pg0.addPolyData(pdata)
         return pg0
 
-    def __set_boopy__(self, pg0, layer: int):
+    def __set_boopy__(self, pg0: boopy.PolyGroup, layer: int) -> None:
+        """Append polygons from a `boopy.PolyGroup` object back into the geometry.
+
+        Parameters
+        ----------
+        pg0 : boopy.PolyGroup
+            Source polygon group holding integer coordinates.
+        layer : int
+            Layer assigned to imported polygons.
+
+        Returns
+        -------
+        None
+
+        """
         npoly = pg0.getPolyCount()
         polys = GeomGroup()
         for i in range(npoly):
@@ -866,9 +878,10 @@ class GeomGroup:
             polys.add(poly)
         self.group = self.group + polys.group
 
-    def boolean_union(self, layer: int):
-        """
-        Perform a full boolean union (OR) of all polygons in the group matching a layer
+    def boolean_union(self, layer: int) -> Self:
+        """Perform a boolean union (OR) operation of all polygons matching a layer.
+
+        This operation is performed in-place.
 
         All other elements (circles, paths, texts) are ignored unless they have been
         already converted to polygons.
@@ -880,7 +893,8 @@ class GeomGroup:
 
         Returns
         -------
-        Reference to the the object.
+        Self
+            Reference to the object.
 
         """
         # Get the boost python data
@@ -894,10 +908,13 @@ class GeomGroup:
         self.__set_boopy__(pg0, layer)
         return self
 
-    def boolean_difference(self, targetB: "GeomGroup", layerA: int, layerB: int):
-        """
-        Perform a full difference between the polygons in the calling group matching
-        layerA and the polygons in group targetB, matching layerB.
+    def boolean_difference(
+        self, targetB: "GeomGroup", layerA: int, layerB: int
+    ) -> Self:
+        """Perform a boolean difference operation between polygons.
+
+        The operation is done in-place in the calling group matching `layerA` and the
+        polygons in group `targetB`, matching `layerB`.
 
         All other elements (circles, paths, texts) are ignored unless they have been
         already converted to polygons.
@@ -913,7 +930,8 @@ class GeomGroup:
 
         Returns
         -------
-        Reference to the the object.
+        Self
+            Reference to the object.
 
         """
         # Get the boost python data
@@ -929,25 +947,28 @@ class GeomGroup:
         self.__set_boopy__(polygroup_a, layerA)
         return self
 
-    def boolean_xor(self, targetB: "GeomGroup", layerA: int, layerB: int):
-        """
-        Perform an exclusive-OR operation between the polygons in the calling group
-        matching layerA and the polygons in group targetB, matching layerB. All other
-        elements (circles, paths, texts) are ignored unless they have been already
-        converted to polygons
+    def boolean_xor(self, targetB: "GeomGroup", layerA: int, layerB: int) -> Self:
+        """Perform a boolean exclusive-OR (XOR) operation between polygons.
+
+        The operation is done in-place in the calling group matching `layerA` and the
+        polygons in group `targetB`, matching `layerB`.
+
+        All other elements (circles, paths, texts) are ignored unless they have been
+        already converted to polygons.
 
         Parameters
         ----------
         targetB: GeomGroup
-            The geometry to be x-OR 'ed.
+            The geometry to be XORed.
         layerA : int
             The layer from which XOR operation should be performed.
         layerB: int
-            The layer to be XOR 'ed.
+            The layer to be XORed.
 
         Returns
         -------
-        Reference to the the object.
+        GeomGroup
+            Reference to the object.
 
         """
         # Get the boost python data
@@ -963,12 +984,16 @@ class GeomGroup:
         self.__set_boopy__(polygroup_a, layerA)
         return self
 
-    def boolean_intersection(self, targetB: "GeomGroup", layerA: int, layerB: int):
-        """
-        Perform a full intersection (AND) between the polygons in the calling group
-        matching layerA and the polygons in group targetB, matching layerB. All other
-        elements (circles, paths, texts) are ignored unless they have been already
-        converted to polygons
+    def boolean_intersection(
+        self, targetB: "GeomGroup", layerA: int, layerB: int
+    ) -> Self:
+        """Perform a boolean intersection (AND) operation between polygons.
+
+        The operation is done in-place in the calling group matching `layerA` and the
+        polygons in group `targetB`, matching `layerB`.
+
+        All other elements (circles, paths, texts) are ignored unless they have been
+        already converted to polygons.
 
         Parameters
         ----------
@@ -981,7 +1006,8 @@ class GeomGroup:
 
         Returns
         -------
-        Reference to the the object.
+        Self
+            Reference to the object.
 
         """
         # Get the boost python data
@@ -1003,10 +1029,12 @@ class GeomGroup:
         layer: int,
         corner_fill_arc: bool = False,
         num_circle_segments: int = 0,
-    ):
-        """
-        Offset the polygon by a certain distance. Acts only on polygons and on a single
-        layer.
+    ) -> Self:
+        """Offset the polygon by a certain distance.
+
+        This operation is performed in-place.
+
+        Acts only on polygons and on a single layer.
 
         Parameters
         ----------
@@ -1015,14 +1043,15 @@ class GeomGroup:
         layer : int
             The layer to be resized.
         corner_fill_arc : bool, optional
-            Rounds the convex corners. The default is False.
+            Rounds the convex corners, by default False.
         num_circle_segments : int, optional
             If corner_fill_arc is True, the number of segments to be used for arc
-            filling. The default is 0.
+            filling, by default 0.
 
         Returns
         -------
-        Reference to the the object.
+        Self
+            Reference to the object.
 
         """
         polygroup = self.__get_boopy__(layer)
@@ -1033,9 +1062,8 @@ class GeomGroup:
         self.__set_boopy__(polygroup, layer)
         return self
 
-    def poly_anisotropic_resize(self, angles: list, deltas: list, layer: int):
-        """
-        Perform an anisotropic offset of the polygons in a given layer.
+    def poly_anisotropic_resize(self, angles: list, deltas: list, layer: int) -> Self:
+        """Perform an anisotropic offset of the polygons in a given layer.
 
         Requires an offset array in deltas matching the angle of expansion. Angles
         should cover -90 to 90 degrees.
@@ -1051,7 +1079,8 @@ class GeomGroup:
 
         Returns
         -------
-        Reference to the the object.
+        Self
+            Reference to the object.
 
         """
         for i in range(len(self.group)):
@@ -1066,9 +1095,10 @@ class GeomGroup:
         distance: float = 0,
         corner_fill_arc: bool = False,
         num_circle_segments: int = 0,
-    ):
-        """
-        Calculate the polygon outline by resizing and subtracting the original geometry.
+    ) -> Self:
+        """Calculate the polygon outline of the polygons in a given layer.
+
+        This operation is performed in-place.
 
         Also works on circles (ignores the other elements, which must be converted to
         poly first)
@@ -1081,16 +1111,17 @@ class GeomGroup:
             The layer to be resized.
         distance: float, optional
             How far should the outline be displaced from the polygon edge.
-            Negative values mean inward distance. The default is 0.
+            Negative values mean inward distance, by default 0.
         corner_fill_arc : bool, optional
-            Rounds the convex corners. The default is False.
+            Rounds the convex corners, by default False.
         num_circle_segments : int, optional
             If corner_fill_arc is True, the number of segments to be used for arc
-            filling. The default is 0.
+            filling, by default 0.
 
         Returns
         -------
-        Reference to the the object.
+        Self
+            Reference to the object.
 
         """
         polygroup = self.__get_boopy__(layer)
@@ -1132,11 +1163,10 @@ class GeomGroup:
 
         return self
 
-    def invert(self, layer: int, offset: float = 0):
-        """
-        Perform the inverse boolean operation (NOT) on a group.
+    def invert(self, layer: int, offset: float = 0) -> Self:
+        """Perform a boolean inverse operation (NOT) on the polygons in a layer.
 
-        Acts on the specified layer only.
+        This operation is performed in-place.
 
         The result is the negative of the mask on the bounding box polygon.
         An offset can be specified to bloat/shrink the bounding box before inversion.
@@ -1146,12 +1176,13 @@ class GeomGroup:
         layer : int
             The layer to be inverted.
         offset : float, optional
-            Resizing amount (positive or negative) of the bounding box before inversion.
-            The default is 0.
+            Resizing amount (positive or negative) of the bounding box before inversion,
+            by default 0.
 
         Returns
         -------
-        reference to the inverted object.
+        Self
+            Reference to the inverted object.
 
         """
         polygroup = self.__get_boopy__(layer)
@@ -1171,18 +1202,20 @@ class GeomGroup:
 
         return self
 
-    def trapezoids(self, layer: int):
-        """
-        Convert and fractures all polygons in a set of trapezoids.
+    def trapezoids(self, layer: int) -> Self:
+        """Convert and fractures all polygons in a set of trapezoids.
+
+        This operation is performed in-place.
 
         Parameters
         ----------
         layer : int
-            the layer to be fractured.
+            The layer to be fractured.
 
         Returns
         -------
-        Reference to the the object.
+        Self
+            Reference to the object.
 
         """
         polygroup = self.__get_boopy__(layer)
@@ -1194,8 +1227,9 @@ class GeomGroup:
         return self
 
     def poly_filter(self, keep_str: str) -> int:
-        """
-        Perform filtering of vertices based on a condition string.
+        """Perform filtering of vertices based on a condition string.
+
+        This operation is performed in-place.
 
         Possible conditions are expressed based on the following variables:
 
@@ -1241,15 +1275,57 @@ class GeomGroup:
 
 
 class Dot:
-    def __init__(self, x, y):
+    """Point helper class used for geometric transformations."""
+
+    def __init__(self, x: float, y: float) -> None:
+        """Create a point.
+
+        Parameters
+        ----------
+        x : float
+            X coordinate.
+        y : float
+            Y coordinate.
+
+        """
         self.x = x
         self.y = y
 
-    def translate(self, dx, dy):
+    def translate(self, dx: float, dy: float) -> None:
+        """Translate the point.
+
+        Parameters
+        ----------
+        dx : float
+            Translation along x.
+        dy : float
+            Translation along y.
+
+        Returns
+        -------
+        None
+
+        """
         self.x += dx
         self.y += dy
 
-    def rotate(self, x0, y0, rot):
+    def rotate(self, x0: float, y0: float, rot: float) -> None:
+        """Rotate the point around a center.
+
+        Parameters
+        ----------
+        x0 : float
+            Rotation center x coordinate.
+        y0 : float
+            Rotation center y coordinate.
+        rot : float
+            Rotation angle in degrees.
+
+        Returns
+        -------
+        None
+
+        """
         xc = self.x - x0
         yc = self.y - y0
         cost = math.cos(rot / 180 * math.pi)
@@ -1257,29 +1333,94 @@ class Dot:
         self.x = cost * xc - sint * yc + x0
         self.y = sint * xc + cost * yc + y0
 
-    def rotate_translate(self, x0, y0, rot):
+    def rotate_translate(self, x0: float, y0: float, rot: float) -> None:
+        """Rotate the point around origin and then translate.
+
+        Parameters
+        ----------
+        x0 : float
+            Translation along x after rotation.
+        y0 : float
+            Translation along y after rotation.
+        rot : float
+            Rotation angle in degrees around origin.
+
+        Returns
+        -------
+        None
+
+        """
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         x = self.x
         y = self.y
-        self.x = cost * (x) - sint * (y) + x0
-        self.y = sint * (x) + cost * (y) + y0
+        self.x = cost * x - sint * y + x0
+        self.y = sint * x + cost * y + y0
 
-    def scale(self, x0, y0, scale_x, scale_y):
+    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:
+        """Scale the point around a center.
+
+        This operation translates the point as if it was part of a scaled geometry.
+
+        Parameters
+        ----------
+        x0 : float
+            Scaling center x coordinate.
+        y0 : float
+            Scaling center y coordinate.
+        scale_x : float
+            Scale factor along x.
+        scale_y : float
+            Scale factor along y.
+
+        Returns
+        -------
+        None
+
+        """
         self.x = (self.x - x0) * scale_x + x0
         self.y = (self.y - y0) * scale_y + y0
 
-    def mirrorX(self, x0):
+    def mirrorX(self, x0: float) -> None:
+        """Mirror the point with respect to a vertical axis.
+
+        Parameters
+        ----------
+        x0 : float
+            X coordinate of the mirror axis.
+
+        Returns
+        -------
+        None
+
+        """
         self.x = 2 * x0 - self.x
 
-    def mirrorY(self, y0):
+    def mirrorY(self, y0: float) -> None:
+        """Mirror the point with respect to a horizontal axis.
+
+        Parameters
+        ----------
+        y0 : float
+            Y coordinate of the mirror axis.
+
+        Returns
+        -------
+        None
+
+        """
         self.y = 2 * y0 - self.y
 
 
 class Box:
-    def __init__(self, llx: float, lly: float, width: float, height: float):
-        """
-        Initialize a box object (not for drawing)
+    """Axis-aligned bounding box utility class.
+
+    This class is used for bounding box calculations and transformations. It is not a
+    geometry element.
+    """
+
+    def __init__(self, llx: float, lly: float, width: float, height: float) -> None:
+        """Initialize a box object.
 
         Parameters
         ----------
@@ -1292,19 +1433,14 @@ class Box:
         height : float
             height of the box.
 
-        Returns
-        -------
-        None.
-
         """
         self.llx = llx
         self.lly = lly
         self.width = width
         self.height = height
 
-    def cx(self):
-        """
-        The x-coordinate of the box center
+    def cx(self) -> float:
+        """Get the x-coordinate of the box center.
 
         Returns
         -------
@@ -1314,9 +1450,8 @@ class Box:
         """
         return self.llx + self.width / 2
 
-    def cy(self):
-        """
-        The y-coordinate of the box center
+    def cy(self) -> float:
+        """Get the y-coordinate of the box center.
 
         Returns
         -------
@@ -1324,12 +1459,10 @@ class Box:
             y-coordinate of the box center.
 
         """
-
         return self.lly + self.height / 2
 
-    def urx(self):
-        """
-        The x-coordinate of the upper-right corner
+    def urx(self) -> float:
+        """Get the x-coordinate of the upper-right corner.
 
         Returns
         -------
@@ -1337,12 +1470,10 @@ class Box:
             x-coordinate of the upper-right corner.
 
         """
-
         return self.llx + self.width
 
-    def ury(self):
-        """
-        The y-coordinate of the upper-right corner
+    def ury(self) -> float:
+        """Get the y-coordinate of the upper-right corner.
 
         Returns
         -------
@@ -1350,12 +1481,10 @@ class Box:
             y-coordinate of the upper-right corner.
 
         """
-
         return self.lly + self.height
 
-    def combine(self, other: "Box"):
-        """
-        Extend the box to fit another box "other"
+    def combine(self, other: "Box") -> None:
+        """Extend the box to fit another box.
 
         Parameters
         ----------
@@ -1364,26 +1493,23 @@ class Box:
 
         Returns
         -------
-        None.
+        None
 
         """
         tmp_urx = self.urx()
         tmp_ury = self.ury()
-        if other.llx < self.llx:
-            self.llx = other.llx
-        if other.lly < self.lly:
-            self.lly = other.lly
-        if other.urx() > tmp_urx:
-            tmp_urx = other.urx()
-        if other.ury() > tmp_ury:
-            tmp_ury = other.ury()
+        self.llx = min(self.llx, other.llx)
+        self.lly = min(self.lly, other.lly)
+        tmp_urx = max(tmp_urx, other.urx())
+        tmp_ury = max(tmp_ury, other.ury())
 
         self.width = tmp_urx - self.llx
         self.height = tmp_ury - self.lly
 
-    def toPoly(self):
-        """
-        Create a Poly object (not for drawing)
+    def toPoly(self) -> "Poly":
+        """Convert the box to a `Poly` object that can be added to geometry groups.
+
+        The resulting polygon will be initialized in layer 0.
 
         Returns
         -------
@@ -1398,12 +1524,11 @@ class Box:
         )
 
     def toRect(self) -> "GeomGroup":
-        """
-        Create a group with a rectangle (as in make_rect), for drawing
+        """Create a group with a rectangle for drawing.
 
         Returns
         -------
-        g : GeomGroup
+        GeomGroup
             The group containing the bounding box rectangle.
 
         """
@@ -1411,11 +1536,10 @@ class Box:
         g.add(self.toPoly())
         return g
 
-    def get_numkey_point(self, numkey: int) -> tuple:
-        """
-        Return a tuple with x,y coordinate of the point matching the numerical
-        keypad (e.g. 5 is the center, 1 is the lower left corner, etc...)
+    def get_numkey_point(self, numkey: int) -> tuple[float, float]:
+        """Get a tuple with coordinates of the point matching a numerical keypad.
 
+        E.g. 5 is the center, 1 is the lower left corner, etc...
 
         Parameters
         ----------
@@ -1424,7 +1548,7 @@ class Box:
 
         Returns
         -------
-        tuple
+        tuple[float, float]
             The coordinates corresponding to the keypad.
 
         """
@@ -1438,35 +1562,127 @@ class Box:
 
 
 class Poly:
-    def __init__(self, xpts, ypts, layer):
+    """Closed polygon represented by interleaved coordinate data."""
+
+    def __init__(self, xpts: ArrayLike, ypts: ArrayLike, layer: int) -> None:
+        """Initialize a polygon from x/y coordinates.
+
+        Parameters
+        ----------
+        xpts : ArrayLike
+            Polygon x coordinates.
+        ypts : ArrayLike
+            Polygon y coordinates.
+        layer : int
+            Layer number.
+
+        """
         self.layer = layer
         self.set_points(xpts, ypts)
 
-    def set_points(self, xpts, ypts):
+    def set_points(self, xpts: ArrayLike, ypts: ArrayLike) -> None:
+        """Set polygon points from x and y coordinate arrays.
+
+        Parameters
+        ----------
+        xpts : ArrayLike
+            Polygon x coordinates.
+        ypts : ArrayLike
+            Polygon y coordinates.
+
+        Returns
+        -------
+        None
+
+        """
         # Note: only for polygon class, we store the points in GDS format,
         # already scaled to nanometers and as X0,Y0,X1,Y1,X2,Y2...
         # rdata = np.round_((np.array([xpts,ypts])*1000)).astype(int)
-        rdata = np.array([xpts, ypts], dtype="float64")
+        xvals = np.asarray(xpts, dtype=np.float64).reshape(-1)
+        yvals = np.asarray(ypts, dtype=np.float64).reshape(-1)
+        rdata = np.array([xvals, yvals], dtype="float64")
         self.data = np.transpose(rdata).reshape(-1)
         self.data = np.append(self.data, self.data[0:2])
         self.Npts = math.floor(self.data.size / 2)
 
-    def set_data(self, data):
+    def set_data(self, data: np.ndarray) -> None:
+        """Set polygon coordinates from interleaved coordinate data.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            Flat array `[x0, y0, x1, y1, ...]`.
+
+        Returns
+        -------
+        None
+
+        """
         self.data = data
         self.Npts = math.floor(self.data.size / 2)
 
-    def int_data(self):
+    def int_data(self) -> np.ndarray:
+        """Get polygon data scaled to integer nanometer units.
+
+        Returns
+        -------
+        np.ndarray
+            Integer coordinate array.
+
+        """
         return np.round(self.data * 1000).astype(int)
 
-    def set_int_data(self, idata):
-        self.data = idata.astype("float64") / 1000
-        self.Npts = self.data.size / 2
+    def set_int_data(self, idata: np.ndarray) -> None:
+        """Set polygon data from integer nanometer units.
 
-    def translate(self, dx, dy):
+        Parameters
+        ----------
+        idata : np.ndarray
+            Integer coordinate array.
+
+        Returns
+        -------
+        None
+
+        """
+        self.data = idata.astype("float64") / 1000
+        self.Npts = math.floor(self.data.size / 2)
+
+    def translate(self, dx: float, dy: float) -> None:
+        """Translate the polygon.
+
+        Parameters
+        ----------
+        dx : float
+            Translation along x.
+        dy : float
+            Translation along y.
+
+        Returns
+        -------
+        None
+
+        """
         self.data[0::2] += dx
         self.data[1::2] += dy
 
-    def rotate_translate(self, x0, y0, rot):
+    def rotate_translate(self, x0: float, y0: float, rot: float) -> None:
+        """Rotate the polygon around origin and then translate.
+
+        Parameters
+        ----------
+        x0 : float
+            Translation along x after rotation.
+        y0 : float
+            Translation along y after rotation.
+        rot : float
+            Rotation angle in degrees around origin.
+
+        Returns
+        -------
+        None
+
+        """
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         x = np.copy(self.data[0::2])
@@ -1474,7 +1690,23 @@ class Poly:
         self.data[0::2] = cost * (x) - sint * (y) + x0
         self.data[1::2] = sint * (x) + cost * (y) + y0
 
-    def rotate(self, x0, y0, rot):
+    def rotate(self, x0: float, y0: float, rot: float) -> None:
+        """Rotate the polygon around a center.
+
+        Parameters
+        ----------
+        x0 : float
+            Rotation center x coordinate.
+        y0 : float
+            Rotation center y coordinate.
+        rot : float
+            Rotation angle in degrees.
+
+        Returns
+        -------
+        None
+
+        """
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         x = np.copy(self.data[0::2])
@@ -1482,43 +1714,109 @@ class Poly:
         self.data[0::2] = cost * (x - x0) - sint * (y - y0) + x0
         self.data[1::2] = sint * (x - x0) + cost * (y - y0) + y0
 
-    def scale(self, x0, y0, scale_x, scale_y):
+    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:
+        """Scale polygon coordinates around a center.
+
+        Parameters
+        ----------
+        x0 : float
+            Scaling center x coordinate.
+        y0 : float
+            Scaling center y coordinate.
+        scale_x : float
+            Scale factor along x.
+        scale_y : float
+            Scale factor along y.
+
+        Returns
+        -------
+        None
+
+        """
         x = self.data[0::2]
         y = self.data[1::2]
         self.data[0::2] = scale_x * (x - x0) + x0
         self.data[1::2] = scale_y * (y - y0) + y0
 
-    def mirrorX(self, x0):
+    def mirrorX(self, x0: float) -> None:
+        """Mirror polygon vertices with respect to a vertical axis.
+
+        Parameters
+        ----------
+        x0 : float
+            X coordinate of mirror axis.
+
+        Returns
+        -------
+        None
+
+        """
         self.data[0::2] = 2 * x0 - self.data[0::2]
 
-    def mirrorY(self, y0):
+    def mirrorY(self, y0: float) -> None:
+        """Mirror polygon vertices with respect to a horizontal axis.
+
+        Parameters
+        ----------
+        y0 : float
+            Y coordinate of mirror axis.
+
+        Returns
+        -------
+        None
+
+        """
         self.data[1::2] = 2 * y0 - self.data[1::2]
 
-    def bounding_box(self):
+    def bounding_box(self) -> Box:
+        """Compute the polygon bounding box.
+
+        Returns
+        -------
+        Box
+            Axis-aligned bounding box.
+
+        """
         llx = min(self.data[0::2])
         urx = max(self.data[0::2])
         lly = min(self.data[1::2])
         ury = max(self.data[1::2])
         return Box(llx, lly, urx - llx, ury - lly)
 
-    def area(self):
+    def area(self) -> float:
+        """Compute polygon area.
+
+        Returns
+        -------
+        float
+            Absolute polygon area.
+
+        """
         area = 0.0
         x = self.data[0::2]
         y = self.data[1::2]
-        n = int(len(x))
+        n = len(x)
         j = n - 1
         for i in range(n):
             area += x[j] * y[i] - x[i] * y[j]
             j = i
         return float(round(1e6 * abs(area / 2.0))) / 1.0e6
 
-    def centroid(self):
+    def centroid(self) -> tuple[float, float]:
+        """Compute polygon centroid.
+
+        Returns
+        -------
+        tuple[float, float]
+            Centroid coordinates `(x, y)`.
+
+        """
         cx = 0
         cy = 0
         area = 0
         x = self.data[0::2]
         y = self.data[1::2]
-        n = int(len(x))
+        n = len(x)
         j = n - 1
         for i in range(n):
             shl = x[j] * y[i] - x[i] * y[j]
@@ -1530,11 +1828,19 @@ class Poly:
         cy /= 3 * area
         return cx, cy
 
-    def perimeter(self):
+    def perimeter(self) -> float:
+        """Compute polygon perimeter.
+
+        Returns
+        -------
+        float
+            Polygon perimeter length.
+
+        """
         p = 0
         x = self.data[0::2]
         y = self.data[1::2]
-        n = int(len(x))
+        n = len(x)
         j = n - 1
         for i in range(n):
             p += np.sqrt((x[i] - x[j]) ** 2 + (y[i] - y[j]) ** 2)
@@ -1542,8 +1848,7 @@ class Poly:
         return p
 
     def three_point_filter(self, keep_str: str) -> int:
-        """
-        Perform filtering of vertices based on a condition string.
+        """Perform filtering of vertices based on a condition string.
 
         Possible conditions are expressed based on the following variables:
 
@@ -1599,7 +1904,8 @@ class Poly:
         code = compile(keep_str, "<string>", "eval")
         for name in code.co_names:
             if name not in allowed_names:
-                raise NameError(f"Use of expression {name} not allowed")
+                msg = f"Use of expression {name} not allowed"
+                raise NameError(msg)
 
         #        g.group[:] = [sflat.group[i] for i,val in enumerate(sel) if val]
         #       return g
@@ -1611,6 +1917,7 @@ class Poly:
         ndisc = 0
         j = n - 1
         k = n - 2
+        aeval = Interpreter(raise_errors=True)
         for i in range(n):
             attr = x[i] * (y[j] - y[k]) + x[j] * (y[k] - y[i]) + x[k] * (y[i] - y[j])
             d1 = np.sqrt((x[i] - x[j]) ** 2 + (y[i] - y[j]) ** 2)
@@ -1629,7 +1936,8 @@ class Poly:
             allowed_names["dm"] = d2
             allowed_names["dp"] = d1
             allowed_names["d0"] = d3
-            sel = eval(code, {"__builtins__": {}}, allowed_names)
+            aeval.symtable.update(allowed_names)
+            sel = aeval(keep_str)
             if sel:
                 xf += [x[j]]
                 yf += [y[j]]
@@ -1641,12 +1949,35 @@ class Poly:
         self.set_points(xf, yf)
         return ndisc
 
-    def to_polygon(self):
+    def to_polygon(self) -> GeomGroup:
+        """Return the polygon as a single-element geometry group.
+
+        Returns
+        -------
+        GeomGroup
+            Group containing this polygon.
+
+        """
         g = GeomGroup()
         g.add(self)
         return g
 
-    def to_circle(self, thresh: float = 0.95, vcount: int = 10):
+    def to_circle(self, thresh: float = 0.95, vcount: int = 10) -> GeomGroup:
+        """Approximate polygon as a circle when sufficiently circular.
+
+        Parameters
+        ----------
+        thresh : float, optional
+            Minimum circularity threshold. Default is 0.95.
+        vcount : int, optional
+            Minimum number of vertices required to test conversion. Default is 10.
+
+        Returns
+        -------
+        GeomGroup
+            Empty group if conversion fails, otherwise a group with one circle.
+
+        """
         g = GeomGroup()
         if self.Npts < vcount:
             return g
@@ -1664,14 +1995,28 @@ class Poly:
             g.add(Circle(cx, cy, r_avg, self.layer))
         return g
 
-    def identical_to(self, p2: "Poly"):
+    def identical_to(self, p2: "Poly") -> bool:
+        """Check whether two polygons are identical.
+
+        Parameters
+        ----------
+        p2 : Poly
+            Polygon to compare with.
+
+        Returns
+        -------
+        bool
+            `True` if the polygons contain the same ordered vertices modulo starting
+            index.
+
+        """
         x = self.data[0::2]
         y = self.data[1::2]
         x2 = p2.data[0::2]
         y2 = p2.data[1::2]
         x3 = np.append(x, x)
         y3 = np.append(y, y)
-        for e in range(0, len(x)):
+        for e in range(len(x)):
             k = 0
             for w in range(e, e + len(x)):
                 if x2[k] == x3[w] and y2[k] == y3[w]:
@@ -1683,7 +2028,22 @@ class Poly:
                 return True
         return False
 
-    def point_inside(self, x, y):
+    def point_inside(self, x: float, y: float) -> bool:
+        """Test whether a point lies inside the polygon.
+
+        Parameters
+        ----------
+        x : float
+            Query x coordinate.
+        y : float
+            Query y coordinate.
+
+        Returns
+        -------
+        bool
+            `True` when the point is inside.
+
+        """
         c = False
         n = self.Npts
         xpts = self.data[0::2]
@@ -1704,23 +2064,24 @@ class Poly:
             bpy = fpy
         return c
 
-    def anisotropic_resize(self, angle, deltas):
-        """
-        Perform an anisotropic offset of the polygon.
+    def anisotropic_resize(
+        self, angle: Sequence[float], deltas: Sequence[float]
+    ) -> None:
+        """Perform an anisotropic offset of the polygon.
 
         Requires an offset array in deltas matching the angle of expansion. Angles
         should cover -90 to 90 degrees.
 
         Parameters
         ----------
-        angle : list
-            list of angles in degrees.
-        deltas : list
-            offset at a given angle.
+        angle : Sequence[float]
+            Sequence of angles in degrees.
+        deltas : Sequence[float]
+            Sequence of offsets at the corresponding angles.
 
         Returns
         -------
-        None.
+        None
 
         """
         xpts = self.data[0::2]
@@ -1760,19 +2121,67 @@ class Poly:
 
 
 class Path:
-    def __init__(self, xpts, ypts, width, layer):
-        self.xpts = xpts
-        self.ypts = ypts
+    """Open polyline with finite width."""
+
+    def __init__(
+        self, xpts: Sequence[float], ypts: Sequence[float], width: float, layer: int
+    ) -> None:
+        """Initialize a path.
+
+        Parameters
+        ----------
+        xpts : Sequence[float]
+            X coordinates of path vertices.
+        ypts : Sequence[float]
+            Y coordinates of path vertices.
+        width : float
+            Path width.
+        layer : int
+            Layer number.
+
+        """
+        self.xpts = list(xpts)
+        self.ypts = list(ypts)
         self.width = width
         self.layer = layer
-        self.Npts = len(xpts)
+        self.Npts = len(self.xpts)
 
-    def translate(self, dx, dy):
+    def translate(self, dx: float, dy: float) -> None:
+        """Translate the path.
+
+        Parameters
+        ----------
+        dx : float
+            Translation along x.
+        dy : float
+            Translation along y.
+
+        Returns
+        -------
+        None
+
+        """
         for i in range(self.Npts):
             self.xpts[i] = self.xpts[i] + dx
             self.ypts[i] = self.ypts[i] + dy
 
-    def rotate_translate(self, x0, y0, rot):
+    def rotate_translate(self, x0: float, y0: float, rot: float) -> None:
+        """Rotate around origin and then translate path vertices.
+
+        Parameters
+        ----------
+        x0 : float
+            Translation along x after rotation.
+        y0 : float
+            Translation along y after rotation.
+        rot : float
+            Rotation angle in degrees around origin.
+
+        Returns
+        -------
+        None
+
+        """
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         for i in range(self.Npts):
@@ -1781,7 +2190,23 @@ class Path:
             self.xpts[i] = cost * (x) - sint * (y) + x0
             self.ypts[i] = sint * (x) + cost * (y) + y0
 
-    def rotate(self, x0, y0, rot):
+    def rotate(self, x0: float, y0: float, rot: float) -> None:
+        """Rotate the path around a center.
+
+        Parameters
+        ----------
+        x0 : float
+            Rotation center x coordinate.
+        y0 : float
+            Rotation center y coordinate.
+        rot : float
+            Rotation angle in degrees.
+
+        Returns
+        -------
+        None
+
+        """
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         for i in range(self.Npts):
@@ -1790,7 +2215,25 @@ class Path:
             self.xpts[i] = cost * (x - x0) - sint * (y - y0) + x0
             self.ypts[i] = sint * (x - x0) + cost * (y - y0) + y0
 
-    def scale(self, x0, y0, scale_x, scale_y):
+    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:
+        """Scale path vertices around a center.
+
+        Parameters
+        ----------
+        x0 : float
+            Scaling center x coordinate.
+        y0 : float
+            Scaling center y coordinate.
+        scale_x : float
+            Scale factor along x.
+        scale_y : float
+            Scale factor along y.
+
+        Returns
+        -------
+        None
+
+        """
         for i in range(self.Npts):
             x = self.xpts[i]
             y = self.ypts[i]
@@ -1798,22 +2241,62 @@ class Path:
             self.ypts[i] = scale_y * (y - y0) + y0
             self.width *= scale_x
 
-    def mirrorX(self, x0):
+    def mirrorX(self, x0: float) -> None:
+        """Mirror path vertices with respect to a vertical axis.
+
+        Parameters
+        ----------
+        x0 : float
+            X coordinate of mirror axis.
+
+        Returns
+        -------
+        None
+
+        """
         for i in range(self.Npts):
             self.xpts[i] = 2 * x0 - self.xpts[i]
 
-    def mirrorY(self, y0):
+    def mirrorY(self, y0: float) -> None:
+        """Mirror path vertices with respect to a horizontal axis.
+
+        Parameters
+        ----------
+        y0 : float
+            Y coordinate of mirror axis.
+
+        Returns
+        -------
+        None
+
+        """
         for i in range(self.Npts):
             self.ypts[i] = 2 * y0 - self.ypts[i]
 
-    def bounding_box(self):
+    def bounding_box(self) -> Box:
+        """Compute the path bounding box.
+
+        Returns
+        -------
+        Box
+            Axis-aligned bounding box of path vertices.
+
+        """
         llx = min(self.xpts)
         urx = max(self.xpts)
         lly = min(self.ypts)
         ury = max(self.ypts)
         return Box(llx, lly, urx - llx, ury - lly)
 
-    def path_length(self):
+    def path_length(self) -> float:
+        """Compute centerline path length.
+
+        Returns
+        -------
+        float
+            Total length of the path centerline.
+
+        """
         x = self.xpts
         y = self.ypts
         plen = 0.0
@@ -1821,93 +2304,176 @@ class Path:
             plen += np.sqrt((x[i] - x[i - 1]) ** 2 + (y[i] - y[i - 1]) ** 2)
         return plen
 
-    def area(self):
+    def area(self) -> float:
+        """Estimate path area as `length * width`.
+
+        Returns
+        -------
+        float
+            Approximate area.
+
+        """
         # Approximately the path length * width
         return self.path_length() * self.width
 
-    def centroid(self):
+    def centroid(self) -> tuple[float, float]:
+        """Estimate path centroid from average vertex position.
+
+        Returns
+        -------
+        tuple[float, float]
+            Approximate centroid `(x, y)`.
+
+        """
         # Give the average x,y
         cx = np.array(self.xpts).mean()
         cy = np.array(self.ypts).mean()
         return cx, cy
 
-    def perimeter(self):
+    def perimeter(self) -> float:
+        """Estimate path perimeter.
+
+        Returns
+        -------
+        float
+            Approximate perimeter based on centerline length and width.
+
+        """
         # Approximately twice the length and twice width
         return self.path_length() * 2 + self.width * 2
 
-    def to_polygon(self):
+    def _get_1pt_poly_coords(
+        self, x: list[float], y: list[float], w: float
+    ) -> tuple[list[float], list[float]]:
+        x0 = x[0]
+        y0 = y[0]
+        xpts = [x0 - w / 2, x0 + w / 2, x0 + w / 2, x0 - w / 2]
+        ypts = [y0 - w / 2, y0 - w / 2, y0 + w / 2, y0 + w / 2]
+        return xpts, ypts
+
+    def _get_2pt_poly_coords(
+        self, x: list[float], y: list[float], w: float
+    ) -> tuple[list[float], list[float]]:
+        ang1 = math.atan2(y[1] - y[0], x[1] - x[0])
+        c1 = w / 2 * math.cos(ang1 - math.pi / 2)
+        c2 = w / 2 * math.cos(ang1 + math.pi / 2)
+        s1 = w / 2 * math.sin(ang1 - math.pi / 2)
+        s2 = w / 2 * math.sin(ang1 + math.pi / 2)
+        xpts = [x[0] + c1, x[1] + c1, x[1] + c2, x[0] + c2]
+        ypts = [y[0] + s1, y[1] + s1, y[1] + s2, y[0] + s2]
+        return xpts, ypts
+
+    def _get_npt_poly_coords(
+        self, x: list[float], y: list[float], w: float
+    ) -> tuple[list[float], list[float]]:
+        xpts1 = []
+        ypts1 = []
+        xpts2 = []
+        ypts2 = []
+        for j in range(1, self.Npts - 1):
+            ang1 = math.atan2(y[j] - y[j - 1], x[j] - x[j - 1])
+            ang2 = math.atan2(y[j + 1] - y[j], x[j + 1] - x[j])
+            d = (x[j + 1] - x[j - 1]) * (y[j] - y[j - 1]) - (y[j + 1] - y[j - 1]) * (
+                x[j] - x[j - 1]
+            )
+            if j == 1:
+                xpts1.append(x[j - 1] + w / 2 * math.cos(ang1 - math.pi / 2))
+                ypts1.append(y[j - 1] + w / 2 * math.sin(ang1 - math.pi / 2))
+                xpts2.append(x[j - 1] + w / 2 * math.cos(ang1 + math.pi / 2))
+                ypts2.append(y[j - 1] + w / 2 * math.sin(ang1 + math.pi / 2))
+
+            if d < 0:
+                xpts1.append(x[j] + w / 2 * math.cos(ang1 - math.pi / 2))
+                ypts1.append(y[j] + w / 2 * math.sin(ang1 - math.pi / 2))
+                xpts1.append(x[j] + w / 2 * math.cos(ang2 - math.pi / 2))
+                ypts1.append(y[j] + w / 2 * math.sin(ang2 - math.pi / 2))
+                wx = w / 2 / math.cos((ang2 - ang1) / 2)
+                a0 = math.pi / 2 - (ang1 + ang2) / 2
+                xpts2.append(x[j] - wx * math.cos(a0))
+                ypts2.append(y[j] + wx * math.sin(a0))
+            else:
+                xpts2.append(x[j] + w / 2 * math.cos(ang1 + math.pi / 2))
+                ypts2.append(y[j] + w / 2 * math.sin(ang1 + math.pi / 2))
+                xpts2.append(x[j] + w / 2 * math.cos(ang2 + math.pi / 2))
+                ypts2.append(y[j] + w / 2 * math.sin(ang2 + math.pi / 2))
+                wx = w / 2 / math.cos((ang2 - ang1) / 2)
+                a0 = math.pi / 2 - (ang1 + ang2) / 2
+                xpts1.append(x[j] + wx * math.cos(a0))
+                ypts1.append(y[j] - wx * math.sin(a0))
+            if j == self.Npts - 2:
+                xpts1.append(x[j + 1] + w / 2 * math.cos(ang2 - math.pi / 2))
+                ypts1.append(y[j + 1] + w / 2 * math.sin(ang2 - math.pi / 2))
+                xpts2.append(x[j + 1] + w / 2 * math.cos(ang2 + math.pi / 2))
+                ypts2.append(y[j + 1] + w / 2 * math.sin(ang2 + math.pi / 2))
+
+        xpts2.reverse()
+        ypts2.reverse()
+        xpts = xpts1 + xpts2
+        ypts = ypts1 + ypts2
+        return xpts, ypts
+
+    def to_polygon(self) -> GeomGroup:
+        """Convert the path to polygon geometry.
+
+        Returns
+        -------
+        GeomGroup
+            Group containing polygon approximation of the path.
+
+        """
         x = self.xpts
         y = self.ypts
         w = self.width
-        p1 = Poly([0], [0], self.layer)
         if self.Npts == 1:
-            p1.set_points(
-                [-w / 2, w / 2, w / 2, -w / 2], [-w / 2, -w / 2, w / 2, w / 2]
-            )
-            p1.translate(x, y)
-
-        if self.Npts == 2:
-            ang1 = math.atan2(y[1] - y[0], x[1] - x[0])
-            c1 = w / 2 * math.cos(ang1 - math.pi / 2)
-            c2 = w / 2 * math.cos(ang1 + math.pi / 2)
-            s1 = w / 2 * math.sin(ang1 - math.pi / 2)
-            s2 = w / 2 * math.sin(ang1 + math.pi / 2)
-            p1.set_points(
-                [x[0] + c1, x[1] + c1, x[1] + c2, x[0] + c2],
-                [y[0] + s1, y[1] + s1, y[1] + s2, y[0] + s2],
-            )
-
-        if self.Npts > 2:
-            xp1 = []
-            yp1 = []
-            xp2 = []
-            yp2 = []
-            for j in range(1, self.Npts - 1):
-                ang1 = math.atan2(y[j] - y[j - 1], x[j] - x[j - 1])
-                ang2 = math.atan2(y[j + 1] - y[j], x[j + 1] - x[j])
-                d = (x[j + 1] - x[j - 1]) * (y[j] - y[j - 1]) - (
-                    y[j + 1] - y[j - 1]
-                ) * (x[j] - x[j - 1])
-                if j == 1:
-                    xp1.append(x[j - 1] + w / 2 * math.cos(ang1 - math.pi / 2))
-                    yp1.append(y[j - 1] + w / 2 * math.sin(ang1 - math.pi / 2))
-                    xp2.append(x[j - 1] + w / 2 * math.cos(ang1 + math.pi / 2))
-                    yp2.append(y[j - 1] + w / 2 * math.sin(ang1 + math.pi / 2))
-
-                if d < 0:
-                    xp1.append(x[j] + w / 2 * math.cos(ang1 - math.pi / 2))
-                    yp1.append(y[j] + w / 2 * math.sin(ang1 - math.pi / 2))
-                    xp1.append(x[j] + w / 2 * math.cos(ang2 - math.pi / 2))
-                    yp1.append(y[j] + w / 2 * math.sin(ang2 - math.pi / 2))
-                    wx = w / 2 / math.cos((ang2 - ang1) / 2)
-                    a0 = math.pi / 2 - (ang1 + ang2) / 2
-                    xp2.append(x[j] - wx * math.cos(a0))
-                    yp2.append(y[j] + wx * math.sin(a0))
-                else:
-                    xp2.append(x[j] + w / 2 * math.cos(ang1 + math.pi / 2))
-                    yp2.append(y[j] + w / 2 * math.sin(ang1 + math.pi / 2))
-                    xp2.append(x[j] + w / 2 * math.cos(ang2 + math.pi / 2))
-                    yp2.append(y[j] + w / 2 * math.sin(ang2 + math.pi / 2))
-                    wx = w / 2 / math.cos((ang2 - ang1) / 2)
-                    a0 = math.pi / 2 - (ang1 + ang2) / 2
-                    xp1.append(x[j] + wx * math.cos(a0))
-                    yp1.append(y[j] - wx * math.sin(a0))
-                if j == self.Npts - 2:
-                    xp1.append(x[j + 1] + w / 2 * math.cos(ang2 - math.pi / 2))
-                    yp1.append(y[j + 1] + w / 2 * math.sin(ang2 - math.pi / 2))
-                    xp2.append(x[j + 1] + w / 2 * math.cos(ang2 + math.pi / 2))
-                    yp2.append(y[j + 1] + w / 2 * math.sin(ang2 + math.pi / 2))
-
-            xp2.reverse()
-            yp2.reverse()
-            p1.set_points(xp1 + xp2, yp1 + yp2)
+            xpts, ypts = self._get_1pt_poly_coords(x, y, w)
+        elif self.Npts == 2:
+            xpts, ypts = self._get_2pt_poly_coords(x, y, w)
+        else:
+            xpts, ypts = self._get_npt_poly_coords(x, y, w)
         g = GeomGroup()
-        g.add(p1)
+        g.add(Poly(xpts, ypts, self.layer))
         return g
 
 
 class Text:
-    def __init__(self, x0, y0, text, posu, posv, height, width, angle, layer):
+    """Text annotation object with stroke-based polygon conversion."""
+
+    def __init__(
+        self,
+        x0: float,
+        y0: float,
+        text: str,
+        posu: int,
+        posv: int,
+        height: float,
+        width: float,
+        angle: float,
+        layer: int,
+    ) -> None:
+        """Create a text object.
+
+        Parameters
+        ----------
+        x0 : float
+            Text anchor x coordinate.
+        y0 : float
+            Text anchor y coordinate.
+        text : str
+            Text string.
+        posu : int
+            Horizontal alignment index.
+        posv : int
+            Vertical alignment index.
+        height : float
+            Character height.
+        width : float
+            Stroke width.
+        angle : float
+            Rotation angle in degrees.
+        layer : int
+            Layer number.
+
+        """
         self.x0 = x0
         self.y0 = y0
         self.text = text
@@ -1918,11 +2484,41 @@ class Text:
         self.angle = angle
         self.layer = layer
 
-    def translate(self, dx, dy):
+    def translate(self, dx: float, dy: float) -> None:
+        """Translate text anchor position.
+
+        Parameters
+        ----------
+        dx : float
+            Translation along x.
+        dy : float
+            Translation along y.
+
+        Returns
+        -------
+        None
+
+        """
         self.x0 += dx
         self.y0 += dy
 
-    def rotate_translate(self, dx, dy, rot):
+    def rotate_translate(self, dx: float, dy: float, rot: float) -> None:
+        """Rotate around origin then translate text anchor.
+
+        Parameters
+        ----------
+        dx : float
+            Translation along x after rotation.
+        dy : float
+            Translation along y after rotation.
+        rot : float
+            Rotation angle in degrees around origin.
+
+        Returns
+        -------
+        None
+
+        """
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         xv = self.x0
@@ -1931,7 +2527,23 @@ class Text:
         self.y0 = sint * xv + cost * yv + dy
         self.angle += rot
 
-    def rotate(self, xc, yc, rot):
+    def rotate(self, xc: float, yc: float, rot: float) -> None:
+        """Rotate text around a center.
+
+        Parameters
+        ----------
+        xc : float
+            Rotation center x coordinate.
+        yc : float
+            Rotation center y coordinate.
+        rot : float
+            Rotation angle in degrees.
+
+        Returns
+        -------
+        None
+
+        """
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         xv = self.x0 - xc
@@ -1940,34 +2552,116 @@ class Text:
         self.y0 = sint * xv + cost * yv + yc
         self.angle += rot
 
-    def scale(self, xc, yc, scale_x, scale_y):
+    def scale(self, xc: float, yc: float, scale_x: float, scale_y: float) -> None:
+        """Scale text anchor and glyph dimensions.
+
+        Parameters
+        ----------
+        xc : float
+            Scaling center x coordinate.
+        yc : float
+            Scaling center y coordinate.
+        scale_x : float
+            Scale factor along x.
+        scale_y : float
+            Scale factor along y.
+
+        Returns
+        -------
+        None
+
+        """
         self.x0 = scale_x * (self.x0 - xc) + xc
         self.y0 = scale_y * (self.y0 - yc) + yc
         self.height *= scale_y
         self.width *= scale_x
 
-    def mirrorX(self, xc):
+    def mirrorX(self, xc: float) -> None:
+        """Mirror text with respect to a vertical axis.
+
+        Parameters
+        ----------
+        xc : float
+            X coordinate of mirror axis.
+
+        Returns
+        -------
+        None
+
+        """
         self.x0 = 2 * xc - self.x0
         self.angle = 180 - self.angle
 
-    def mirrorY(self, yc):
+    def mirrorY(self, yc: float) -> None:
+        """Mirror text with respect to a horizontal axis.
+
+        Parameters
+        ----------
+        yc : float
+            Y coordinate of mirror axis.
+
+        Returns
+        -------
+        None
+
+        """
         self.y0 = 2 * yc - self.y0
         self.angle = -self.angle
 
-    def bounding_box(self):
+    def bounding_box(self) -> Box:
+        """Return a degenerate bounding box at text anchor.
+
+        Returns
+        -------
+        Box
+            Bounding box estimate with zero width and height.
+
+        """
         # Note this cannot be properly estimated
         return Box(self.x0, self.y0, 0, 0)
 
-    def area(self):
-        return 0
+    def area(self) -> float:
+        """Return area proxy for text.
 
-    def centroid(self):
+        Returns
+        -------
+        float
+            Always `0`.
+
+        """
+        return 0.0
+
+    def centroid(self) -> tuple[float, float]:
+        """Return text anchor as centroid.
+
+        Returns
+        -------
+        tuple[float, float]
+            Anchor coordinates `(x, y)`.
+
+        """
         return self.x0, self.y0
 
-    def perimeter(self):
-        return 0
+    def perimeter(self) -> float:
+        """Return perimeter proxy for text.
 
-    def __to_path(self):
+        Returns
+        -------
+        float
+            Always `0`.
+
+        """
+        return 0.0
+
+    def __to_path(self) -> GeomGroup:
+        """Convert text glyphs into stroked path geometry.
+
+        Returns
+        -------
+        GeomGroup
+            Group containing path strokes for all supported glyphs.
+
+        """
         offset = 0
         g = GeomGroup()
         for c in self.text:
@@ -1990,14 +2684,42 @@ class Text:
         g.translate(self.x0, self.y0)
         return g
 
-    def to_polygon(self):
+    def to_polygon(self) -> GeomGroup:
+        """Convert text into polygon geometry.
+
+        Returns
+        -------
+        GeomGroup
+            Group containing polygon representation of the text.
+
+        """
         g = self.__to_path()
         g.path_to_poly()
         return g
 
 
 class RefBase:
-    def __init__(self, x0, y0, mag, angle, mirror):
+    """Base transformation class for cell references."""
+
+    def __init__(
+        self, x0: float, y0: float, mag: float, angle: float, mirror: bool
+    ) -> None:
+        """Initialize common reference transform parameters.
+
+        Parameters
+        ----------
+        x0 : float
+            Reference x coordinate.
+        y0 : float
+            Reference y coordinate.
+        mag : float
+            Magnification factor.
+        angle : float
+            Rotation angle in degrees.
+        mirror : bool
+            Whether reflection is enabled.
+
+        """
         self.x0 = x0
         self.y0 = y0
         self.mag = mag
@@ -2005,11 +2727,41 @@ class RefBase:
         self.mirror = mirror
         self.layer = 0  # Unused
 
-    def translate(self, dx, dy):
+    def translate(self, dx: float, dy: float) -> None:
+        """Translate reference position.
+
+        Parameters
+        ----------
+        dx : float
+            Translation along x.
+        dy : float
+            Translation along y.
+
+        Returns
+        -------
+        None
+
+        """
         self.x0 += dx
         self.y0 += dy
 
-    def rotate_translate(self, dx, dy, rot):
+    def rotate_translate(self, dx: float, dy: float, rot: float) -> None:
+        """Rotate around origin and then translate reference position.
+
+        Parameters
+        ----------
+        dx : float
+            Translation along x after rotation.
+        dy : float
+            Translation along y after rotation.
+        rot : float
+            Rotation angle in degrees.
+
+        Returns
+        -------
+        None
+
+        """
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         xv = self.x0
@@ -2019,7 +2771,23 @@ class RefBase:
         self.angle += rot
         self.angle = self.angle % 360
 
-    def rotate(self, xc, yc, rot):
+    def rotate(self, xc: float, yc: float, rot: float) -> None:
+        """Rotate reference position around a center.
+
+        Parameters
+        ----------
+        xc : float
+            Rotation center x coordinate.
+        yc : float
+            Rotation center y coordinate.
+        rot : float
+            Rotation angle in degrees.
+
+        Returns
+        -------
+        None
+
+        """
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         xv = self.x0 - xc
@@ -2029,33 +2797,122 @@ class RefBase:
         self.angle += rot
         self.angle = self.angle % 360
 
-    def scale(self, xc, yc, scale_x, scale_y):
+    def scale(self, xc: float, yc: float, scale_x: float, scale_y: float) -> None:
+        """Scale reference position and magnification.
+
+        Parameters
+        ----------
+        xc : float
+            Scaling center x coordinate.
+        yc : float
+            Scaling center y coordinate.
+        scale_x : float
+            Scale factor along x.
+        scale_y : float
+            Scale factor along y.
+
+        Returns
+        -------
+        None
+
+        """
         self.x0 = scale_x * (self.x0 - xc) + xc
         self.y0 = scale_y * (self.y0 - yc) + yc
         self.mag *= scale_x
 
-    def mirrorX(self, xc):
+    def mirrorX(self, xc: float) -> None:
+        """Mirror reference with respect to a vertical axis.
+
+        Parameters
+        ----------
+        xc : float
+            X coordinate of mirror axis.
+
+        Returns
+        -------
+        None
+
+        """
         self.x0 = 2 * xc - self.x0
         self.mirror = not self.mirror
         self.angle = 180 - self.angle
         self.angle = self.angle % 360
 
-    def mirrorY(self, yc):
+    def mirrorY(self, yc: float) -> None:
+        """Mirror reference with respect to a horizontal axis.
+
+        Parameters
+        ----------
+        yc : float
+            Y coordinate of mirror axis.
+
+        Returns
+        -------
+        None
+
+        """
         self.y0 = 2 * yc - self.y0
         self.mirror = not self.mirror
         self.angle = -self.angle
 
-    def centroid(self):
+    def centroid(self) -> tuple[float, float]:
+        """Return reference anchor point.
+
+        Returns
+        -------
+        tuple[float, float]
+            Anchor coordinates `(x, y)`.
+
+        """
         return self.x0, self.y0
 
 
 class SRef(RefBase):
-    def __init__(self, x0, y0, cellname, group, mag, angle, mirror):
+    """Single-cell reference geometry."""
+
+    def __init__(
+        self,
+        x0: float,
+        y0: float,
+        cellname: str,
+        group: GeomGroup,
+        mag: float,
+        angle: float,
+        mirror: bool,
+    ) -> None:
+        """Create a single cell reference.
+
+        Parameters
+        ----------
+        x0 : float
+            Reference x coordinate.
+        y0 : float
+            Reference y coordinate.
+        cellname : str
+            Name of the referenced cell.
+        group : GeomGroup
+            Geometry of the referenced cell.
+        mag : float
+            Magnification factor.
+        angle : float
+            Rotation angle in degrees.
+        mirror : bool
+            Whether reflection is enabled.
+
+        """
         RefBase.__init__(self, x0, y0, mag, angle, mirror)
         self.cellname = cellname
         self.group = group
 
-    def bounding_box(self):
+    def bounding_box(self) -> Box:
+        """Compute transformed bounding box of referenced geometry.
+
+        Returns
+        -------
+        Box
+            Bounding box after magnification, rotation, and mirror.
+
+        """
         if self.cellname in _BoundingBoxPool:
             bb = _BoundingBoxPool[self.cellname]
         else:
@@ -2067,7 +2924,20 @@ class SRef(RefBase):
             p.mirrorY(self.y0)
         return p.bounding_box()
 
-    def place_group(self, flat_group):
+    def place_group(self, flat_group: GeomGroup) -> GeomGroup:
+        """Apply reference transform to a flattened group.
+
+        Parameters
+        ----------
+        flat_group : GeomGroup
+            Group to transform and place.
+
+        Returns
+        -------
+        GeomGroup
+            Transformed geometry group.
+
+        """
         # scale first
         if self.mag != 1:
             flat_group.scale(0, 0, self.mag, self.mag)
@@ -2082,9 +2952,56 @@ class SRef(RefBase):
 
 
 class ARef(SRef):
+    """Array reference to repeated cell placements."""
+
     def __init__(
-        self, x0, y0, cellname, group, ncols, nrows, ax, ay, bx, by, mag, angle, mirror
-    ):
+        self,
+        x0: float,
+        y0: float,
+        cellname: str,
+        group: GeomGroup,
+        ncols: int,
+        nrows: int,
+        ax: float,
+        ay: float,
+        bx: float,
+        by: float,
+        mag: float,
+        angle: float,
+        mirror: bool,
+    ) -> None:
+        """Create an array reference.
+
+        Parameters
+        ----------
+        x0 : float
+            Reference origin x coordinate.
+        y0 : float
+            Reference origin y coordinate.
+        cellname : str
+            Name of the referenced cell.
+        group : GeomGroup
+            Geometry of the referenced cell.
+        ncols : int
+            Number of columns.
+        nrows : int
+            Number of rows.
+        ax : float
+            X increment per column.
+        ay : float
+            Y increment per column.
+        bx : float
+            X increment per row.
+        by : float
+            Y increment per row.
+        mag : float
+            Magnification factor.
+        angle : float
+            Rotation angle in degrees.
+        mirror : bool
+            Whether reflection is enabled.
+
+        """
         SRef.__init__(self, x0, y0, cellname, group, mag, angle, mirror)
         self.ncols = ncols
         self.nrows = nrows
@@ -2093,7 +3010,15 @@ class ARef(SRef):
         self.bx = bx
         self.by = by
 
-    def bounding_box(self):
+    def bounding_box(self) -> Box:
+        """Compute bounding box of all array instances.
+
+        Returns
+        -------
+        Box
+            Bounding box covering all placements.
+
+        """
         bb = SRef.bounding_box(self)
         bbn = deepcopy(bb)
         for i in range(self.ncols):
@@ -2103,7 +3028,20 @@ class ARef(SRef):
                 bbn.combine(Box(bb.llx + dx, bb.lly + dy, bb.width, bb.height))
         return bbn
 
-    def place_group(self, flat_group):
+    def place_group(self, flat_group: GeomGroup) -> GeomGroup:
+        """Instantiate flattened group across the array lattice.
+
+        Parameters
+        ----------
+        flat_group : GeomGroup
+            Flattened geometry for one array element.
+
+        Returns
+        -------
+        GeomGroup
+            Group containing all array instances.
+
+        """
         SRef.place_group(self, flat_group)
         base_group = flat_group.copy()
         for i in range(self.ncols):
@@ -2119,17 +3057,63 @@ class ARef(SRef):
 
 
 class Circle:
-    def __init__(self, x0, y0, r, layer):
+    """Circular geometry primitive."""
+
+    def __init__(self, x0: float, y0: float, r: float, layer: int) -> None:
+        """Create a circle.
+
+        Parameters
+        ----------
+        x0 : float
+            Center x coordinate.
+        y0 : float
+            Center y coordinate.
+        r : float
+            Radius.
+        layer : int
+            Layer number.
+
+        """
         self.x0 = x0
         self.y0 = y0
         self.r = r
         self.layer = layer
 
-    def translate(self, dx, dy):
+    def translate(self, dx: float, dy: float) -> None:
+        """Translate circle center.
+
+        Parameters
+        ----------
+        dx : float
+            Translation along x.
+        dy : float
+            Translation along y.
+
+        Returns
+        -------
+        None
+
+        """
         self.x0 += dx
         self.y0 += dy
 
-    def rotate_translate(self, xc, yc, rot):
+    def rotate_translate(self, xc: float, yc: float, rot: float) -> None:
+        """Rotate center around origin and then translate.
+
+        Parameters
+        ----------
+        xc : float
+            Translation along x after rotation.
+        yc : float
+            Translation along y after rotation.
+        rot : float
+            Rotation angle in degrees around origin.
+
+        Returns
+        -------
+        None
+
+        """
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         x = self.x0
@@ -2137,7 +3121,23 @@ class Circle:
         self.x0 = cost * x - sint * y + xc
         self.y0 = sint * x + cost * y + yc
 
-    def rotate(self, xc, yc, rot):
+    def rotate(self, xc: float, yc: float, rot: float) -> None:
+        """Rotate circle center around a point.
+
+        Parameters
+        ----------
+        xc : float
+            Rotation center x coordinate.
+        yc : float
+            Rotation center y coordinate.
+        rot : float
+            Rotation angle in degrees.
+
+        Returns
+        -------
+        None
+
+        """
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         x = self.x0
@@ -2145,30 +3145,117 @@ class Circle:
         self.x0 = cost * (x - xc) - sint * (y - yc) + xc
         self.y0 = sint * (x - xc) + cost * (y - yc) + yc
 
-    def scale(self, xc, yc, scale_x, scale_y):
+    def scale(self, xc: float, yc: float, scale_x: float, scale_y: float) -> None:
+        """Scale circle center and radius.
+
+        Parameters
+        ----------
+        xc : float
+            Scaling center x coordinate.
+        yc : float
+            Scaling center y coordinate.
+        scale_x : float
+            Scale factor along x.
+        scale_y : float
+            Scale factor along y.
+
+        Returns
+        -------
+        None
+
+        """
         self.x0 = scale_x * (self.x0 - xc) + xc
         self.y0 = scale_y * (self.y0 - yc) + yc
         self.r = scale_x * self.r
 
-    def mirrorX(self, xc):
+    def mirrorX(self, xc: float) -> None:
+        """Mirror circle center with respect to a vertical axis.
+
+        Parameters
+        ----------
+        xc : float
+            X coordinate of mirror axis.
+
+        Returns
+        -------
+        None
+
+        """
         self.x0 = 2 * xc - self.x0
 
-    def mirrorY(self, yc):
+    def mirrorY(self, yc: float) -> None:
+        """Mirror circle center with respect to a horizontal axis.
+
+        Parameters
+        ----------
+        yc : float
+            Y coordinate of mirror axis.
+
+        Returns
+        -------
+        None
+
+        """
         self.y0 = 2 * yc - self.y0
 
-    def bounding_box(self):
+    def bounding_box(self) -> Box:
+        """Compute circle bounding box.
+
+        Returns
+        -------
+        Box
+            Axis-aligned bounding box.
+
+        """
         return Box(self.x0 - self.r, self.y0 - self.r, 2 * self.r, 2 * self.r)
 
-    def area(self):
+    def area(self) -> float:
+        """Compute circle area.
+
+        Returns
+        -------
+        float
+            Circle area.
+
+        """
         return np.pi * self.r * self.r
 
-    def centroid(self):
+    def centroid(self) -> tuple[float, float]:
+        """Return circle centroid.
+
+        Returns
+        -------
+        tuple[float, float]
+            Center coordinates `(x, y)`.
+
+        """
         return self.x0, self.y0
 
-    def perimeter(self):
+    def perimeter(self) -> float:
+        """Compute circle perimeter.
+
+        Returns
+        -------
+        float
+            Circumference.
+
+        """
         return 2 * np.pi * self.r
 
-    def to_polygon(self, Npts=12):
+    def to_polygon(self, Npts: int = 12) -> GeomGroup:
+        """Approximate the circle with a polygon.
+
+        Parameters
+        ----------
+        Npts : int, optional
+            Number of polygon vertices. Default is 12.
+
+        Returns
+        -------
+        GeomGroup
+            Group containing one polygon approximation.
+
+        """
         xc = np.array([0.0] * Npts)
         yc = np.array([0.0] * Npts)
         for i in range(Npts):
@@ -2180,44 +3267,177 @@ class Circle:
 
 
 class Ellipse(Circle):
-    def __init__(self, x0, y0, rX, rY, layer, rot):
+    """Ellipse primitive with independent x/y radii and rotation."""
+
+    def __init__(
+        self, x0: float, y0: float, rX: float, rY: float, layer: int, rot: float
+    ) -> None:
+        """Create an ellipse.
+
+        Parameters
+        ----------
+        x0 : float
+            Center x coordinate.
+        y0 : float
+            Center y coordinate.
+        rX : float
+            Radius along x before rotation.
+        rY : float
+            Radius along y before rotation.
+        layer : int
+            Layer number.
+        rot : float
+            Rotation angle in degrees.
+
+        """
         Circle.__init__(self, x0, y0, rX, layer)
         self.r1 = rY
         self.rot = rot
 
-    def rotate_translate(self, xc, yc, rot):
+    def rotate_translate(self, xc: float, yc: float, rot: float) -> None:
+        """Rotate around origin then translate center and orientation.
+
+        Parameters
+        ----------
+        xc : float
+            Translation along x after rotation.
+        yc : float
+            Translation along y after rotation.
+        rot : float
+            Rotation angle in degrees around origin.
+
+        Returns
+        -------
+        None
+
+        """
         Circle.rotate_translate(self, xc, yc, rot)
         self.rot += rot
 
-    def rotate(self, xc, yc, rot):
+    def rotate(self, xc: float, yc: float, rot: float) -> None:
+        """Rotate ellipse around a center.
+
+        Parameters
+        ----------
+        xc : float
+            Rotation center x coordinate.
+        yc : float
+            Rotation center y coordinate.
+        rot : float
+            Rotation angle in degrees.
+
+        Returns
+        -------
+        None
+
+        """
         Circle.rotate(self, xc, yc, rot)
         self.rot += rot
 
-    def scale(self, xc, yc, scale_x, scale_y):
+    def scale(self, xc: float, yc: float, scale_x: float, scale_y: float) -> None:
+        """Scale ellipse center and radii.
+
+        Parameters
+        ----------
+        xc : float
+            Scaling center x coordinate.
+        yc : float
+            Scaling center y coordinate.
+        scale_x : float
+            Scale factor along x.
+        scale_y : float
+            Scale factor along y.
+
+        Returns
+        -------
+        None
+
+        """
         Circle.scale(self, xc, yc, scale_x, scale_y)
         self.r1 *= scale_y
 
-    def mirrorX(self, xc):
+    def mirrorX(self, xc: float) -> None:
+        """Mirror ellipse with respect to a vertical axis.
+
+        Parameters
+        ----------
+        xc : float
+            X coordinate of mirror axis.
+
+        Returns
+        -------
+        None
+
+        """
         Circle.mirrorX(self, xc)
         self.rot = 180 - self.rot
 
-    def mirrorY(self, yc):
+    def mirrorY(self, yc: float) -> None:
+        """Mirror ellipse with respect to a horizontal axis.
+
+        Parameters
+        ----------
+        yc : float
+            Y coordinate of mirror axis.
+
+        Returns
+        -------
+        None
+
+        """
         Circle.mirrorY(self, yc)
         self.rot = -self.rot
 
-    def bounding_box(self):
+    def bounding_box(self) -> Box:
+        """Compute ellipse bounding box from polygon approximation.
+
+        Returns
+        -------
+        Box
+            Axis-aligned bounding box.
+
+        """
         g = self.to_polygon(12)
         return g.bounding_box()
 
-    def area(self):
+    def area(self) -> float:
+        """Compute ellipse area.
+
+        Returns
+        -------
+        float
+            Ellipse area.
+
+        """
         return np.pi * self.r * self.r1
 
-    def perimeter(self):
+    def perimeter(self) -> float:
+        """Estimate ellipse perimeter.
+
+        Returns
+        -------
+        float
+            Ramanujan approximation of perimeter.
+
+        """
         a = self.r
         b = self.r1
         return np.pi * (3 * (a + b) - np.sqrt((3 * a + b) * (a + 3 * b)))
 
-    def to_polygon(self, Npts=32):
+    def to_polygon(self, Npts: int = 32) -> GeomGroup:
+        """Approximate the ellipse with a polygon.
+
+        Parameters
+        ----------
+        Npts : int, optional
+            Number of polygon vertices. Default is 32.
+
+        Returns
+        -------
+        GeomGroup
+            Group containing one polygon approximation.
+
+        """
         xc = np.array([0.0] * Npts)
         yc = np.array([0.0] * Npts)
         for i in range(Npts):
@@ -2230,28 +3450,114 @@ class Ellipse(Circle):
 
 
 class Ring(Ellipse):
-    def __init__(self, x0, y0, rX, rY, layer, rot, w):
+    """Elliptical annulus primitive."""
+
+    def __init__(
+        self,
+        x0: float,
+        y0: float,
+        rX: float,
+        rY: float,
+        layer: int,
+        rot: float,
+        w: float,
+    ) -> None:
+        """Create a ring.
+
+        Parameters
+        ----------
+        x0 : float
+            Center x coordinate.
+        y0 : float
+            Center y coordinate.
+        rX : float
+            Outer-center radius along x.
+        rY : float
+            Outer-center radius along y.
+        layer : int
+            Layer number.
+        rot : float
+            Rotation angle in degrees.
+        w : float
+            Ring width.
+
+        """
         Ellipse.__init__(self, x0, y0, rX, rY, layer, rot)
         self.w = w
 
-    def scale(self, xc, yc, scale_x, scale_y):
+    def scale(self, xc: float, yc: float, scale_x: float, scale_y: float) -> None:
+        """Scale ring center, radii, and width.
+
+        Parameters
+        ----------
+        xc : float
+            Scaling center x coordinate.
+        yc : float
+            Scaling center y coordinate.
+        scale_x : float
+            Scale factor along x.
+        scale_y : float
+            Scale factor along y.
+
+        Returns
+        -------
+        None
+
+        """
         Ellipse.scale(self, xc, yc, scale_x, scale_y)
         self.w *= scale_x
 
-    def bounding_box(self):
+    def bounding_box(self) -> Box:
+        """Compute ring bounding box from polygon approximation.
+
+        Returns
+        -------
+        Box
+            Axis-aligned bounding box.
+
+        """
         g = self.to_polygon(12)
         return g.bounding_box()
 
-    def area(self):
+    def area(self) -> float:
+        """Compute ring area.
+
+        Returns
+        -------
+        float
+            Area enclosed by outer contour minus inner contour.
+
+        """
         a1 = np.pi * (self.r + self.w / 2) * (self.r1 + self.w / 2)
         a2 = np.pi * (self.r - self.w / 2) * (self.r1 - self.w / 2)
         return a1 - a2
 
-    def perimeter(self):
+    def perimeter(self) -> float:
+        """Estimate ring perimeter from polygon approximation.
+
+        Returns
+        -------
+        float
+            Approximate total contour length.
+
+        """
         g = self.to_polygon(12)
         return g.group[0].perimeter()
 
-    def to_polygon(self, Npts=32):
+    def to_polygon(self, Npts: int = 32) -> GeomGroup:
+        """Approximate ring contours with a polygon.
+
+        Parameters
+        ----------
+        Npts : int, optional
+            Number of segments used per contour. Default is 32.
+
+        Returns
+        -------
+        GeomGroup
+            Group containing one polygon for the ring.
+
+        """
         xpts = np.array([0.0] * (2 + Npts * 2))
         ypts = np.array([0.0] * (2 + Npts * 2))
         for i in range(1 + Npts):
@@ -2275,24 +3581,100 @@ class Ring(Ellipse):
 
 
 class Arc(Ring):
-    def __init__(self, x0, y0, rX, rY, layer, rot, w, a1, a2):
+    """Arc segment of an elliptical ring."""
+
+    def __init__(
+        self,
+        x0: float,
+        y0: float,
+        rX: float,
+        rY: float,
+        layer: int,
+        rot: float,
+        w: float,
+        a1: float,
+        a2: float,
+    ) -> None:
+        """Create an arc.
+
+        Parameters
+        ----------
+        x0 : float
+            Center x coordinate.
+        y0 : float
+            Center y coordinate.
+        rX : float
+            Radius along x.
+        rY : float
+            Radius along y.
+        layer : int
+            Layer number.
+        rot : float
+            Rotation angle in degrees.
+        w : float
+            Arc width.
+        a1 : float
+            Start angle in degrees.
+        a2 : float
+            End angle in degrees.
+
+        """
         Ring.__init__(self, x0, y0, rX, rY, layer, rot, w)
         self.a1 = a1
         self.a2 = a2
 
-    def bounding_box(self):
+    def bounding_box(self) -> Box:
+        """Compute arc bounding box from polygon approximation.
+
+        Returns
+        -------
+        Box
+            Axis-aligned bounding box.
+
+        """
         g = self.to_polygon(12)
         return g.bounding_box()
 
-    def area(self):
+    def area(self) -> float:
+        """Compute arc area from parent ring area and angular span.
+
+        Returns
+        -------
+        float
+            Arc area.
+
+        """
         ra = Ring.area(self)
         return ra * (math.radians(self.a2) - math.radians(self.a1)) / 2 / np.pi
 
-    def centroid(self):
+    def centroid(self) -> tuple[float, float]:
+        """Get the centroid of the arc.
+
+        Returns
+        -------
+        tuple[float, float]
+            Coordinates of the centroid `(x, y)`
+
+        """
         g = self.to_polygon(12)
         return g.group[0].centroid()
 
-    def to_polygon(self, Npts=32, autosplit=False):
+    def to_polygon(self, Npts: int = 32, autosplit: bool = False) -> GeomGroup:
+        """Convert arc to polygon.
+
+        Parameters
+        ----------
+        Npts : int, optional
+            Number of points to approximate the arc. Default is 32.
+        autosplit : bool, optional
+            Whether to split the arc into multiple polygons. Default is False.
+
+        Returns
+        -------
+        GeomGroup
+            GeomGroup containing the polygon representation of the arc.
+
+        """
         Npts += 1
         th = np.linspace(math.radians(self.a1), math.radians(self.a2), Npts)
         xpts1 = np.cos(th) * (self.r + self.w / 2) + self.x0
@@ -2303,21 +3685,23 @@ class Arc(Ring):
         if autosplit:
             for i in range(Npts - 1):
                 p1 = Poly(
-                    np.append(
+                    xpts=np.append(
                         xpts1[i : (i + 2)],
                         xpts2[(-Npts + 1 + i) : (-Npts - 1 + i) : -1],
                     ),
-                    np.append(
+                    ypts=np.append(
                         ypts1[i : (i + 2)],
                         ypts2[(-Npts + 1 + i) : (-Npts - 1 + i) : -1],
                     ),
-                    self.layer,
+                    layer=self.layer,
                 )
                 p1.rotate(self.x0, self.y0, self.rot)
                 g.add(p1)
         else:
             p1 = Poly(
-                np.append(xpts1, xpts2[::-1]), np.append(ypts1, ypts2[::-1]), self.layer
+                xpts=np.append(xpts1, xpts2[::-1]),
+                ypts=np.append(ypts1, ypts2[::-1]),
+                layer=self.layer,
             )
             p1.rotate(self.x0, self.y0, self.rot)
             g.add(p1)
@@ -2326,8 +3710,8 @@ class Arc(Ring):
 
 # Load fonts and store the glyphs
 # Maybe we should place this somewhere else
-caps = dict()
-with open(_STENCIL_FONT_PATH, encoding=_STENCIL_FONT_ENCODING) as f:
+caps = {}
+with _Path(_STENCIL_FONT_PATH).open(encoding=_STENCIL_FONT_ENCODING) as f:
     c = "a"
     for line in f:
         test = line.rstrip("\n").split(" ")
@@ -2338,8 +3722,7 @@ with open(_STENCIL_FONT_PATH, encoding=_STENCIL_FONT_ENCODING) as f:
             nums = list(map(float, test))
             caps[c] += nums
 
-for i in caps:
-    data = caps[i]
+for i, data in caps.items():
     gl = GeomGroup()
     xpts = []
     ypts = []

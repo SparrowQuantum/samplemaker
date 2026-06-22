@@ -240,7 +240,7 @@ class TestBox:
     def test_to_poly(self, box_obj: sp.Box) -> None:
         poly = box_obj.toPoly()
         assert isinstance(poly, sp.Poly)
-        # poly.data should be of the format [x0, y0, x1, y1, x2, y2, x3, y3, ..., x0, y0]
+        # poly.data should be of the format [x0, y0, x1, y1, x2, y2, ..., x0, y0]
         assert isinstance(poly.data, np.ndarray)
         assert len(poly.data) == 10
 
@@ -284,8 +284,7 @@ class TestBox:
 
 
 class TestPoly:
-    """
-    Tests for the Poly class.
+    """Tests for the Poly class.
 
     Methods without coverage:
 
@@ -503,7 +502,7 @@ class TestPath:
         xpts, ypts = poly_pts
         path_obj.rotate(0.0, 0.0, 90.0)
         expected_xpts = [-y for y in ypts]
-        expected_ypts = [x for x in xpts]
+        expected_ypts = list(xpts)
         assert path_obj.xpts == pytest.approx(expected_xpts)
         assert path_obj.ypts == pytest.approx(expected_ypts)
 
@@ -738,7 +737,7 @@ class TestSRef:
         assert len(g.group) == 1
         assert g is geomgroup_obj
 
-    @pytest.mark.parametrize("xoff, yoff", [(1.0, 2.0), (-1.0, -2.0), (0.5, -0.5)])
+    @pytest.mark.parametrize(("xoff", "yoff"), [(1.0, 2.0), (-1.0, -2.0), (0.5, -0.5)])
     def test_translate(
         self, sref_obj: sp.SRef, sref_kwargs: SRefKwargs, xoff: float, yoff: float
     ) -> None:
@@ -766,7 +765,7 @@ class TestSRef:
         assert sref_obj.y0 == pytest.approx(expected_y0)
         assert sref_obj.angle == pytest.approx(expected_angle)
 
-    @pytest.mark.parametrize("sx, sy", [(2.0, 3.0), (0.5, 0.5), (1.0, 1.0)])
+    @pytest.mark.parametrize(("sx", "sy"), [(2.0, 3.0), (0.5, 0.5), (1.0, 1.0)])
     def test_scale(
         self, sref_obj: sp.SRef, sref_kwargs: SRefKwargs, sx: float, sy: float
     ) -> None:
@@ -815,7 +814,7 @@ class TestSRef:
         sref_obj.mirrorY(0.0)
         assert sref_obj.mirror is False
 
-    @pytest.mark.parametrize("xoff, yoff", [(1.0, 2.0), (-1.0, -2.0), (0.5, -0.5)])
+    @pytest.mark.parametrize(("xoff", "yoff"), [(1.0, 2.0), (-1.0, -2.0), (0.5, -0.5)])
     def test_centroid(
         self, sref_obj: sp.SRef, geomgroup_obj: sp.GeomGroup, xoff: float, yoff: float
     ) -> None:
@@ -824,7 +823,7 @@ class TestSRef:
         sref_obj.translate(xoff, yoff)
         assert sref_obj.centroid() == pytest.approx((expected_x0, expected_y0))
 
-    @pytest.mark.parametrize("xoff, yoff", [(1.0, 2.0), (-1.0, -2.0), (0.5, -0.5)])
+    @pytest.mark.parametrize(("xoff", "yoff"), [(1.0, 2.0), (-1.0, -2.0), (0.5, -0.5)])
     def test_bounding_box(
         self, sref_obj: sp.SRef, geomgroup_obj: sp.GeomGroup, xoff: float, yoff: float
     ) -> None:
@@ -843,7 +842,7 @@ class TestSRef:
         assert bb.height == pytest.approx(expected_height)
 
     @pytest.mark.parametrize(
-        "mag, angle, mirror",
+        ("mag", "angle", "mirror"),
         [(1.0, 0.0, False), (2.0, 90.0, False)],
     )
     def test_bounding_box_matches_placed_group(
@@ -938,7 +937,7 @@ class TestAref:
         assert len(g.group) == 1
         assert g is geomgroup_obj
 
-    @pytest.mark.parametrize("xoff, yoff", [(1.0, 2.0), (-1.0, -2.0), (0.5, -0.5)])
+    @pytest.mark.parametrize(("xoff", "yoff"), [(1.0, 2.0), (-1.0, -2.0), (0.5, -0.5)])
     def test_translate(
         self, aref_obj: sp.ARef, aref_kwargs: ARefKwargs, xoff: float, yoff: float
     ) -> None:
@@ -958,7 +957,7 @@ class TestAref:
         assert aref_obj.y0 == pytest.approx(-aref_kwargs.y0 + 3.0)
         assert aref_obj.angle == pytest.approx((aref_kwargs.angle + 180.0) % 360)
 
-    @pytest.mark.parametrize("sx, sy", [(2.0, 3.0), (0.5, 0.5), (1.0, 1.0)])
+    @pytest.mark.parametrize(("sx", "sy"), [(2.0, 3.0), (0.5, 0.5), (1.0, 1.0)])
     def test_scale(
         self, aref_obj: sp.ARef, aref_kwargs: ARefKwargs, sx: float, sy: float
     ) -> None:
@@ -1033,7 +1032,7 @@ class TestAref:
         assert bb.ury() == pytest.approx(ury)
 
     @pytest.mark.parametrize(
-        "mag, angle, mirror",
+        ("mag", "angle", "mirror"),
         [(1.0, 0.0, False), (2.0, 90.0, False)],
     )
     def test_bounding_box_matches_placed_group(
@@ -1328,7 +1327,10 @@ class TestArc:
         assert isinstance(g, sp.GeomGroup)
         assert len(g.group) == 1
         assert isinstance(g.group[0], sp.Poly)
-        assert g.group[0].layer == arc_obj.layer
+        poly = g.group[0]
+        assert poly.layer == arc_obj.layer
+        poly_ypts = poly.data[1::2]
+        assert np.all(poly_ypts >= arc_obj.y0)
 
     def test_to_polygon_autosplit(self, arc_obj: sp.Arc) -> None:
         n_segments = 8
@@ -1338,6 +1340,9 @@ class TestArc:
         assert len(g.group) == n_segments
         assert all(isinstance(poly, sp.Poly) for poly in g.group)
         assert all(poly.layer == arc_obj.layer for poly in g.group)
+        for poly in g.group:
+            poly_ypts = poly.data[1::2]
+            assert np.all(poly_ypts >= arc_obj.y0)
 
 
 class TestGeomGroup:
@@ -1762,7 +1767,9 @@ class TestGeomGroup:
         g = sp.Box(0.0, 0.0, 1.0, 1.0).toRect()
         g.set_layer(layer)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match="It is only possible to search for a single polygon shape"
+        ):
             g.find_matching_patterns(pattern, layer)
 
     @pytest.mark.xfail(
