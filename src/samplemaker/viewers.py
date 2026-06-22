@@ -6,6 +6,7 @@ viewers.
 """
 
 import warnings
+from warnings import deprecated
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -84,7 +85,7 @@ def __get_device_ports_patches(dev: Device) -> list:
     return patches
 
 
-def GeomView(grp: GeomGroup) -> None:
+def view_geometry(grp: GeomGroup) -> None:
     """Plot a geometry in a matplotlib window.
 
     Only polygons and circles are displayed. Most elements are either ignored or
@@ -110,6 +111,31 @@ def GeomView(grp: GeomGroup) -> None:
     plt.grid()
     plt.axis("equal")
     plt.show()
+
+
+@deprecated(
+    "GeomView is deprecated and will be removed "
+    "in a future version. Use view_geometry instead."
+)
+def GeomView(grp: GeomGroup) -> None:  # noqa: N802
+    """Plot a geometry in a matplotlib window.
+
+    Only polygons and circles are displayed. Most elements are either ignored or
+    converted to polygon.
+
+    No flattening is performed, thus structure references are not displayed.
+
+    Parameters
+    ----------
+    grp : GeomGroup
+        The geometry to be displayed.
+
+    Returns
+    -------
+    None
+
+    """
+    view_geometry(grp)
 
 
 def __update_scrollbar(_val: float) -> None:
@@ -147,14 +173,14 @@ def _build_device(devcl: Device | type[Device]) -> Device:
     elif isinstance(devcl, type) and issubclass(devcl, Device):
         dev = devcl.build()
     else:
-        msg = "DeviceInspect only accepts Device classes or Device instances."
+        msg = "Invalid argument: expected Device classes or Device instances."
         raise TypeError(msg)
 
     dev.use_references = False
     return dev
 
 
-def DeviceInspect(devcl: Device | type[Device]) -> None:
+def inspect_device(devcl: Device | type[Device]) -> None:
     """Interactive display of devices defined from `samplemaker.devices`.
 
     If a device class is provided, the device is rendered using its default
@@ -237,3 +263,31 @@ def DeviceInspect(devcl: Device | type[Device]) -> None:
         _ViewerCurrentSliders.append(samp)
 
     plt.show()
+
+
+@deprecated(
+    "DeviceInspect is deprecated and will be removed "
+    "in a future version. Use inspect_device instead."
+)
+def DeviceInspect(devcl: Device | type[Device]) -> None:  # noqa: N802
+    """Interactive display of devices defined from `samplemaker.devices`.
+
+    If a device class is provided, the device is rendered using its default
+    parameter values. If a device instance is provided, the device is rendered
+    using the instance's current parameter values.
+
+    Additionally a set of scrollbars is created to interactively modify
+    the parameters and observe the changes in real time.
+    If the device includes ports, they are displayed as blue arrows.
+
+    Parameters
+    ----------
+    devcl : Device | type[Device]
+        A device instance or class to be displayed.
+
+    Returns
+    -------
+    None
+
+    """
+    inspect_device(devcl)

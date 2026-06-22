@@ -17,7 +17,7 @@ from samplemaker.baselib.waveguides import BaseWaveguidePort, BaseWaveguideSeque
 from samplemaker.devices import Device
 
 # And the device inspection tool
-from samplemaker.viewers import DeviceInspect
+from samplemaker.viewers import inspect_device
 
 # We have imported the BaseWaveguidePort, which can be used to build ports interfacing
 # the device to the outside (e.g. to other devices in a circuit).
@@ -105,7 +105,7 @@ sdc = DirectionalCoupler.build()
 g = sdc.run()
 
 # We can inspect the device
-DeviceInspect(sdc)
+inspect_device(sdc)
 
 # We will now check if ports are working as expected.
 

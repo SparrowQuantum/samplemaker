@@ -69,6 +69,7 @@ extend-select = [
     "RUF",  # ruff
     "PGH",  # pygrep-hooks
     "PERF", # perflint
+    "N",    # pep8-naming
 ]
 ignore = ["D203", "D213", "PLR2004", "PLR091"]
 
