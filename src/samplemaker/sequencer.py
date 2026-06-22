@@ -74,14 +74,18 @@ COMMANDS_DICT_TYPE: TypeAlias = dict[str, _CMD_DICT_VAL_TYPE]
 
 
 def __changeState(
-    args: ARGS_TYPE, state: STATE_TYPE, options: OPTIONS_TYPE
+    args: ARGS_TYPE,
+    state: STATE_TYPE,
+    options: OPTIONS_TYPE,  # noqa: ARG001
 ) -> GeomGroup:
     state[args[0]] = args[1]
     return GeomGroup()
 
 
 def __centerState(
-    args: ARGS_TYPE, state: STATE_TYPE, options: OPTIONS_TYPE
+    args: ARGS_TYPE,
+    state: STATE_TYPE,
+    options: OPTIONS_TYPE,  # noqa: ARG001
 ) -> GeomGroup:
     state["__XC__"] = -state["x"] + args[0]
     state["__YC__"] = -state["y"] + args[1]
@@ -89,7 +93,9 @@ def __centerState(
 
 
 def __storeState(
-    args: ARGS_TYPE, state: STATE_TYPE, options: OPTIONS_TYPE
+    args: ARGS_TYPE,  # noqa: ARG001
+    state: STATE_TYPE,
+    options: OPTIONS_TYPE,  # noqa: ARG001
 ) -> GeomGroup:
     state["STORED"] += [[state["x"], state["y"]]]
     return GeomGroup()
@@ -167,13 +173,13 @@ def default_command_list() -> COMMANDS_DICT_TYPE:
         The default command dictionary.
 
     """
-    defcmdlist = dict()
-    defcmdlist["INIT"] = (0, __initState)
-    defcmdlist["STATE"] = (2, __changeState)
-    defcmdlist["CENTER"] = (2, __centerState)
-    defcmdlist["STORE"] = (0, __storeState)
-    defcmdlist["DEV"] = (3, __insertDevice)
-    return defcmdlist
+    return {
+        "INIT": (0, __initState),
+        "STATE": (2, __changeState),
+        "CENTER": (2, __centerState),
+        "STORE": (0, __storeState),
+        "DEV": (3, __insertDevice),
+    }
 
 
 def default_options() -> OPTIONS_TYPE:
@@ -187,7 +193,7 @@ def default_options() -> OPTIONS_TYPE:
         Returns the default options for the sequencer.
 
     """
-    defopts = dict()
+    defopts = {}
     for dname in _DeviceList:
         dev = _DeviceList[dname]()
         dev.parameters()
@@ -219,7 +225,7 @@ class SequencerState:
         * 'STORED': Stores the current position when calling 'STORE'
 
         """
-        self.state: STATE_TYPE = dict()
+        self.state: STATE_TYPE = {}
         self.state["x"] = 0
         self.state["y"] = 0
         self.state["a"] = 0

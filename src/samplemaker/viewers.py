@@ -37,10 +37,6 @@ def __get_geom_patches(grp: GeomGroup) -> list:
             tmpp = Polygon(xy, closed=True)
             tmpp.set_facecolor(lcolor)
             patches.append(tmpp)
-        elif isinstance(geom, smsh.Circle):
-            tmpc = Circle((geom.x0, geom.y0), geom.r)
-            tmpc.set_facecolor(lcolor)
-            patches.append(tmpc)
         elif isinstance(geom, smsh.Path):
             xy = np.transpose([geom.xpts, geom.ypts])
             tmpp = Polygon(xy, closed=False)
@@ -51,26 +47,22 @@ def __get_geom_patches(grp: GeomGroup) -> list:
             # stacklevel=3 to point to calling function, not this one.
             msg = "text display is not supported, please convert to polygon first."
             warnings.warn(msg, stacklevel=3, category=UserWarning)
+        elif isinstance(geom, smsh.Ring):
+            gpl = geom.to_polygon()
+            g = gpl.group[0]
+            n = int(len(g.data) / 2)
+            xy = np.reshape(g.data, (n, 2))
+            tmpp = Polygon(xy, closed=True)
+            tmpp.set_facecolor(lcolor)
+            patches.append(tmpp)
         elif isinstance(geom, smsh.Ellipse):
             tmpe = Ellipse((geom.x0, geom.y0), geom.r * 2, geom.r1 * 2, angle=geom.rot)
             tmpe.set_facecolor(lcolor)
             patches.append(tmpe)
-        elif isinstance(geom, smsh.Ring):
-            gpl = geom.to_polygon()
-            geom = gpl.group[0]
-            n = int(len(geom.data) / 2)
-            xy = np.reshape(geom.data, (n, 2))
-            tmpp = Polygon(xy, closed=True)
-            tmpp.set_facecolor(lcolor)
-            patches.append(tmpp)
-        elif isinstance(geom, smsh.Arc):
-            gpl = geom.to_polygon()
-            geom = gpl.group[0]
-            n = int(len(geom.data) / 2)
-            xy = np.reshape(geom.data, (n, 2))
-            tmpp = Polygon(xy, closed=True)
-            tmpp.set_facecolor(lcolor)
-            patches.append(tmpp)
+        elif isinstance(geom, smsh.Circle):
+            tmpc = Circle((geom.x0, geom.y0), geom.r)
+            tmpc.set_facecolor(lcolor)
+            patches.append(tmpc)
         elif isinstance(geom, smsh.SRef):
             msg = "SRef and ARef display is not supported, please flatten first."
             warnings.warn(msg, stacklevel=3, category=UserWarning)
@@ -121,9 +113,6 @@ def GeomView(grp: GeomGroup) -> None:
 
 
 def __update_scrollbar(_val: float) -> None:
-    global _ViewerCurrentDevice
-    global _ViewerCurrentSliders
-    global _ViewerCurrentAxes
     dev = _ViewerCurrentDevice
     ax = _ViewerCurrentAxes
     if dev is None or ax is None:
@@ -150,6 +139,21 @@ def __update_scrollbar(_val: float) -> None:
     ax.figure.canvas.draw_idle()
 
 
+def _build_device(devcl: Device | type[Device]) -> Device:
+    if isinstance(devcl, Device):
+        dev = devcl.build()  # Device copy with default parameters
+        for param, value in devcl._p.items():
+            dev.set_param(param, value)
+    elif isinstance(devcl, type) and issubclass(devcl, Device):
+        dev = devcl.build()
+    else:
+        msg = "DeviceInspect only accepts Device classes or Device instances."
+        raise TypeError(msg)
+
+    dev.use_references = False
+    return dev
+
+
 def DeviceInspect(devcl: Device | type[Device]) -> None:
     """Interactive display of devices defined from `samplemaker.devices`.
 
@@ -171,21 +175,11 @@ def DeviceInspect(devcl: Device | type[Device]) -> None:
     None
 
     """
-    global _ViewerCurrentDevice
-    global _ViewerCurrentSliders
-    global _ViewerCurrentAxes
+    global _ViewerCurrentDevice  # noqa: PLW0603
+    global _ViewerCurrentSliders  # noqa: PLW0603
+    global _ViewerCurrentAxes  # noqa: PLW0603
 
-    if isinstance(devcl, Device):
-        dev = devcl.build()  # Device copy with default parameters
-        for param, value in devcl._p.items():
-            dev.set_param(param, value)
-    elif isinstance(devcl, type) and issubclass(devcl, Device):
-        dev = devcl.build()
-    else:
-        msg = "DeviceInspect only accepts Device classes or Device instances."
-        raise TypeError(msg)
-
-    dev.use_references = False
+    dev = _build_device(devcl)
     _ViewerCurrentDevice = dev
     g = dev.run()
 

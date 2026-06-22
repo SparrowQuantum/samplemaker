@@ -8,10 +8,15 @@ object in the `samplemaker.layout` submodule.
 import math
 import struct
 import time
+from pathlib import Path as _Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 import samplemaker.shapes as smsh
+
+if TYPE_CHECKING:
+    from io import BufferedWriter
 
 
 class GDSWriter:
@@ -33,10 +38,10 @@ class GDSWriter:
         self.arcres = arcres
         self.xc = np.array([0.0] * circleres)
         self.yc = np.array([0.0] * circleres)
+        self.fid: BufferedWriter | None = None
         for i in range(circleres):
             self.xc[i] = math.cos(i * 2 * math.pi / circleres)
             self.yc[i] = math.sin(i * 2 * math.pi / circleres)
-        # Init stuff goes here
 
     def __write_string(self, text: str, tag: int) -> None:
         L = len(text)
@@ -57,6 +62,9 @@ class GDSWriter:
         self.__write_data(struct.pack("8B", *real))
 
     def __write_data(self, data: bytes) -> None:
+        if self.fid is None:
+            msg = "File stream is not open."
+            raise ValueError(msg)
         self.fid.write(data)
 
     def __write_polygon(self, poly: smsh.Poly) -> None:
@@ -183,13 +191,12 @@ class GDSWriter:
         group = []
         for geom in gg.group:
             geomtype = type(geom)
-            if geomtype == smsh.Poly:
-                if geom.Npts > 8000:
-                    newgrp = smsh.GeomGroup()
-                    newgrp.add(geom)
-                    newgrp.trapezoids(geom.layer)
-                    group += newgrp.group
-                    continue
+            if geomtype == smsh.Poly and geom.Npts > 8000:
+                newgrp = smsh.GeomGroup()
+                newgrp.add(geom)
+                newgrp.trapezoids(geom.layer)
+                group += newgrp.group
+                continue
             group += [geom]
         gg.group = group
         return gg
@@ -209,7 +216,13 @@ class GDSWriter:
         None
 
         """
-        self.fid = open(filename, "wb")
+        if self.fid is not None:
+            msg = (
+                "A file stream is already open. "
+                "Please close it before opening a new one."
+            )
+            raise ValueError(msg)
+        self.fid = _Path(filename).open("wb")  # noqa: SIM115
         # Write header
         lt = time.localtime(time.time())
         buf = np.array(
@@ -407,7 +420,7 @@ class GDSWriter:
 
         """
         for sname, group in pool.items():
-            if sname in cache.keys():
+            if sname in cache:
                 print("Writing cached", sname)
                 self.__write_data(cache[sname])
             else:
@@ -421,9 +434,16 @@ class GDSWriter:
         None
 
         """
+        if self.fid is None:
+            return
         self.__write_data(struct.pack(">2H", 4, 1024))
         pos = self.fid.tell()
         buf = np.zeros(2048 - pos % 2048, dtype=int)
         self.__write_data(struct.pack(f"{buf.size}b", *buf))
         print("Writing to GDS complete.")
         self.fid.close()
+        self.fid = None
+
+    def __del__(self) -> None:
+        """Destructor to ensure the file stream is closed."""
+        self.close_library()

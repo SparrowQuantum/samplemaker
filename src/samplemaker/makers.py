@@ -71,7 +71,7 @@ def make_path(
     ypts: list[float],
     width: float,
     layer: int = 1,
-    to_poly: bool = 0,
+    to_poly: bool = False,
 ) -> GeomGroup:
     """Create a path object (open line with width).
 
@@ -315,7 +315,7 @@ def make_ellipse(
     rY: float,
     rot: float,
     layer: int = 1,
-    to_poly: bool = 0,
+    to_poly: bool = False,
     vertices: int = 32,
 ) -> GeomGroup:
     """Create a filled ellipse.
@@ -363,7 +363,7 @@ def make_ring(
     rot: float,
     w: float,
     layer: int = 1,
-    to_poly: bool = 0,
+    to_poly: bool = False,
     vertices: int = 32,
 ) -> GeomGroup:
     """Create an elliptical ring.
@@ -415,7 +415,7 @@ def make_arc(
     a1: float,
     a2: float,
     layer: int = 1,
-    to_poly: bool = 0,
+    to_poly: bool = False,
     vertices: int = 32,
     split: bool = False,
 ) -> GeomGroup:

@@ -92,6 +92,7 @@ import math
 import pickle  # for caching
 from collections.abc import Sequence
 from copy import deepcopy
+from pathlib import Path as _Path
 
 from samplemaker import (
     LayoutPool,
@@ -201,7 +202,7 @@ class MarkerSet(Marker):
         g = self.dev.run()
         sref = g.group[0]
         if self.mset == 2:
-            aref = make_aref(
+            return make_aref(
                 self.x0,
                 self.y0,
                 sref.cellname,
@@ -213,10 +214,8 @@ class MarkerSet(Marker):
                 0,
                 self.ydist,
             )
-            return aref
-
         if self.mset == 4:
-            aref = make_aref(
+            return make_aref(
                 self.x0,
                 self.y0,
                 sref.cellname,
@@ -228,7 +227,6 @@ class MarkerSet(Marker):
                 0,
                 self.ydist,
             )
-            return aref
         return g
 
 
@@ -458,7 +456,7 @@ class DeviceTable:
         self.annotations = None
         self.use_references = True
         self.pos_xy = tuple([tuple([(0, 0) for _ in range(ncol)]) for _ in range(nrow)])
-        self._external_ports = dict()
+        self._external_ports = {}
         self._geometries = []
         self._portmap = []
         self._backup_dev = deepcopy(dev)  # Keep it to reset the whole thing
@@ -605,7 +603,7 @@ class DeviceTable:
 
     def __build_geomarray(self) -> None:
         dev = self.dev
-        self._portmap = [[dict() for _ in range(self.ncol)] for _ in range(self.nrow)]
+        self._portmap = [[{} for _ in range(self.ncol)] for _ in range(self.nrow)]
         self._geometries = [
             [GeomGroup() for _ in range(self.ncol)] for _ in range(self.nrow)
         ]
@@ -681,14 +679,10 @@ class DeviceTable:
                 self.pos_xy[j][i][1] = -by
                 bboxes[j][i].llx -= bx
                 bboxes[j][i].lly -= by
-                if bboxes[j][i].urx() > x_extrR[i]:
-                    x_extrR[i] = bboxes[j][i].urx()
-                if bboxes[j][i].ury() > y_extrT[j]:
-                    y_extrT[j] = bboxes[j][i].ury()
-                if bboxes[j][i].llx < x_extrL[i]:
-                    x_extrL[i] = bboxes[j][i].llx
-                if bboxes[j][i].lly < y_extrB[j]:
-                    y_extrB[j] = bboxes[j][i].lly
+                x_extrR[i] = max(x_extrR[i], bboxes[j][i].urx())
+                y_extrT[j] = max(y_extrT[j], bboxes[j][i].ury())
+                x_extrL[i] = min(x_extrL[i], bboxes[j][i].llx)
+                y_extrB[j] = min(y_extrB[j], bboxes[j][i].lly)
 
         sx = [(x_extrR[i - 1] - x_extrL[i] + min_dist_x) for i in range(1, self.ncol)]
         sy = [(y_extrT[j - 1] - y_extrB[j] + min_dist_y) for j in range(1, self.nrow)]
@@ -976,7 +970,6 @@ class Mask:
 
     def __export_cache(self) -> None:
         print("Storing objects in cache file...")
-        cachefile = open(self.name + ".cache", "wb")
         # Note that we do not need the full geometry, as we will just reload
         # it from the GDS file. So we keep the references only.
         # We might, however, need to re-compute the bounding boxes
@@ -992,26 +985,26 @@ class Mask:
             _DevicePool,
             _BoundingBoxPool,
         )
-        pickle.dump(data, cachefile)
-        cachefile.close()
+        with _Path(self.name + ".cache").open("wb") as cachefile:
+            pickle.dump(data, cachefile)
         print("Done.")
 
     def __import_cache(self) -> None:
         try:
-            with open(self.name + ".cache", "rb") as cachefile:
+            with _Path(self.name + ".cache").open("rb") as cachefile:
                 print("Loading cache data...")
-                data = pickle.load(cachefile)
+                data = pickle.load(cachefile)  # noqa: S301, to be replaced
                 print("Done.")
-                for key in data[0].keys():
+                for key in data[0]:
                     LayoutPool[key] = data[0][key]
                 LayoutPool.pop(self.mainsymbol, None)
-                for key in data[1].keys():
+                for key in data[1]:
                     _DeviceCountPool[key] = data[1][key]
-                for key in data[2].keys():
+                for key in data[2]:
                     _DeviceLocalParamPool[key] = data[2][key]
-                for key in data[3].keys():
+                for key in data[3]:
                     _DevicePool[key] = data[3][key]
-                for key in data[4].keys():
+                for key in data[4]:
                     _BoundingBoxPool[key] = data[4][key]
         except OSError:
             pass
@@ -1023,7 +1016,7 @@ class Mask:
 
         unref = []
         unref_hsh = []
-        for ref in LayoutPool.keys():
+        for ref in LayoutPool:
             if ref not in reflist:
                 unref += [ref]
 
@@ -1093,7 +1086,7 @@ class Mask:
             if cname not in reflist:
                 mainsymbolcandidates.add(cname)
         if len(mainsymbolcandidates) == 1:
-            self.mainsymbol = [i for i in mainsymbolcandidates][0]
+            self.mainsymbol = list(mainsymbolcandidates)[0]
         else:
             nsubref = 0
             for cname in mainsymbolcandidates:

@@ -69,16 +69,19 @@ to save memory and computation time. For example
 
 import math
 import pathlib
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from copy import deepcopy
-from typing import Collection, Self
+from pathlib import Path as _Path
+from typing import Self
 
 import numpy as np
+from asteval import Interpreter
+from numpy.typing import ArrayLike
 
-import samplemaker.resources.boopy as boopy
 from samplemaker import _BoundingBoxPool
+from samplemaker.resources import boopy
 
-_glyphs = dict()
+_glyphs = {}
 
 _STENCIL_FONT_FILENAME = "sm_stencil_font.txt"
 _STENCIL_FONT_ENCODING = "ISO-8859-1"
@@ -96,7 +99,7 @@ class GeomGroup:
 
     def __init__(self) -> None:
         """Create an empty GeomGroup with no elements."""
-        self.group = list()
+        self.group = []
 
     def __add__(self, other: "GeomGroup") -> "GeomGroup":
         """Combine two geometry groups.
@@ -116,7 +119,7 @@ class GeomGroup:
         gg.group = self.group + other.group
         return gg
 
-    def add(self, geom: "Poly | SRef | Path | Text") -> None:
+    def add(self, geom: "Poly | SRef | Path | Text | Circle") -> None:
         """Add a shape to the group.
 
         Parameters
@@ -355,7 +358,7 @@ class GeomGroup:
             Dictionary containing per-type entity counts.
 
         """
-        cnt = dict()
+        cnt = {}
         lfgroup = self.group
         if layer_wise:
             lfgroup = [g for g in self.group if g.layer == layer]
@@ -374,7 +377,7 @@ class GeomGroup:
                 if isinstance(g, SRef):
                     subcnt = g.group.__entity_count(recursive, layer_wise, layer)
                     if type(g) is ARef:
-                        for e in subcnt.keys():
+                        for e in subcnt:
                             subcnt[e] *= g.ncols * g.nrows
                     for name in cnt:
                         cnt[name] += subcnt[name]
@@ -405,7 +408,7 @@ class GeomGroup:
             Contains information on the group geometry.
 
         """
-        stat = dict()
+        stat = {}
         bb = self.bounding_box()
         layer_list = self.get_layer_list()
         stat["BoundingBox"] = {
@@ -433,10 +436,10 @@ class GeomGroup:
             The box representing the bounding box of the geometry.
 
         """
-        if len(self.group) != 0:
-            bb = self.group[0].bounding_box()
-
-        for geom in self.group:
+        if len(self.group) == 0:
+            return Box(0, 0, 0, 0)
+        bb = self.group[0].bounding_box()
+        for geom in self.group[1:]:
             bb.combine(geom.bounding_box())
         return bb
 
@@ -586,67 +589,57 @@ class GeomGroup:
         Returns
         -------
         GeomGroup
-            A geometry group containing the elments that satisfy the criteria.
+            A geometry group containing the elements that satisfy the criteria.
 
         """
-        allowed_names = {
-            "A": "Polygon area",
-            "P": "Polygon perimeter",
-            "W": "Bounding box width",
-            "H": "Bounding box height",
-            "L": "Layer",
-            "T": "Type",
-            "x": "X position, center or reference pos",
-            "y": "Y position, center or reference pos",
-            "llx": "lower left x position of the bb",
-            "lly": "lower left y position of the bb",
-            "urx": "upper right x position of the bb",
-            "ury": "upper right y position of the bb",
-        }
         code = compile(query_str, "<string>", "eval")
         sflat = self
         if self.get_sref_list():
             sflat = self.flatten()
         # Pre-allocate Bounding boxes
         bbs = [g.bounding_box() for g in sflat.group]
+        usersyms = {}
         for name in code.co_names:
-            if name not in allowed_names:
-                msg = f"Use of expression {name} not allowed"
-                raise NameError(msg)
-
             # Prepare the local variable dictionary
-
-            if name == "A":  # Prepare area array
-                allowed_names[name] = np.array([g.area() for g in sflat.group])
-            if name == "P":  # Prepare area array
-                allowed_names[name] = np.array([g.perimeter() for g in sflat.group])
-            if name == "L":  # Prepare layer array
-                allowed_names[name] = np.array([g.layer for g in sflat.group])
-            if name == "W":  # Prepare width array
-                allowed_names[name] = np.array([b.width for b in bbs])
-            if name == "H":  # Prepare height array
-                allowed_names[name] = np.array([b.height for b in bbs])
-            if name == "x" or name == "y":  # Prepare centroid array
-                allowed_names["x"] = np.array([g.centroid()[0] for g in sflat.group])
-                allowed_names["y"] = np.array([g.centroid()[1] for g in sflat.group])
-            if name == "llx":  # Prepare LL array
-                allowed_names["llx"] = np.array([b.llx for b in bbs])
-            if name == "lly":  # Prepare LL array
-                allowed_names["lly"] = np.array([b.lly for b in bbs])
-            if name == "urx":  # Prepare UR array
-                allowed_names["urx"] = np.array([b.urx() for b in bbs])
-            if name == "ury":  # Prepare UR array
-                allowed_names["ury"] = np.array([b.ury() for b in bbs])
-            if name == "T":  # Prepare type array
-                allowed_names[name] = np.array(
-                    [str(g.__class__.__name__) for g in sflat.group]
-                )
+            usersyms[name] = self._get_property_from_name(name, sflat, bbs)
 
         # Now execute
         g = GeomGroup()
-        sel = eval(code, {"__builtins__": {}}, allowed_names)
+        aeval = Interpreter(usersyms=usersyms, raise_errors=True)
+        sel: np.ndarray = aeval(query_str)  # type: ignore
         g.group[:] = [sflat.group[i] for i, val in enumerate(sel) if val]
         return g
+
+    def _get_property_from_name(
+        self, name: str, sflat: "GeomGroup", bbs: list["Box"]
+    ) -> np.ndarray:
+        if name == "A":  # Prepare area array
+            return np.array([g.area() for g in sflat.group])
+        if name == "P":  # Prepare perimeter array
+            return np.array([g.perimeter() for g in sflat.group])
+        if name == "L":  # Prepare layer array
+            return np.array([g.layer for g in sflat.group])
+        if name == "W":  # Prepare width array
+            return np.array([b.width for b in bbs])
+        if name == "H":  # Prepare height array
+            return np.array([b.height for b in bbs])
+        if name == "x":  # Prepare centroid array
+            return np.array([g.centroid()[0] for g in sflat.group])
+        if name == "y":  # Prepare centroid array
+            return np.array([g.centroid()[1] for g in sflat.group])
+        if name == "llx":  # Prepare LL array
+            return np.array([b.llx for b in bbs])
+        if name == "lly":  # Prepare LL array
+            return np.array([b.lly for b in bbs])
+        if name == "urx":  # Prepare UR array
+            return np.array([b.urx() for b in bbs])
+        if name == "ury":  # Prepare UR array
+            return np.array([b.ury() for b in bbs])
+        if name == "T":  # Prepare type array
+            return np.array([str(g.__class__.__name__) for g in sflat.group])
+
+        msg = f"Use of expression {name} not allowed"
+        raise NameError(msg)
 
     def find_matching_patterns(
         self, pattern: "GeomGroup", layer: int
@@ -755,20 +748,14 @@ class GeomGroup:
         polys = GeomGroup()
         for i in range(len(self.group)):
             g = self.group[i]
-            if isinstance(g, Poly):
+            if isinstance(g, (Poly, Text, Path)):
                 polys += self.group[i].to_polygon()
-            elif isinstance(g, Text):
-                polys += self.group[i].to_polygon()
-            elif isinstance(g, Path):
-                polys += self.group[i].to_polygon()
-            elif isinstance(g, Circle):
-                polys += self.group[i].to_polygon(Npts_circ)
-            elif isinstance(g, Ellipse):
-                polys += self.group[i].to_polygon(Npts_arc)
-            elif isinstance(g, Ring):
-                polys += self.group[i].to_polygon(Npts_arc)
             elif isinstance(g, Arc):
                 polys += self.group[i].to_polygon(Npts_arc, split_arc)
+            elif isinstance(g, Ellipse):  # Also covers Ring
+                polys += self.group[i].to_polygon(Npts_arc)
+            elif isinstance(g, Circle):
+                polys += self.group[i].to_polygon(Npts_circ)
 
         self.group[:] = [g for g in self.group if isinstance(g, SRef)]
         self.group = self.group + polys.group
@@ -804,7 +791,7 @@ class GeomGroup:
                 else:
                     polys += convp
                 continue
-            elif isinstance(self.group[i], SRef):
+            if isinstance(self.group[i], SRef):
                 if include_refs:
                     self.group[i].group.poly_to_circle(thresh, vcount)
                 continue
@@ -831,9 +818,8 @@ class GeomGroup:
 
         """
         for i in range(len(self.group)):
-            if isinstance(self.group[i], SRef):
-                if self.group[i].point_inside(x, y):
-                    return True
+            if isinstance(self.group[i], SRef) and self.group[i].point_inside(x, y):
+                return True
         return False
 
     def keep_refs_only(self) -> None:
@@ -1512,14 +1498,10 @@ class Box:
         """
         tmp_urx = self.urx()
         tmp_ury = self.ury()
-        if other.llx < self.llx:
-            self.llx = other.llx
-        if other.lly < self.lly:
-            self.lly = other.lly
-        if other.urx() > tmp_urx:
-            tmp_urx = other.urx()
-        if other.ury() > tmp_ury:
-            tmp_ury = other.ury()
+        self.llx = min(self.llx, other.llx)
+        self.lly = min(self.lly, other.lly)
+        tmp_urx = max(tmp_urx, other.urx())
+        tmp_ury = max(tmp_ury, other.ury())
 
         self.width = tmp_urx - self.llx
         self.height = tmp_ury - self.lly
@@ -1582,16 +1564,14 @@ class Box:
 class Poly:
     """Closed polygon represented by interleaved coordinate data."""
 
-    def __init__(
-        self, xpts: Sequence[float], ypts: Sequence[float], layer: int
-    ) -> None:
+    def __init__(self, xpts: ArrayLike, ypts: ArrayLike, layer: int) -> None:
         """Initialize a polygon from x/y coordinates.
 
         Parameters
         ----------
-        xpts : Sequence[float]
+        xpts : ArrayLike
             Polygon x coordinates.
-        ypts : Sequence[float]
+        ypts : ArrayLike
             Polygon y coordinates.
         layer : int
             Layer number.
@@ -1600,14 +1580,14 @@ class Poly:
         self.layer = layer
         self.set_points(xpts, ypts)
 
-    def set_points(self, xpts: Sequence[float], ypts: Sequence[float]) -> None:
+    def set_points(self, xpts: ArrayLike, ypts: ArrayLike) -> None:
         """Set polygon points from x and y coordinate arrays.
 
         Parameters
         ----------
-        xpts : Sequence[float]
+        xpts : ArrayLike
             Polygon x coordinates.
-        ypts : Sequence[float]
+        ypts : ArrayLike
             Polygon y coordinates.
 
         Returns
@@ -1618,7 +1598,9 @@ class Poly:
         # Note: only for polygon class, we store the points in GDS format,
         # already scaled to nanometers and as X0,Y0,X1,Y1,X2,Y2...
         # rdata = np.round_((np.array([xpts,ypts])*1000)).astype(int)
-        rdata = np.array([xpts, ypts], dtype="float64")
+        xvals = np.asarray(xpts, dtype=np.float64).reshape(-1)
+        yvals = np.asarray(ypts, dtype=np.float64).reshape(-1)
+        rdata = np.array([xvals, yvals], dtype="float64")
         self.data = np.transpose(rdata).reshape(-1)
         self.data = np.append(self.data, self.data[0:2])
         self.Npts = math.floor(self.data.size / 2)
@@ -1664,7 +1646,7 @@ class Poly:
 
         """
         self.data = idata.astype("float64") / 1000
-        self.Npts = self.data.size / 2
+        self.Npts = math.floor(self.data.size / 2)
 
     def translate(self, dx: float, dy: float) -> None:
         """Translate the polygon.
@@ -1922,7 +1904,8 @@ class Poly:
         code = compile(keep_str, "<string>", "eval")
         for name in code.co_names:
             if name not in allowed_names:
-                raise NameError(f"Use of expression {name} not allowed")
+                msg = f"Use of expression {name} not allowed"
+                raise NameError(msg)
 
         #        g.group[:] = [sflat.group[i] for i,val in enumerate(sel) if val]
         #       return g
@@ -1934,6 +1917,7 @@ class Poly:
         ndisc = 0
         j = n - 1
         k = n - 2
+        aeval = Interpreter(raise_errors=True)
         for i in range(n):
             attr = x[i] * (y[j] - y[k]) + x[j] * (y[k] - y[i]) + x[k] * (y[i] - y[j])
             d1 = np.sqrt((x[i] - x[j]) ** 2 + (y[i] - y[j]) ** 2)
@@ -1952,7 +1936,8 @@ class Poly:
             allowed_names["dm"] = d2
             allowed_names["dp"] = d1
             allowed_names["d0"] = d3
-            sel = eval(code, {"__builtins__": {}}, allowed_names)
+            aeval.symtable.update(allowed_names)
+            sel = aeval(keep_str)
             if sel:
                 xf += [x[j]]
                 yf += [y[j]]
@@ -2031,7 +2016,7 @@ class Poly:
         y2 = p2.data[1::2]
         x3 = np.append(x, x)
         y3 = np.append(y, y)
-        for e in range(0, len(x)):
+        for e in range(len(x)):
             k = 0
             for w in range(e, e + len(x)):
                 if x2[k] == x3[w] and y2[k] == y3[w]:
@@ -2155,11 +2140,11 @@ class Path:
             Layer number.
 
         """
-        self.xpts = xpts
-        self.ypts = ypts
+        self.xpts = list(xpts)
+        self.ypts = list(ypts)
         self.width = width
         self.layer = layer
-        self.Npts = len(xpts)
+        self.Npts = len(self.xpts)
 
     def translate(self, dx: float, dy: float) -> None:
         """Translate the path.
@@ -2357,6 +2342,76 @@ class Path:
         # Approximately twice the length and twice width
         return self.path_length() * 2 + self.width * 2
 
+    def _get_1pt_poly_coords(
+        self, x: list[float], y: list[float], w: float
+    ) -> tuple[list[float], list[float]]:
+        x0 = x[0]
+        y0 = y[0]
+        xpts = [x0 - w / 2, x0 + w / 2, x0 + w / 2, x0 - w / 2]
+        ypts = [y0 - w / 2, y0 - w / 2, y0 + w / 2, y0 + w / 2]
+        return xpts, ypts
+
+    def _get_2pt_poly_coords(
+        self, x: list[float], y: list[float], w: float
+    ) -> tuple[list[float], list[float]]:
+        ang1 = math.atan2(y[1] - y[0], x[1] - x[0])
+        c1 = w / 2 * math.cos(ang1 - math.pi / 2)
+        c2 = w / 2 * math.cos(ang1 + math.pi / 2)
+        s1 = w / 2 * math.sin(ang1 - math.pi / 2)
+        s2 = w / 2 * math.sin(ang1 + math.pi / 2)
+        xpts = [x[0] + c1, x[1] + c1, x[1] + c2, x[0] + c2]
+        ypts = [y[0] + s1, y[1] + s1, y[1] + s2, y[0] + s2]
+        return xpts, ypts
+
+    def _get_npt_poly_coords(
+        self, x: list[float], y: list[float], w: float
+    ) -> tuple[list[float], list[float]]:
+        xpts1 = []
+        ypts1 = []
+        xpts2 = []
+        ypts2 = []
+        for j in range(1, self.Npts - 1):
+            ang1 = math.atan2(y[j] - y[j - 1], x[j] - x[j - 1])
+            ang2 = math.atan2(y[j + 1] - y[j], x[j + 1] - x[j])
+            d = (x[j + 1] - x[j - 1]) * (y[j] - y[j - 1]) - (y[j + 1] - y[j - 1]) * (
+                x[j] - x[j - 1]
+            )
+            if j == 1:
+                xpts1.append(x[j - 1] + w / 2 * math.cos(ang1 - math.pi / 2))
+                ypts1.append(y[j - 1] + w / 2 * math.sin(ang1 - math.pi / 2))
+                xpts2.append(x[j - 1] + w / 2 * math.cos(ang1 + math.pi / 2))
+                ypts2.append(y[j - 1] + w / 2 * math.sin(ang1 + math.pi / 2))
+
+            if d < 0:
+                xpts1.append(x[j] + w / 2 * math.cos(ang1 - math.pi / 2))
+                ypts1.append(y[j] + w / 2 * math.sin(ang1 - math.pi / 2))
+                xpts1.append(x[j] + w / 2 * math.cos(ang2 - math.pi / 2))
+                ypts1.append(y[j] + w / 2 * math.sin(ang2 - math.pi / 2))
+                wx = w / 2 / math.cos((ang2 - ang1) / 2)
+                a0 = math.pi / 2 - (ang1 + ang2) / 2
+                xpts2.append(x[j] - wx * math.cos(a0))
+                ypts2.append(y[j] + wx * math.sin(a0))
+            else:
+                xpts2.append(x[j] + w / 2 * math.cos(ang1 + math.pi / 2))
+                ypts2.append(y[j] + w / 2 * math.sin(ang1 + math.pi / 2))
+                xpts2.append(x[j] + w / 2 * math.cos(ang2 + math.pi / 2))
+                ypts2.append(y[j] + w / 2 * math.sin(ang2 + math.pi / 2))
+                wx = w / 2 / math.cos((ang2 - ang1) / 2)
+                a0 = math.pi / 2 - (ang1 + ang2) / 2
+                xpts1.append(x[j] + wx * math.cos(a0))
+                ypts1.append(y[j] - wx * math.sin(a0))
+            if j == self.Npts - 2:
+                xpts1.append(x[j + 1] + w / 2 * math.cos(ang2 - math.pi / 2))
+                ypts1.append(y[j + 1] + w / 2 * math.sin(ang2 - math.pi / 2))
+                xpts2.append(x[j + 1] + w / 2 * math.cos(ang2 + math.pi / 2))
+                ypts2.append(y[j + 1] + w / 2 * math.sin(ang2 + math.pi / 2))
+
+        xpts2.reverse()
+        ypts2.reverse()
+        xpts = xpts1 + xpts2
+        ypts = ypts1 + ypts2
+        return xpts, ypts
+
     def to_polygon(self) -> GeomGroup:
         """Convert the path to polygon geometry.
 
@@ -2369,70 +2424,14 @@ class Path:
         x = self.xpts
         y = self.ypts
         w = self.width
-        p1 = Poly([0], [0], self.layer)
         if self.Npts == 1:
-            p1.set_points(
-                [-w / 2, w / 2, w / 2, -w / 2], [-w / 2, -w / 2, w / 2, w / 2]
-            )
-            p1.translate(x, y)
-
-        if self.Npts == 2:
-            ang1 = math.atan2(y[1] - y[0], x[1] - x[0])
-            c1 = w / 2 * math.cos(ang1 - math.pi / 2)
-            c2 = w / 2 * math.cos(ang1 + math.pi / 2)
-            s1 = w / 2 * math.sin(ang1 - math.pi / 2)
-            s2 = w / 2 * math.sin(ang1 + math.pi / 2)
-            p1.set_points(
-                [x[0] + c1, x[1] + c1, x[1] + c2, x[0] + c2],
-                [y[0] + s1, y[1] + s1, y[1] + s2, y[0] + s2],
-            )
-
-        if self.Npts > 2:
-            xp1 = []
-            yp1 = []
-            xp2 = []
-            yp2 = []
-            for j in range(1, self.Npts - 1):
-                ang1 = math.atan2(y[j] - y[j - 1], x[j] - x[j - 1])
-                ang2 = math.atan2(y[j + 1] - y[j], x[j + 1] - x[j])
-                d = (x[j + 1] - x[j - 1]) * (y[j] - y[j - 1]) - (
-                    y[j + 1] - y[j - 1]
-                ) * (x[j] - x[j - 1])
-                if j == 1:
-                    xp1.append(x[j - 1] + w / 2 * math.cos(ang1 - math.pi / 2))
-                    yp1.append(y[j - 1] + w / 2 * math.sin(ang1 - math.pi / 2))
-                    xp2.append(x[j - 1] + w / 2 * math.cos(ang1 + math.pi / 2))
-                    yp2.append(y[j - 1] + w / 2 * math.sin(ang1 + math.pi / 2))
-
-                if d < 0:
-                    xp1.append(x[j] + w / 2 * math.cos(ang1 - math.pi / 2))
-                    yp1.append(y[j] + w / 2 * math.sin(ang1 - math.pi / 2))
-                    xp1.append(x[j] + w / 2 * math.cos(ang2 - math.pi / 2))
-                    yp1.append(y[j] + w / 2 * math.sin(ang2 - math.pi / 2))
-                    wx = w / 2 / math.cos((ang2 - ang1) / 2)
-                    a0 = math.pi / 2 - (ang1 + ang2) / 2
-                    xp2.append(x[j] - wx * math.cos(a0))
-                    yp2.append(y[j] + wx * math.sin(a0))
-                else:
-                    xp2.append(x[j] + w / 2 * math.cos(ang1 + math.pi / 2))
-                    yp2.append(y[j] + w / 2 * math.sin(ang1 + math.pi / 2))
-                    xp2.append(x[j] + w / 2 * math.cos(ang2 + math.pi / 2))
-                    yp2.append(y[j] + w / 2 * math.sin(ang2 + math.pi / 2))
-                    wx = w / 2 / math.cos((ang2 - ang1) / 2)
-                    a0 = math.pi / 2 - (ang1 + ang2) / 2
-                    xp1.append(x[j] + wx * math.cos(a0))
-                    yp1.append(y[j] - wx * math.sin(a0))
-                if j == self.Npts - 2:
-                    xp1.append(x[j + 1] + w / 2 * math.cos(ang2 - math.pi / 2))
-                    yp1.append(y[j + 1] + w / 2 * math.sin(ang2 - math.pi / 2))
-                    xp2.append(x[j + 1] + w / 2 * math.cos(ang2 + math.pi / 2))
-                    yp2.append(y[j + 1] + w / 2 * math.sin(ang2 + math.pi / 2))
-
-            xp2.reverse()
-            yp2.reverse()
-            p1.set_points(xp1 + xp2, yp1 + yp2)
+            xpts, ypts = self._get_1pt_poly_coords(x, y, w)
+        elif self.Npts == 2:
+            xpts, ypts = self._get_2pt_poly_coords(x, y, w)
+        else:
+            xpts, ypts = self._get_npt_poly_coords(x, y, w)
         g = GeomGroup()
-        g.add(p1)
+        g.add(Poly(xpts, ypts, self.layer))
         return g
 
 
@@ -3686,7 +3685,6 @@ class Arc(Ring):
         if autosplit:
             for i in range(Npts - 1):
                 p1 = Poly(
-                    # FIXME: Swap kwargs
                     xpts=np.append(
                         xpts1[i : (i + 2)],
                         xpts2[(-Npts + 1 + i) : (-Npts - 1 + i) : -1],
@@ -3712,8 +3710,8 @@ class Arc(Ring):
 
 # Load fonts and store the glyphs
 # Maybe we should place this somewhere else
-caps = dict()
-with open(_STENCIL_FONT_PATH, encoding=_STENCIL_FONT_ENCODING) as f:
+caps = {}
+with _Path(_STENCIL_FONT_PATH).open(encoding=_STENCIL_FONT_ENCODING) as f:
     c = "a"
     for line in f:
         test = line.rstrip("\n").split(" ")
@@ -3724,8 +3722,7 @@ with open(_STENCIL_FONT_PATH, encoding=_STENCIL_FONT_ENCODING) as f:
             nums = list(map(float, test))
             caps[c] += nums
 
-for i in caps:
-    data = caps[i]
+for i, data in caps.items():
     gl = GeomGroup()
     xpts = []
     ypts = []

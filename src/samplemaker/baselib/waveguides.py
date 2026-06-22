@@ -267,7 +267,9 @@ def BaseWaveguideT(
 
 
 def BaseWaveguideOFF(
-    args: smseq.ARGS_TYPE, state: smseq.STATE_TYPE, options: smseq.OPTIONS_TYPE
+    args: smseq.ARGS_TYPE,
+    state: smseq.STATE_TYPE,
+    options: smseq.OPTIONS_TYPE,  # noqa: ARG001
 ) -> GeomGroup:
     """Offset the waveguide (jumps left or right of waveguide).
 
@@ -363,8 +365,7 @@ def BaseWaveguideConnector(port1: DevicePort, port2: DevicePort) -> GeomGroup:
         g = so.run()
         g.rotate_translate(port1.x0, port1.y0, math.degrees(port1.angle()))
         return g
-    else:
-        return GeomGroup()
+    return GeomGroup()
 
 
 # Now let's create a new DevicePort with a connector function
@@ -376,8 +377,8 @@ class BaseWaveguidePort(DevicePort):
         x0: float,
         y0: float,
         orient: str = "East",
-        width: float = None,
-        name: str = None,
+        width: float = 0,
+        name: str = "",
     ) -> None:
         """Initialize a waveguide port.
 
@@ -389,7 +390,7 @@ class BaseWaveguidePort(DevicePort):
             y coordinate of the port.
         orient : str, optional
             Orientation of the port, by default "East". Can be "North", "South", "East",
-            "West" or their first letters (lowercase).
+            "West" or their first letters.
         width : float, optional
             Width of the waveguide port.
         name : str, optional
@@ -399,11 +400,11 @@ class BaseWaveguidePort(DevicePort):
         orient = orient.lower()
         horizontal = True
         forward = True
-        if orient == "west" or orient == "w":
+        if orient in {"west", "w"}:
             forward = False
-        if orient == "north" or orient == "n":
+        if orient in {"north", "n"}:
             horizontal = False
-        if orient == "south" or orient == "s":
+        if orient in {"south", "s"}:
             horizontal = False
             forward = False
 
