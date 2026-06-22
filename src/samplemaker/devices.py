@@ -1708,18 +1708,18 @@ def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel") -> None:
                             )
 
             dev.ports()
-            for pname, port in dev._ports.items():
-                f.write(
-                    f"<Port {int(port.x0 * 100 / scale)} "
-                    f"{int(port.y0 * 100 / scale)} {pname}>\n"
-                )
+            port_info = (
+                f"<Port {int(port.x0 * 100 / scale)} "
+                f"{int(port.y0 * 100 / scale)} {pname}>\n"
+                for pname, port in dev._ports.items()
+            )
+            f.writelines(port_info)
 
             f.write("</Symbol>\n")
             # f.write("<Offsetlabel 0 -50 -50>\n")
             f.write("<Netlist spice>\n")
             f.write("$devicename ")
-            for pname in dev._ports:
-                f.write(f"{pname} $node({pname}) ")
+            f.writelines(f"{pname} $node({pname}) " for pname in dev._ports)
             f.write(". ")
             for p in oj._p:
                 f.write(f"{p} ${p} ")
