@@ -35,6 +35,7 @@ from copy import deepcopy
 from typing import Self, TypeAlias
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 import samplemaker.makers as sm
 from samplemaker.layout import LayoutPool
@@ -55,7 +56,7 @@ class Crystal:
         self,
         xpts: Iterable[float] | None = None,
         ypts: Iterable[float] | None = None,
-        params: Iterable[float] | None = None,
+        params: Iterable[Iterable[float]] | None = None,
     ) -> None:
         """Initialize a Crystal template.
 
@@ -65,7 +66,7 @@ class Crystal:
             List of x-coordinates (normalized) of the lattice sites, by default [].
         ypts : Iterable[float], optional
             List of y-coordinates (normalized) of the lattice sites, by default [].
-        params : Iterable[float], optional
+        params : Iterable[Iterable[float]], optional
             2D list of parameter values of the lattice sites. Should be of the form
             params[pindex,site_index], by default [].
 
@@ -158,16 +159,14 @@ class Crystal:
         """
         self.params[pindex, index] = pvalues
 
-    def coord_to_index(
-        self, xc: float | np.ndarray, yc: float | np.ndarray
-    ) -> list[int]:
+    def coord_to_index(self, xc: float | ArrayLike, yc: float | ArrayLike) -> list[int]:
         """Convert a coordinate to an index (if matches).
 
         Parameters
         ----------
-        xc : float | np.ndarray
+        xc : float | ArrayLike
             x-coordinate(s) in normalized units.
-        yc : float | np.ndarray
+        yc : float | ArrayLike
             y-coordinate(s) in normalized units.
 
         Returns
@@ -176,9 +175,8 @@ class Crystal:
             A list of coordinate indices.
 
         """
-        if not isinstance(xc, np.ndarray) or not isinstance(yc, np.ndarray):
-            xc = np.array(xc)
-            yc = np.array(yc)
+        xc = np.asarray(xc)
+        yc = np.asarray(yc)
         sel = []
         for i in range(xc.size):
             sx = abs(self.xpts - xc[i]) < 1e-6
