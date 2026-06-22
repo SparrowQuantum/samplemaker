@@ -42,7 +42,7 @@ re0 += re1  # re0 contains both, you can still change re1!
 re0 += re1.copy().translate(20, 0).scale(40, 0, 1.2, 2.2).set_layer(6)
 
 # mirror both in the Y direction around the x=0 axis
-re0.mirrorY(0)
+re0.mirror_y(0)
 
 # We can inspect the geometry using view_geometry()
 view_geometry(re0)

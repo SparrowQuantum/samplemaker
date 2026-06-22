@@ -68,7 +68,7 @@ class FreeFreeMembrane(Device):
         tet = sm.make_rect(0, p["tetOff"], p["R"] * 2, p["tetW"])
         # Mirror to get the second one
         tet2 = tet.copy()
-        tet2.mirrorY(0)
+        tet2.mirror_y(0)
         mem += tet + tet2
         # Support ring
         ring = sm.make_circle(0, 0, p["R"], to_poly=True, vertices=64)

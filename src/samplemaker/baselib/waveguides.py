@@ -155,7 +155,7 @@ def BaseWaveguideB(
     xf = radius * math.sin(math.radians(abs(angle)))
     yf = radius * (1 - math.cos(math.radians(abs(angle))))
     if angle < 0:
-        wg.mirrorY(0)
+        wg.mirror_y(0)
         yf = -yf
     ept = sm.make_dot(xf, yf)  # helps calculating the end point
     # Now rotate and translate according to pointer orientation
@@ -199,9 +199,9 @@ def BaseWaveguideC(
     radius -= delta
     if radius == 0:
         return GeomGroup()
-    n_points = options["bendResolution"]
+    npts = options["bendResolution"]
     amp = math.pi * off / 4 / radius
-    t = np.linspace(0, 2, n_points)
+    t = np.linspace(0, 2, npts)
     s = [math.asin(math.tan(math.atan(amp) * x) / amp) for x in t if x < 1]
     s += [
         math.asin(math.tan(math.atan(amp) * (x - 2)) / amp) + math.pi

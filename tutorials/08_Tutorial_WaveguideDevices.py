@@ -74,11 +74,11 @@ class DirectionalCoupler(Device):
         ss = BaseWaveguideSequencer(seq)
         dc = ss.run()
         dc2 = dc.copy()
-        dc2.mirrorX(ltot / 2)
+        dc2.mirror_x(ltot / 2)
         dc += dc2
         dc.translate(-ltot / 2, off + p["gap"] / 2 + p["width"] / 2)
         dc3 = dc.copy()
-        dc3.mirrorY(0)
+        dc3.mirror_y(0)
         dc += dc3
 
         # Ok, now we have to tell the device that there are 4 ports and we should
