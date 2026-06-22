@@ -1795,7 +1795,7 @@ class Poly:
         area = 0.0
         x = self.data[0::2]
         y = self.data[1::2]
-        n = int(len(x))
+        n = len(x)
         j = n - 1
         for i in range(n):
             area += x[j] * y[i] - x[i] * y[j]
@@ -1816,7 +1816,7 @@ class Poly:
         area = 0
         x = self.data[0::2]
         y = self.data[1::2]
-        n = int(len(x))
+        n = len(x)
         j = n - 1
         for i in range(n):
             shl = x[j] * y[i] - x[i] * y[j]
@@ -1840,7 +1840,7 @@ class Poly:
         p = 0
         x = self.data[0::2]
         y = self.data[1::2]
-        n = int(len(x))
+        n = len(x)
         j = n - 1
         for i in range(n):
             p += np.sqrt((x[i] - x[j]) ** 2 + (y[i] - y[j]) ** 2)

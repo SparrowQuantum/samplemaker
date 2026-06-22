@@ -154,7 +154,7 @@ class GDSWriter:
         self.__write_strans(sref.mag, sref.angle, sref.mirror)
         self.__write_data(struct.pack(">2H", 12, 0x1003))
         self.__write_data(
-            struct.pack(">2i", int(round(sref.x0 * 1000)), int(round(sref.y0 * 1000)))
+            struct.pack(">2i", round(sref.x0 * 1000), round(sref.y0 * 1000))
         )
         self.__write_data(struct.pack(">2H", 4, 0x1100))
 
@@ -169,7 +169,7 @@ class GDSWriter:
         )
         self.__write_data(struct.pack(">2H", 28, 0x1003))
         self.__write_data(
-            struct.pack(">2i", int(round(aref.x0 * 1000)), int(round(aref.y0 * 1000)))
+            struct.pack(">2i", round(aref.x0 * 1000), round(aref.y0 * 1000))
         )
         self.__write_data(
             struct.pack(

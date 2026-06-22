@@ -216,10 +216,10 @@ def __connect_step(
     if dl < dr:
         port1.BL(rad)
         port1.fix()
-        return False, (seq + [["B", 90, rad]])
+        return False, [*seq, ["B", 90, rad]]
     port1.BR(rad)
     port1.fix()
-    return False, (seq + [["B", -90, rad]])
+    return False, [*seq, ["B", -90, rad]]
 
 
 def WaveguideConnect(

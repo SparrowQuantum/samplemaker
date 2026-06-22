@@ -1086,7 +1086,7 @@ class Mask:
             if cname not in reflist:
                 mainsymbolcandidates.add(cname)
         if len(mainsymbolcandidates) == 1:
-            self.mainsymbol = list(mainsymbolcandidates)[0]
+            self.mainsymbol = next(iter(mainsymbolcandidates))
         else:
             nsubref = 0
             for cname in mainsymbolcandidates:

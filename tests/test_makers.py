@@ -29,8 +29,8 @@ def test_make_poly() -> None:
 
     poly_xpts = poly.data[0::2]
     poly_ypts = poly.data[1::2]
-    expected_xpts = xpts + [xpts[0]]
-    expected_ypts = ypts + [ypts[0]]
+    expected_xpts = [*xpts, xpts[0]]
+    expected_ypts = [*ypts, ypts[0]]
     assert poly_xpts == pytest.approx(expected_xpts)
     assert poly_ypts == pytest.approx(expected_ypts)
 

@@ -103,7 +103,7 @@ def GeomView(grp: GeomGroup) -> None:
 
     """
     plt.close("all")
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
     patches = __get_geom_patches(grp)
     p = PatchCollection(patches, match_original=True)
     ax.add_collection(p)
@@ -185,7 +185,7 @@ def DeviceInspect(devcl: Device | type[Device]) -> None:
 
     plt.close("all")
 
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
     _ViewerCurrentAxes = ax
 
     patches = __get_geom_patches(g)
