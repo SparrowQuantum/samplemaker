@@ -65,6 +65,10 @@ extend-select = [
     "UP",   # Pyupgrade
     "F",    # pyflakes
     "PL",   # pylint
+    "FURB", # refurb
+    "RUF",  # ruff
+    "PGH",  # pygrep-hooks
+    "PERF", # perflint
 ]
 ignore = ["D203", "D213", "PLR2004", "PLR091"]
 
