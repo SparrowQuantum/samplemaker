@@ -274,8 +274,8 @@ def connect_waveguide_ports(
 
 
 @deprecated(
-    "WaveguideConnect is deprecated and will be removed"
-    "in a future version, use connect_waveguide_ports instead"
+    "This function is deprecated and will be removed "
+    "in a future version. Use connect_waveguide_ports() instead."
 )
 def WaveguideConnect(  # noqa: N802
     port1: DevicePort, port2: DevicePort, rad: float = 3
@@ -289,7 +289,7 @@ def WaveguideConnect(  # noqa: N802
     function returns False. The sequence can be used in combination with any
     `samplemaker.sequencer.Sequencer` class that implements the commands S, C, and B.
 
-    DEPRECATED. Use `connect_waveguide_ports` instead.
+    DEPRECATED: Use connect_waveguide_ports() instead.
 
     Parameters
     ----------
@@ -381,8 +381,8 @@ def calculate_elbow_path(
 
 
 @deprecated(
-    "ElbowRouter is deprecated and will be removed"
-    "in a future version, use calculate_elbow_path instead"
+    "This function is deprecated and will be removed "
+    "in a future version. Use calculate_elbow_path() instead."
 )
 def ElbowRouter(  # noqa: N802
     port1: DevicePort, port2: DevicePort, offset: float = 5
@@ -394,7 +394,7 @@ def ElbowRouter(  # noqa: N802
 
     of the ports before attempting a connection (using cubic Bezier).
 
-    DEPRECATED. Use `calculate_elbow_path` instead.
+    DEPRECATED: Use calculate_elbow_path() instead.
 
     Parameters
     ----------

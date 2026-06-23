@@ -114,8 +114,8 @@ def view_geometry(grp: GeomGroup) -> None:
 
 
 @deprecated(
-    "GeomView is deprecated and will be removed "
-    "in a future version. Use view_geometry instead."
+    "This function is deprecated and will be removed "
+    "in a future version. Use view_geometry() instead."
 )
 def GeomView(grp: GeomGroup) -> None:  # noqa: N802
     """Plot a geometry in a matplotlib window.
@@ -266,8 +266,8 @@ def inspect_device(devcl: Device | type[Device]) -> None:
 
 
 @deprecated(
-    "DeviceInspect is deprecated and will be removed "
-    "in a future version. Use inspect_device instead."
+    "This function is deprecated and will be removed "
+    "in a future version. Use inspect_device() instead."
 )
 def DeviceInspect(devcl: Device | type[Device]) -> None:  # noqa: N802
     """Interactive display of devices defined from `samplemaker.devices`.

@@ -322,13 +322,13 @@ class GeomGroup:
         return self
 
     @deprecated(
-        "GeomGroup.mirrorX is deprecated and will be removed"
-        "in a future version, use GeomGroup.mirror_x instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use GeomGroup.mirror_x() instead."
     )
     def mirrorX(self, x0: float) -> Self:  # noqa: N802
         """Mirror the geometry around x-axis.
 
-        DEPRECATED. Use mirror_x instead.
+        DEPRECATED: Use GeomGroup.mirror_x() instead.
 
         Parameters
         ----------
@@ -346,7 +346,7 @@ class GeomGroup:
     def mirror_y(self, y0: float) -> Self:
         """Mirror the geometry around y-axis.
 
-        DEPRECATED. Use mirror_y instead.
+        DEPRECATED: Use GeomGroup.mirror_y() instead.
 
         Parameters
         ----------
@@ -364,8 +364,8 @@ class GeomGroup:
         return self
 
     @deprecated(
-        "GeomGroup.mirrorY is deprecated and will be removed"
-        "in a future version, use GeomGroup.mirror_y instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use GeomGroup.mirror_y() instead."
     )
     def mirrorY(self, y0: float) -> Self:  # noqa: N802
         """Mirror the geometry around y-axis.
@@ -1536,13 +1536,13 @@ class Dot:
         self.x = 2 * x0 - self.x
 
     @deprecated(
-        "Dot.mirrorX is deprecated and will be removed"
-        "in a future version, use Dot.mirror_x instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Dot.mirror_x() instead."
     )
     def mirrorX(self, x0: float) -> None:  # noqa: N802
         """Mirror the point with respect to a vertical axis.
 
-        DEPRECATED. Use mirror_x instead.
+        DEPRECATED: Use Dot.mirror_x() instead.
 
         Parameters
         ----------
@@ -1572,13 +1572,13 @@ class Dot:
         self.y = 2 * y0 - self.y
 
     @deprecated(
-        "Dot.mirrorY is deprecated and will be removed"
-        "in a future version, use Dot.mirror_y instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Dot.mirror_y() instead."
     )
     def mirrorY(self, y0: float) -> None:  # noqa: N802
         """Mirror the point with respect to a horizontal axis.
 
-        DEPRECATED. Use mirror_y instead.
+        DEPRECATED: Use Dot.mirror_y() instead.
 
         Parameters
         ----------
@@ -1704,7 +1704,7 @@ class Box:
         )
 
     @deprecated(
-        "Box.toPoly() is deprecated and will be removed"
+        "This method is deprecated and will be removed "
         "in a future version. Use Box.to_poly() instead."
     )
     def toPoly(self) -> "Poly":  # noqa: N802
@@ -1734,7 +1734,7 @@ class Box:
         return g
 
     @deprecated(
-        "Box.toRect() is deprecated and will be removed"
+        "This method is deprecated and will be removed "
         "in a future version. Use Box.to_rect() instead."
     )
     def toRect(self) -> GeomGroup:  # noqa: N802
@@ -1966,13 +1966,13 @@ class Poly:
         self.data[0::2] = 2 * x0 - self.data[0::2]
 
     @deprecated(
-        "Poly.mirrorX is deprecated and will be removed"
-        "in a future version, use Poly.mirror_x instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Poly.mirror_x() instead."
     )
     def mirrorX(self, x0: float) -> None:  # noqa: N802
         """Mirror polygon vertices with respect to a vertical axis.
 
-        DEPRECATED. Use mirror_x instead.
+        DEPRECATED: Use Poly.mirror_x() instead.
 
         Parameters
         ----------
@@ -2002,13 +2002,13 @@ class Poly:
         self.data[1::2] = 2 * y0 - self.data[1::2]
 
     @deprecated(
-        "Poly.mirrorY is deprecated and will be removed"
-        "in a future version, use Poly.mirror_y instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Poly.mirror_y() instead."
     )
     def mirrorY(self, y0: float) -> None:  # noqa: N802
         """Mirror polygon vertices with respect to a horizontal axis.
 
-        DEPRECATED. Use mirror_y instead.
+        DEPRECATED: Use Poly.mirror_y() instead.
 
         Parameters
         ----------
@@ -2512,13 +2512,13 @@ class Path:
             self.xpts[i] = 2 * x0 - self.xpts[i]
 
     @deprecated(
-        "Path.mirrorX is deprecated and will be removed"
-        "in a future version, use Path.mirror_x instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Path.mirror_x() instead."
     )
     def mirrorX(self, x0: float) -> None:  # noqa: N802
         """Mirror path vertices with respect to a vertical axis.
 
-        DEPRECATED. Use mirror_x instead.
+        DEPRECATED: Use Path.mirror_x() instead.
 
         Parameters
         ----------
@@ -2549,13 +2549,13 @@ class Path:
             self.ypts[i] = 2 * y0 - self.ypts[i]
 
     @deprecated(
-        "Path.mirrorY is deprecated and will be removed"
-        "in a future version, use Path.mirror_y instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Path.mirror_y() instead."
     )
     def mirrorY(self, y0: float) -> None:  # noqa: N802
         """Mirror path vertices with respect to a horizontal axis.
 
-        DEPRECATED. Use mirror_y instead.
+        DEPRECATED: Use Path.mirror_y() instead.
 
         Parameters
         ----------
@@ -2889,13 +2889,13 @@ class Text:
         self.angle = 180 - self.angle
 
     @deprecated(
-        "Text.mirrorX is deprecated and will be removed"
-        "in a future version, use Text.mirror_x instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Text.mirror_x() instead."
     )
     def mirrorX(self, xc: float) -> None:  # noqa: N802
         """Mirror text with respect to a vertical axis.
 
-        DEPRECATED. Use mirror_x instead.
+        DEPRECATED: Use Text.mirror_x() instead.
 
         Parameters
         ----------
@@ -2926,13 +2926,13 @@ class Text:
         self.angle = -self.angle
 
     @deprecated(
-        "Text.mirrorY is deprecated and will be removed"
-        "in a future version, use Text.mirror_y instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Text.mirror_y() instead."
     )
     def mirrorY(self, yc: float) -> None:  # noqa: N802
         """Mirror text with respect to a horizontal axis.
 
-        DEPRECATED. Use mirror_y instead.
+        DEPRECATED: Use Text.mirror_y() instead.
 
         Parameters
         ----------
@@ -3177,13 +3177,13 @@ class RefBase:
         self.angle = self.angle % 360
 
     @deprecated(
-        "RefBase.mirrorX is deprecated and will be removed"
-        "in a future version, use RefBase.mirror_x instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use RefBase.mirror_x() instead."
     )
     def mirrorX(self, xc: float) -> None:  # noqa: N802
         """Mirror reference with respect to a vertical axis.
 
-        DEPRECATED. Use mirror_x instead.
+        DEPRECATED: Use RefBase.mirror_x() instead.
 
         Parameters
         ----------
@@ -3215,13 +3215,13 @@ class RefBase:
         self.angle = -self.angle
 
     @deprecated(
-        "RefBase.mirrorY is deprecated and will be removed"
-        "in a future version, use RefBase.mirror_y instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use RefBase.mirror_y() instead."
     )
     def mirrorY(self, yc: float) -> None:  # noqa: N802
         """Mirror reference with respect to a horizontal axis.
 
-        DEPRECATED. Use mirror_y instead.
+        DEPRECATED: Use RefBase.mirror_y() instead.
 
         Parameters
         ----------
@@ -3564,13 +3564,13 @@ class Circle:
         self.x0 = 2 * xc - self.x0
 
     @deprecated(
-        "Circle.mirrorX is deprecated and will be removed"
-        "in a future version, use Circle.mirror_x instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Circle.mirror_x() instead."
     )
     def mirrorX(self, xc: float) -> None:  # noqa: N802
         """Mirror circle center with respect to a vertical axis.
 
-        DEPRECATED. Use mirror_x instead.
+        DEPRECATED: Use Circle.mirror_x() instead.
 
         Parameters
         ----------
@@ -3600,13 +3600,13 @@ class Circle:
         self.y0 = 2 * yc - self.y0
 
     @deprecated(
-        "Circle.mirrorY is deprecated and will be removed"
-        "in a future version, use Circle.mirror_y instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Circle.mirror_y() instead."
     )
     def mirrorY(self, yc: float) -> None:  # noqa: N802
         """Mirror circle center with respect to a horizontal axis.
 
-        DEPRECATED. Use mirror_y instead.
+        DEPRECATED: Use Circle.mirror_y() instead.
 
         Parameters
         ----------
@@ -3826,13 +3826,13 @@ class Ellipse(Circle):
         self.rot = 180 - self.rot
 
     @deprecated(
-        "Ellipse.mirrorX is deprecated and will be removed"
-        "in a future version, use Ellipse.mirror_x instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Ellipse.mirror_x() instead."
     )
     def mirrorX(self, xc: float) -> None:  # noqa: N802
         """Mirror ellipse with respect to a vertical axis.
 
-        DEPRECATED. Use mirror_x instead.
+        DEPRECATED: Use Ellipse.mirror_x() instead.
 
         Parameters
         ----------
@@ -3863,13 +3863,13 @@ class Ellipse(Circle):
         self.rot = -self.rot
 
     @deprecated(
-        "Ellipse.mirrorY is deprecated and will be removed"
-        "in a future version, use Ellipse.mirror_y instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Ellipse.mirror_y() instead."
     )
     def mirrorY(self, yc: float) -> None:  # noqa: N802
         """Mirror ellipse with respect to a horizontal axis.
 
-        DEPRECATED. Use mirror_y instead.
+        DEPRECATED: Use Ellipse.mirror_y() instead.
 
         Parameters
         ----------

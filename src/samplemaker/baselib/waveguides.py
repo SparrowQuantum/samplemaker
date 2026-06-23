@@ -43,13 +43,13 @@ def create_base_waveguide_options() -> smseq.OPTIONS_TYPE:
 
 
 @deprecated(
-    "BaseWaveguideOptions is deprecated and will be removed"
-    "in a future version, use create_base_waveguide_options instead"
+    "This function is deprecated and will be removed "
+    "in a future version. Use create_base_waveguide_options() instead."
 )
 def BaseWaveguideOptions() -> smseq.OPTIONS_TYPE:  # noqa: N802
     """Create a dictionary with the default options for the BaseWaveguide sequencer.
 
-    DEPRECATED. Use create_base_waveguide_options instead.
+    DEPRECATED: Use create_base_waveguide_options() instead.
 
     Returns
     -------
@@ -105,8 +105,8 @@ def base_waveguide_init(
 
 
 @deprecated(
-    "BaseWaveguideINIT is deprecated and will be removed"
-    "in a future version, use base_waveguide_init instead"
+    "This function is deprecated and will be removed "
+    "in a future version. Use base_waveguide_init() instead."
 )
 def BaseWaveguideINIT(  # noqa: N802
     args: smseq.ARGS_TYPE,
@@ -169,15 +169,15 @@ def base_waveguide_straight(
 
 
 @deprecated(
-    "BaseWaveguideS is deprecated and will be removed"
-    "in a future version, use base_waveguide_straight instead"
+    "This function is deprecated and will be removed "
+    "in a future version. Use base_waveguide_straight() instead."
 )
 def BaseWaveguideS(  # noqa: N802
     args: smseq.ARGS_TYPE, state: smseq.STATE_TYPE, options: smseq.OPTIONS_TYPE
 ) -> GeomGroup:
     """Draw straight waveguide.
 
-    DEPRECATED. Use base_waveguide_straight instead.
+    DEPRECATED: Use base_waveguide_straight() instead.
 
     Parameters
     ----------
@@ -254,15 +254,15 @@ def base_waveguide_bend(
 
 
 @deprecated(
-    "BaseWaveguideB is deprecated and will be removed"
-    "in a future version, use base_waveguide_bend instead"
+    "This function is deprecated and will be removed "
+    "in a future version. Use base_waveguide_bend() instead."
 )
 def BaseWaveguideB(  # noqa: N802
     args: smseq.ARGS_TYPE, state: smseq.STATE_TYPE, options: smseq.OPTIONS_TYPE
 ) -> GeomGroup:
     """Draw circular bend waveguide.
 
-    DEPRECATED. Use base_waveguide_bend instead.
+    DEPRECATED: Use base_waveguide_bend() instead.
 
     Parameters
     ----------
@@ -339,8 +339,8 @@ def base_waveguide_cosine_bend(
 
 
 @deprecated(
-    "BaseWaveguideC is deprecated and will be removed"
-    "in a future version, use base_waveguide_cosine_bend instead"
+    "This function is deprecated and will be removed "
+    "in a future version. Use base_waveguide_cosine_bend() instead."
 )
 def BaseWaveguideC(  # noqa: N802
     args: smseq.ARGS_TYPE, state: smseq.STATE_TYPE, options: smseq.OPTIONS_TYPE
@@ -350,7 +350,7 @@ def BaseWaveguideC(  # noqa: N802
     Keeping the same the same direction, the function bends the waveguide using a cosine
     function.
 
-    DEPRECATED. Use base_waveguide_cosine_bend instead.
+    DEPRECATED: Use base_waveguide_cosine_bend() instead.
 
     Parameters
     ----------
@@ -411,15 +411,15 @@ def base_waveguide_taper(
 
 
 @deprecated(
-    "BaseWaveguideT is deprecated and will be removed"
-    "in a future version, use base_waveguide_taper instead"
+    "This function is deprecated and will be removed "
+    "in a future version. Use base_waveguide_taper() instead."
 )
 def BaseWaveguideT(  # noqa: N802
     args: smseq.ARGS_TYPE, state: smseq.STATE_TYPE, options: smseq.OPTIONS_TYPE
 ) -> GeomGroup:
     """Draw linear taper.
 
-    DEPRECATED. Use base_waveguide_taper instead.
+    DEPRECATED: Use base_waveguide_taper() instead.
 
     Parameters
     ----------
@@ -470,8 +470,8 @@ def base_waveguide_offset(
 
 
 @deprecated(
-    "BaseWaveguideOFF is deprecated and will be removed"
-    "in a future version, use base_waveguide_offset instead"
+    "This function is deprecated and will be removed "
+    "in a future version. Use base_waveguide_offset() instead."
 )
 def BaseWaveguideOFF(  # noqa: N802
     args: smseq.ARGS_TYPE,
@@ -480,7 +480,7 @@ def BaseWaveguideOFF(  # noqa: N802
 ) -> GeomGroup:
     """Offset the waveguide (jumps left or right of waveguide).
 
-    DEPRECATED. Use base_waveguide_offset instead.
+    DEPRECATED: Use base_waveguide_offset() instead.
 
     Parameters
     ----------
@@ -520,13 +520,13 @@ def create_base_waveguide_commands() -> smseq.COMMANDS_DICT_TYPE:
 
 
 @deprecated(
-    "BaseWaveguideCommands is deprecated and will be removed"
-    "in a future version, use init_waveguide_commands instead"
+    "This function is deprecated and will be removed "
+    "in a future version. Use init_waveguide_commands() instead."
 )
 def BaseWaveguideCommands() -> smseq.COMMANDS_DICT_TYPE:  # noqa: N802
     """Create a dictionary with the command list and corresponding functions.
 
-    DEPRECATED. Use init_waveguide_commands instead.
+    DEPRECATED: Use init_waveguide_commands() instead.
 
     Returns
     -------
@@ -600,13 +600,13 @@ def connect_base_waveguide_ports(port1: DevicePort, port2: DevicePort) -> GeomGr
 
 
 @deprecated(
-    "BaseWaveguideConnector is deprecated and will be removed"
-    "in a future version, use connect_base_waveguide_ports instead"
+    "This function is deprecated and will be removed "
+    "in a future version. Use connect_base_waveguide_ports() instead."
 )
 def BaseWaveguideConnector(port1: DevicePort, port2: DevicePort) -> GeomGroup:  # noqa: N802
     """Connect two waveguide ports using the BaseWaveguideSequencer.
 
-    DEPRECATED. Use connect_base_waveguide_ports instead.
+    DEPRECATED: Use connect_base_waveguide_ports() instead.
 
     Parameters
     ----------

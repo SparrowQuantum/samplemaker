@@ -407,8 +407,8 @@ class DevicePort:
         self.y0 += self.dy() * amount
 
     @deprecated(
-        "S is deprecated and will be removed "
-        "in a future version. Use move_straight instead."
+        "This method is deprecated and will be removed "
+        "in a future version. Use DevicePort.move_straight() instead."
     )
     def S(self, amount: float) -> None:  # noqa: N802
         """Move the port straight by the given amount.
@@ -446,13 +446,13 @@ class DevicePort:
         self.set_angle(self.angle() + math.pi / 2)
 
     @deprecated(
-        "BL is deprecated and will be removed "
-        "in a future version. Use bend_left instead."
+        "This method is deprecated and will be removed "
+        "in a future version. Use DevicePort.bend_left() instead."
     )
     def BL(self, radius: float) -> None:  # noqa: N802
         """Make a 90 degree left bend with the given radius.
 
-        DEPRECATED. Use bend_left instead.
+        DEPRECATED: Use bend_left() instead.
 
         Parameters
         ----------
@@ -487,13 +487,13 @@ class DevicePort:
         self.set_angle(self.angle() - math.pi / 2)
 
     @deprecated(
-        "BR is deprecated and will be removed "
-        "in a future version. Use bend_right instead."
+        "This method is deprecated and will be removed "
+        "in a future version. Use DevicePort.bend_right() instead."
     )
     def BR(self, radius: float) -> None:  # noqa: N802
         """Make a 90 degree right bend with the given radius.
 
-        DEPRECATED. Use bend_right instead.
+        DEPRECATED: Use bend_right() instead.
 
         Parameters
         ----------
@@ -1363,8 +1363,8 @@ class NetList:
 
     @classmethod
     @deprecated(
-        "ImportCircuit is deprecated and will be removed "
-        "in a future version. Use import_circuit instead."
+        "This method is deprecated and will be removed "
+        "in a future version. Use Netlist.import_circuit() instead."
     )
     def ImportCircuit(  # noqa: N802
         cls, file_name: str, circuit_name: str = ""
@@ -1727,8 +1727,8 @@ def register_devices_in_module(module_name: str) -> None:
 
 
 @deprecated(
-    "registerDevicesInModule is deprecated and will be removed"
-    "in future versions. Use register_devices_in_module instead."
+    "This function is deprecated and will be removed "
+    "in a future version. Use register_devices_in_module() instead."
 )
 def registerDevicesInModule(module_name: str) -> None:  # noqa: N802
     """Register the device names in a global variable.
@@ -1791,8 +1791,8 @@ def create_device_library(devname: str, params: dict, filename: str) -> None:
 
 
 @deprecated(
-    "CreateDeviceLibrary is deprecated and will be removed"
-    "in future versions. Use create_device_library instead."
+    "This function is deprecated and will be removed "
+    "in a future version. Use create_device_library() instead."
 )
 def CreateDeviceLibrary(devname: str, params: dict, filename: str) -> None:  # noqa: N802
     """Generate a GDS file with a re-usable GDS-format device.
@@ -1800,7 +1800,7 @@ def CreateDeviceLibrary(devname: str, params: dict, filename: str) -> None:  # n
     Also exports ports as text element in GDS.
     Flattens everything.
 
-    DEPRECATED. Use create_device_library instead.
+    DEPRECATED: Use create_device_library() instead.
 
     Parameters
     ----------
@@ -1903,8 +1903,8 @@ def export_device_schematics(filename: str = "SampleMakerLibrary.lel") -> None:
 
 
 @deprecated(
-    "ExportDeviceSchematics deprecated and will be removed"
-    "in future versions. Use export_device_schematics instead."
+    "This function is deprecated and will be removed "
+    "in a future version. Use export_device_schematics() instead."
 )
 def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel") -> None:  # noqa: N802
     """Generate a Layout Editor library file (LEL).
@@ -1913,7 +1913,7 @@ def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel") -> None:  #
     can be used in combination with Layout Editor Schematic to produce spice netlists
     for circuit design.
 
-    DEPRECATED. Use export_device_schematics instead.
+    DEPRECATED: Use export_device_schematics() instead.
 
     Parameters
     ----------

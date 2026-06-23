@@ -842,8 +842,8 @@ class DeviceTable:
         ]
 
     @deprecated(
-        "Regular is deprecated and will be removed "
-        "in a future version, use create_regular_grid instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use DeviceTable.create_regular_grid() instead."
     )
     @staticmethod
     def Regular(  # noqa: N802
@@ -977,13 +977,13 @@ class Mask:
             LayoutPool[self.mainsymbol] += geom_group
 
     @deprecated(
-        "addToMainCell is deprecated and will be removed "
-        "in a future version, use add_to_main_cell instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Mask.add_to_main_cell() instead."
     )
     def addToMainCell(self, geom_group: GeomGroup) -> None:  # noqa: N802
         """Add a geometry to the main cell.
 
-        DEPRECATED. Use add_to_main_cell instead.
+        DEPRECATED: Use Mask.add_to_main_cell() instead.
 
         Parameters
         ----------
@@ -1015,13 +1015,13 @@ class Mask:
         LayoutPool[cellname] = geom_group
 
     @deprecated(
-        "addCell is deprecated and will be removed "
-        "in a future version, use add_cell instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Mask.add_cell() instead."
     )
     def addCell(self, cellname: str, geom_group: GeomGroup) -> None:  # noqa: N802
         """Add a new cell to the GDS structure and assigns a geometry to it.
 
-        DEPRECATED. Use add_cell instead.
+        DEPRECATED: Use Mask.add_cell() instead.
 
         Parameters
         ----------
@@ -1060,15 +1060,15 @@ class Mask:
         return LayoutPool[cellname]
 
     @deprecated(
-        "getCell is deprecated and will be removed "
-        "in a future version, use get_cell instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Mask.get_cell() instead."
     )
     def getCell(self, cellname: str) -> GeomGroup:  # noqa: N802
         """Get a reference to the GeomGroup corresponding to the cellname.
 
         Note: if you modify the cell geometry, it will also be modified in the mask.
 
-        DEPRECATED. Use get_cell instead.
+        DEPRECATED: Use Mask.get_cell() instead.
 
         Parameters
         ----------
@@ -1174,13 +1174,13 @@ class Mask:
             self._export_cache()
 
     @deprecated(
-        "exportGDS is deprecated and will be removed "
-        "in a future version, use export_gds instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Mask.export_gds() instead."
     )
     def exportGDS(self) -> None:  # noqa: N802
         """Finalize the mask, perform cache operations, if any, and write to GDS.
 
-        DEPRECATED. Use export_gds instead.
+        DEPRECATED: Use Mask.export_gds() instead.
 
         Returns
         -------
@@ -1232,13 +1232,13 @@ class Mask:
                     e.group = LayoutPool[e.cellname]
 
     @deprecated(
-        "importGDS is deprecated and will be removed "
-        "in a future version, use import_gds instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Mask.import_gds() instead."
     )
     def importGDS(self, filename: str) -> None:  # noqa: N802
         """Import the full mask from GDS file.
 
-        DEPRECATED. Use import_gds instead.
+        DEPRECATED: Use Mask.import_gds() instead.
 
         Parameters
         ----------
@@ -1272,13 +1272,13 @@ class Mask:
             LayoutPool[self.mainsymbol] += g
 
     @deprecated(
-        "addMarkers is deprecated and will be removed "
-        "in a future version, use add_markers instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Mask.add_markers() instead."
     )
     def addMarkers(self, markerset: "MarkerSet") -> None:  # noqa: N802
         """Add a marker set to the mask.
 
-        DEPRECATED. Use add_markers instead.
+        DEPRECATED: Use Mask.add_markers() instead.
 
         Parameters
         ----------
@@ -1318,15 +1318,15 @@ class Mask:
         self.writefields += [(wf_size, x0, y0, passes, shift)]
 
     @deprecated(
-        "addWriteField is deprecated and will be removed "
-        "in a future version, use add_writefield instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Mask.add_writefield() instead."
     )
     def addWriteField(  # noqa: N802
         self, wf_size: float, x0: float, y0: float, passes: int = 1, shift: float = 0
     ) -> None:
         """Add a square writefield centered in x0,y0.
 
-        DEPRECATED. Use add_writefield instead.
+        DEPRECATED: Use Mask.add_writefield() instead.
 
         Parameters
         ----------
@@ -1418,8 +1418,8 @@ class Mask:
             self.add_to_main_cell(wfs)
 
     @deprecated(
-        "addWriteFieldGrid is deprecated and will be removed"
-        "in a future version, use add_writefield_grid instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Mask.add_writefield_grid() instead."
     )
     def addWriteFieldGrid(  # noqa: N802
         self,
@@ -1434,7 +1434,7 @@ class Mask:
     ) -> None:
         """Create a grid nx x ny of writefields with given size and position.
 
-        DEPRECATED. Use add_writefield_grid instead.
+        DEPRECATED: Use Mask.add_writefield_grid() instead.
 
         Parameters
         ----------
@@ -1495,15 +1495,15 @@ class Mask:
             self.add_cell(cell, geoms)
 
     @deprecated(
-        "addDeviceTable is deprecated and will be removed"
-        "in a future version, use add_device_table instead"
+        "This method is deprecated and will be removed "
+        "in a future version. Use Mask.add_device_table() instead."
     )
     def addDeviceTable(  # noqa: N802
         self, device_table: DeviceTable, x0: float, y0: float, cell: str = ""
     ) -> None:
         """Add a `DeviceTable` to the layout.
 
-        DEPRECATED. Use add_device_table instead.
+        DEPRECATED: Use Mask.add_device_table() instead.
 
         Parameters
         ----------
