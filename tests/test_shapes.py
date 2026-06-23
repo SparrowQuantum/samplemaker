@@ -215,25 +215,25 @@ class TestBox:
         expected_urx = box_obj.llx + box_obj.width
         expected_ury = box_obj.lly + box_obj.height
 
-        assert box_obj.cx() == pytest.approx(expected_cx)
-        assert box_obj.cy() == pytest.approx(expected_cy)
-        assert box_obj.urx() == pytest.approx(expected_urx)
-        assert box_obj.ury() == pytest.approx(expected_ury)
+        assert box_obj.cx == pytest.approx(expected_cx)
+        assert box_obj.cy == pytest.approx(expected_cy)
+        assert box_obj.urx == pytest.approx(expected_urx)
+        assert box_obj.ury == pytest.approx(expected_ury)
 
         other = sp.Box(-1.0, 0.0, 1.0, 1.0)
         box_obj.combine(other)
 
         expected_llx = min(box_obj.llx, other.llx)
         expected_lly = min(box_obj.lly, other.lly)
-        expected_urx = max(box_obj.urx(), other.urx())
-        expected_ury = max(box_obj.ury(), other.ury())
+        expected_urx = max(box_obj.urx, other.urx)
+        expected_ury = max(box_obj.ury, other.ury)
         expected_width = expected_urx - expected_llx
         expected_height = expected_ury - expected_lly
 
         assert box_obj.llx == pytest.approx(expected_llx)
         assert box_obj.lly == pytest.approx(expected_lly)
-        assert box_obj.urx() == pytest.approx(expected_urx)
-        assert box_obj.ury() == pytest.approx(expected_ury)
+        assert box_obj.urx == pytest.approx(expected_urx)
+        assert box_obj.ury == pytest.approx(expected_ury)
         assert box_obj.width == pytest.approx(expected_width)
         assert box_obj.height == pytest.approx(expected_height)
 
@@ -248,7 +248,7 @@ class TestBox:
         xpts, ypts = reshaped_data[:, 0], reshaped_data[:, 1]
 
         llx, lly = box_obj.llx, box_obj.lly
-        urx, ury = box_obj.urx(), box_obj.ury()
+        urx, ury = box_obj.urx, box_obj.ury
         expected_xpts = [llx, urx, urx, llx, llx]
         expected_ypts = [lly, lly, ury, ury, lly]
 
@@ -264,7 +264,7 @@ class TestBox:
 
     def test_numkey_points(self, box_obj: sp.Box) -> None:
         llx, lly = box_obj.llx, box_obj.lly
-        urx, ury = box_obj.urx(), box_obj.ury()
+        urx, ury = box_obj.urx, box_obj.ury
         cx = (llx + urx) / 2
         cy = (lly + ury) / 2
         expected_points = {
@@ -323,8 +323,8 @@ class TestPoly:
         assert isinstance(bb, sp.Box)
         assert bb.llx == pytest.approx(expected_llx)
         assert bb.lly == pytest.approx(expected_lly)
-        assert bb.urx() == pytest.approx(expected_urx)
-        assert bb.ury() == pytest.approx(expected_ury)
+        assert bb.urx == pytest.approx(expected_urx)
+        assert bb.ury == pytest.approx(expected_ury)
         assert bb.width == pytest.approx(expected_width)
         assert bb.height == pytest.approx(expected_height)
 
@@ -485,8 +485,8 @@ class TestPath:
         assert isinstance(bb, sp.Box)
         assert bb.llx == pytest.approx(expected_llx)
         assert bb.lly == pytest.approx(expected_lly)
-        assert bb.urx() == pytest.approx(expected_urx)
-        assert bb.ury() == pytest.approx(expected_ury)
+        assert bb.urx == pytest.approx(expected_urx)
+        assert bb.ury == pytest.approx(expected_ury)
         assert bb.width == pytest.approx(expected_width)
         assert bb.height == pytest.approx(expected_height)
 
@@ -694,8 +694,8 @@ class TestText:
         assert isinstance(bb, sp.Box)
         # Since text isn't a geometric shape, we define its bounding box to be a single
         # point at the text origin (x0, y0).
-        assert bb.cx() == pytest.approx(text_obj.x0)
-        assert bb.cy() == pytest.approx(text_obj.y0)
+        assert bb.cx == pytest.approx(text_obj.x0)
+        assert bb.cy == pytest.approx(text_obj.y0)
         assert bb.width == 0
         assert bb.height == 0
 
@@ -831,13 +831,13 @@ class TestSRef:
         bb = sref_obj.bounding_box()
         assert isinstance(bb, sp.Box)
         ref_bb = geomgroup_obj.bounding_box()
-        expected_cx = sref_obj.x0 + ref_bb.cx()
-        expected_cy = sref_obj.y0 + ref_bb.cy()
+        expected_cx = sref_obj.x0 + ref_bb.cx
+        expected_cy = sref_obj.y0 + ref_bb.cy
         expected_width = ref_bb.width * sref_obj.mag
         expected_height = ref_bb.height * sref_obj.mag
 
-        assert bb.cx() == pytest.approx(expected_cx)
-        assert bb.cy() == pytest.approx(expected_cy)
+        assert bb.cx == pytest.approx(expected_cx)
+        assert bb.cy == pytest.approx(expected_cy)
         assert bb.width == pytest.approx(expected_width)
         assert bb.height == pytest.approx(expected_height)
 
@@ -863,8 +863,8 @@ class TestSRef:
         sref_bb = sref_obj.bounding_box()
         placed_bb = placed.bounding_box()
 
-        assert sref_bb.cx() == pytest.approx(placed_bb.cx())
-        assert sref_bb.cy() == pytest.approx(placed_bb.cy())
+        assert sref_bb.cx == pytest.approx(placed_bb.cx)
+        assert sref_bb.cy == pytest.approx(placed_bb.cy)
         assert sref_bb.width == pytest.approx(placed_bb.width)
         assert sref_bb.height == pytest.approx(placed_bb.height)
 
@@ -887,8 +887,8 @@ class TestSRef:
         bb = sref.bounding_box()
         assert bb.width == pytest.approx(pool_box.width * sref.mag)
         assert bb.height == pytest.approx(pool_box.height * sref.mag)
-        assert bb.cx() == pytest.approx(sref.x0 + pool_box.cx() * sref.mag)
-        assert bb.cy() == pytest.approx(sref.y0 + pool_box.cy() * sref.mag)
+        assert bb.cx == pytest.approx(sref.x0 + pool_box.cx * sref.mag)
+        assert bb.cy == pytest.approx(sref.y0 + pool_box.cy * sref.mag)
 
     @pytest.mark.xfail(
         strict=True,
@@ -906,8 +906,8 @@ class TestSRef:
         sref_bb = sref_obj.bounding_box()
         placed_bb = placed.bounding_box()
 
-        assert sref_bb.cx() == pytest.approx(placed_bb.cx())
-        assert sref_bb.cy() == pytest.approx(placed_bb.cy())
+        assert sref_bb.cx == pytest.approx(placed_bb.cx)
+        assert sref_bb.cy == pytest.approx(placed_bb.cy)
         assert sref_bb.width == pytest.approx(placed_bb.width)
         assert sref_bb.height == pytest.approx(placed_bb.height)
 
@@ -1014,13 +1014,13 @@ class TestAref:
         lly = aref_kwargs.y0 + ref_bb.lly
         urx = (
             aref_kwargs.x0
-            + ref_bb.urx()
+            + ref_bb.urx
             + (aref_kwargs.ncols - 1) * aref_kwargs.ax
             + (aref_kwargs.nrows - 1) * aref_kwargs.bx
         )
         ury = (
             aref_kwargs.y0
-            + ref_bb.ury()
+            + ref_bb.ury
             + (aref_kwargs.ncols - 1) * aref_kwargs.ay
             + (aref_kwargs.nrows - 1) * aref_kwargs.by
         )
@@ -1028,8 +1028,8 @@ class TestAref:
         assert isinstance(bb, sp.Box)
         assert bb.llx == pytest.approx(llx)
         assert bb.lly == pytest.approx(lly)
-        assert bb.urx() == pytest.approx(urx)
-        assert bb.ury() == pytest.approx(ury)
+        assert bb.urx == pytest.approx(urx)
+        assert bb.ury == pytest.approx(ury)
 
     @pytest.mark.parametrize(
         ("mag", "angle", "mirror"),
@@ -1053,8 +1053,8 @@ class TestAref:
         aref_bb = aref_obj.bounding_box()
         placed_bb = placed.bounding_box()
 
-        assert aref_bb.cx() == pytest.approx(placed_bb.cx())
-        assert aref_bb.cy() == pytest.approx(placed_bb.cy())
+        assert aref_bb.cx == pytest.approx(placed_bb.cx)
+        assert aref_bb.cy == pytest.approx(placed_bb.cy)
         assert aref_bb.width == pytest.approx(placed_bb.width)
         assert aref_bb.height == pytest.approx(placed_bb.height)
 
@@ -1083,8 +1083,8 @@ class TestAref:
         aref_bb = aref_obj.bounding_box()
         placed_bb = placed.bounding_box()
 
-        assert aref_bb.cx() == pytest.approx(placed_bb.cx())
-        assert aref_bb.cy() == pytest.approx(placed_bb.cy())
+        assert aref_bb.cx == pytest.approx(placed_bb.cx)
+        assert aref_bb.cy == pytest.approx(placed_bb.cy)
         assert aref_bb.width == pytest.approx(placed_bb.width)
         assert aref_bb.height == pytest.approx(placed_bb.height)
 
@@ -1536,8 +1536,8 @@ class TestGeomGroup:
 
         assert bb.llx == pytest.approx(min(cbb.llx, ebb.llx))
         assert bb.lly == pytest.approx(min(cbb.lly, ebb.lly))
-        assert bb.urx() == pytest.approx(max(cbb.urx(), ebb.urx()))
-        assert bb.ury() == pytest.approx(max(cbb.ury(), ebb.ury()))
+        assert bb.urx == pytest.approx(max(cbb.urx, ebb.urx))
+        assert bb.ury == pytest.approx(max(cbb.ury, ebb.ury))
 
     def test_to_boxes_and_set_layer(
         self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
@@ -1931,8 +1931,8 @@ class TestGeomGroup:
         res_bb = res_poly.bounding_box()
         assert res_bb.width == pytest.approx(3.0)
         assert res_bb.height == pytest.approx(3.0)
-        assert res_bb.cx() == pytest.approx(1.0)
-        assert res_bb.cy() == pytest.approx(1.0)
+        assert res_bb.cx == pytest.approx(1.0)
+        assert res_bb.cy == pytest.approx(1.0)
         assert res_poly.point_inside(-0.1, -0.1)
         assert res_poly.point_inside(2.1, 2.1)
         assert not res_poly.point_inside(0.1, 0.1)

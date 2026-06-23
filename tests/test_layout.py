@@ -74,8 +74,8 @@ class TestMarker:
         assert isinstance(g.group[0], SRef)
 
         bb = g.bounding_box()
-        assert bb.cx() == pytest.approx(x0)
-        assert bb.cy() == pytest.approx(y0)
+        assert bb.cx == pytest.approx(x0)
+        assert bb.cy == pytest.approx(y0)
 
 
 class TestMarkerSet:
@@ -138,8 +138,8 @@ class TestMarkerSet:
         assert dev._name in g.group[0].cellname
 
         bb = g.bounding_box()
-        assert bb.cx() == pytest.approx(x0)
-        assert bb.cy() == pytest.approx(y0)
+        assert bb.cx == pytest.approx(x0)
+        assert bb.cy == pytest.approx(y0)
 
     def test_markerset_get_geom_mset2(self) -> None:
         name = "TestMarkerSet"
@@ -538,7 +538,7 @@ class TestDeviceTable:
         assert ports["io_1_0"].y0 == pytest.approx(20.0)
 
         bb = g.bounding_box()
-        assert bb.cx() == pytest.approx(5.0)
+        assert bb.cx == pytest.approx(5.0)
 
     def test_get_geometries_renders_annotations(
         self, dummy_device: smdev.Device, monkeypatch: pytest.MonkeyPatch
@@ -661,15 +661,15 @@ class TestMask:
 
         themask.add_device_table(tab1, x0=100, y0=200)
         bb_main = LayoutPool[themask.mainsymbol].bounding_box()
-        assert bb_main.cx() == pytest.approx(100)
-        assert bb_main.cy() == pytest.approx(200)
+        assert bb_main.cx == pytest.approx(100)
+        assert bb_main.cy == pytest.approx(200)
 
         tab2 = smlay.DeviceTable(dummy_device, 1, 1, {}, {})
         themask.add_device_table(tab2, x0=10, y0=20, cell="TABLE_CELL")
         assert "TABLE_CELL" in LayoutPool
         bb_cell = LayoutPool["TABLE_CELL"].bounding_box()
-        assert bb_cell.cx() == pytest.approx(10)
-        assert bb_cell.cy() == pytest.approx(20)
+        assert bb_cell.cx == pytest.approx(10)
+        assert bb_cell.cy == pytest.approx(20)
 
     def test_set_cache_triggers_import_only_when_true(
         self, monkeypatch: pytest.MonkeyPatch

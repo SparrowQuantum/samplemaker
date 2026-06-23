@@ -206,7 +206,7 @@ class TestDevice:
         g = dummy_device.run()
         bb = g.bounding_box()
         assert bb.llx == pytest.approx(10.0)
-        assert bb.cy() == pytest.approx(20.0)
+        assert bb.cy == pytest.approx(20.0)
 
     def test_addparameter_rejects_colon(self, dummy_device: smdev.Device) -> None:
         with pytest.raises(ValueError, match="containing ':'"):

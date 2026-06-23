@@ -684,8 +684,8 @@ class DeviceTable:
                 pos_xy[j][i][1] = -by
                 bboxes[j][i].llx -= bx
                 bboxes[j][i].lly -= by
-                x_extr_r[i] = max(x_extr_r[i], bboxes[j][i].urx())
-                y_extr_t[j] = max(y_extr_t[j], bboxes[j][i].ury())
+                x_extr_r[i] = max(x_extr_r[i], bboxes[j][i].urx)
+                y_extr_t[j] = max(y_extr_t[j], bboxes[j][i].ury)
                 x_extr_l[i] = min(x_extr_l[i], bboxes[j][i].llx)
                 y_extr_b[j] = min(y_extr_b[j], bboxes[j][i].lly)
 
@@ -1490,7 +1490,7 @@ class Mask:
         """
         geoms = device_table.get_geometries()
         bb = geoms.bounding_box()
-        geoms.translate(-bb.cx() + x0, -bb.cy() + y0)
+        geoms.translate(-bb.cx + x0, -bb.cy + y0)
         if not cell:
             self.add_to_main_cell(geoms)
         else:

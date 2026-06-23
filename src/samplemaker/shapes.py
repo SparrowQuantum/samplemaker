@@ -69,6 +69,7 @@ to save memory and computation time. For example
 
 import math
 import pathlib
+import warnings
 from collections.abc import Collection, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
@@ -457,8 +458,8 @@ class GeomGroup:
         bb = self.bounding_box()
         layer_list = self.get_layer_list()
         stat["BoundingBox"] = {
-            "x": bb.cx(),
-            "y": bb.cy(),
+            "x": bb.cx,
+            "y": bb.cy,
             "width": bb.width,
             "height": bb.height,
         }
@@ -677,9 +678,9 @@ class GeomGroup:
         if name == "lly":  # Prepare LL array
             return np.array([b.lly for b in bbs])
         if name == "urx":  # Prepare UR array
-            return np.array([b.urx() for b in bbs])
+            return np.array([b.urx for b in bbs])
         if name == "ury":  # Prepare UR array
-            return np.array([b.ury() for b in bbs])
+            return np.array([b.ury for b in bbs])
         if name == "T":  # Prepare type array
             return np.array([str(g.__class__.__name__) for g in sflat.group])
 
@@ -720,15 +721,15 @@ class GeomGroup:
             raise ValueError(msg)
         plook = self.copy().boolean_union(layer)
         b1 = psearch.bounding_box()
-        psearch.translate(-b1.cx(), -b1.cy())
+        psearch.translate(-b1.cx, -b1.cy)
         g2 = psearch.group[0]
         res = []
         for g in plook.group:
             if isinstance(g, Poly):
                 bb = g.bounding_box()
-                g.translate(-bb.cx(), -bb.cy())
+                g.translate(-bb.cx, -bb.cy)
                 if g.identical_to(g2):
-                    res += [[bb.cx(), bb.cy()]]
+                    res += [[bb.cx, bb.cy]]
         return res
 
     def get_area(self) -> float:
@@ -1593,6 +1594,27 @@ class Dot:
         self.mirror_y(y0)
 
 
+def _bw_compat_float_factory(method_name: str) -> type[float]:
+    class _BWCompatFloat(float):
+        """Backward compatibility class for properties that used to be methods."""
+
+        def __call__(self) -> float:
+            """Return the float value after raising a deprecation warning."""
+            msg = (
+                f"Calling {method_name}() is deprecated and will "
+                "be removed in a future version. "
+                f"Use the property {method_name} instead."
+            )
+            warnings.warn(
+                msg,
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            return float(self)
+
+    return _BWCompatFloat
+
+
 class Box:
     """Axis-aligned bounding box utility class.
 
@@ -1620,6 +1642,7 @@ class Box:
         self.width = width
         self.height = height
 
+    @property
     def cx(self) -> float:
         """Get the x-coordinate of the box center.
 
@@ -1629,8 +1652,10 @@ class Box:
             x-coordinate of the box center.
 
         """
-        return self.llx + self.width / 2
+        float_class = _bw_compat_float_factory("Box.cx")
+        return float_class(self.llx + self.width / 2)
 
+    @property
     def cy(self) -> float:
         """Get the y-coordinate of the box center.
 
@@ -1640,8 +1665,10 @@ class Box:
             y-coordinate of the box center.
 
         """
-        return self.lly + self.height / 2
+        float_class = _bw_compat_float_factory("Box.cy")
+        return float_class(self.lly + self.height / 2)
 
+    @property
     def urx(self) -> float:
         """Get the x-coordinate of the upper-right corner.
 
@@ -1651,8 +1678,10 @@ class Box:
             x-coordinate of the upper-right corner.
 
         """
-        return self.llx + self.width
+        float_class = _bw_compat_float_factory("Box.urx")
+        return float_class(self.llx + self.width)
 
+    @property
     def ury(self) -> float:
         """Get the y-coordinate of the upper-right corner.
 
@@ -1662,7 +1691,8 @@ class Box:
             y-coordinate of the upper-right corner.
 
         """
-        return self.lly + self.height
+        float_class = _bw_compat_float_factory("Box.ury")
+        return float_class(self.lly + self.height)
 
     def combine(self, other: "Box") -> None:
         """Extend the box to fit another box.
@@ -1677,12 +1707,12 @@ class Box:
         None
 
         """
-        tmp_urx = self.urx()
-        tmp_ury = self.ury()
+        tmp_urx = self.urx
+        tmp_ury = self.ury
         self.llx = min(self.llx, other.llx)
         self.lly = min(self.lly, other.lly)
-        tmp_urx = max(tmp_urx, other.urx())
-        tmp_ury = max(tmp_ury, other.ury())
+        tmp_urx = max(tmp_urx, other.urx)
+        tmp_ury = max(tmp_ury, other.ury)
 
         self.width = tmp_urx - self.llx
         self.height = tmp_ury - self.lly
@@ -1699,8 +1729,8 @@ class Box:
 
         """
         return Poly(
-            [self.llx, self.urx(), self.urx(), self.llx],
-            [self.lly, self.lly, self.ury(), self.ury()],
+            [self.llx, self.urx, self.urx, self.llx],
+            [self.lly, self.lly, self.ury, self.ury],
             0,
         )
 
@@ -1771,7 +1801,7 @@ class Box:
         numkey = int(numkey)
         xoff = -((numkey - 1) % 3 - 1)
         yoff = math.floor((9 - numkey) / 3) - 1
-        return self.cx() - xoff * self.width / 2, self.cy() - yoff * self.height / 2
+        return self.cx - xoff * self.width / 2, self.cy - yoff * self.height / 2
 
 
 class Poly:

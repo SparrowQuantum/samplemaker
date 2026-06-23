@@ -494,8 +494,8 @@ def test_make_rounded_rect_noncenter_numkey() -> None:
         layer=16,
     )
     bb = rounded_rect_geom.bounding_box()
-    assert bb.urx() == pytest.approx(2.0)
-    assert bb.ury() == pytest.approx(3.0)
+    assert bb.urx == pytest.approx(2.0)
+    assert bb.ury == pytest.approx(3.0)
     assert bb.width == pytest.approx(10.0)
     assert bb.height == pytest.approx(6.0)
 

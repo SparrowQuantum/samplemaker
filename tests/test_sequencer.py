@@ -494,8 +494,8 @@ class TestSequencer:
         assert isinstance(g, GeomGroup)
         assert len(g.group) == 1
         bb = g.bounding_box()
-        assert bb.cx() == pytest.approx(x0 + xc)
-        assert bb.cy() == pytest.approx(y0 + yc)
+        assert bb.cx == pytest.approx(x0 + xc)
+        assert bb.cy == pytest.approx(y0 + yc)
         assert sequencer.state["x"] == pytest.approx(x0 + xc)
         assert sequencer.state["y"] == pytest.approx(y0 + yc)
         stored = sequencer.state["STORED"]
