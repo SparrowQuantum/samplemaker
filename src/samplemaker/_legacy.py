@@ -10,7 +10,7 @@ Optional argument example
 To replace an optional argument (in this case Npts -> npts), do the following:
 
     def my_func(npts: int = 100, **kwargs: int) -> None:
-        npts = parse_optional_legacy_kwarg("npts", npts, 100, "Npts", kwargs)
+        npts = get_optional_kwarg("npts", npts, 100, "Npts", kwargs)
         ensure_empty_kwargs("my_func", kwargs)
 
         # rest of function body
@@ -24,17 +24,17 @@ To replace a required argument (in this case Npts -> npts), do the following:
     def my_func(npts: int | MissingType = MISSING, **kwargs: int) -> None:
         npts = parse_required_legacy_kwarg("npts", npts, "Npts", kwargs)
         ensure_empty_kwargs("my_func", kwargs)
-        check_missing_required_args("my_func", npts=npts)
+        check_missing_args("my_func", npts=npts)
 
         # Filter out the MissingType type hint for the rest of the function body.
-        npts = cast_defined_arg("npts", npts)
+        npts = ensure_arg_type("npts", npts)
 
         # Rest of function body
         ...
 
 If there are required arguments following the one being replaced, they should also be
-given a default value of MISSING, after which check_missing_required_args should be
-called with all of the required arguments:
+given a default value of MISSING, after which check_missing_args should be called with
+all of the required arguments:
 
     def my_func(
         npts: int | MissingType = MISSING,
@@ -43,11 +43,11 @@ called with all of the required arguments:
     ) -> None:
         npts = parse_required_legacy_kwarg("npts", npts, "Npts", kwargs)
         ensure_empty_kwargs("my_func", kwargs)
-        check_missing_required_args("my_func", npts=npts, other_arg=other_arg)
+        check_missing_args("my_func", npts=npts, other_arg=other_arg)
 
         # We cast both npts and other_arg this time
-        npts = cast_defined_arg("npts", npts)
-        other_arg = cast_defined_arg("other_arg", other_arg)
+        npts = ensure_arg_type("npts", npts)
+        other_arg = ensure_arg_type("other_arg", other_arg)
 
         # Rest of function body
         ...
