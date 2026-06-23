@@ -67,8 +67,8 @@ def sample_geometry(sample_device: Device) -> sp.GeomGroup:
     ellipse = sm.make_ellipse(
         40.0,
         10.0,
-        rX=2.0,
-        rY=1.0,
+        rx=2.0,
+        ry=1.0,
         rot=15.0,
         layer=6,
         to_poly=False,
@@ -76,8 +76,8 @@ def sample_geometry(sample_device: Device) -> sp.GeomGroup:
     ring = sm.make_ring(
         50.0,
         10.0,
-        rX=2.5,
-        rY=1.5,
+        rx=2.5,
+        ry=1.5,
         rot=0.0,
         w=0.4,
         layer=7,
@@ -86,8 +86,8 @@ def sample_geometry(sample_device: Device) -> sp.GeomGroup:
     arc = sm.make_arc(
         60.0,
         10.0,
-        rX=2.5,
-        rY=1.5,
+        rx=2.5,
+        ry=1.5,
         rot=0.0,
         w=0.4,
         a1=0,

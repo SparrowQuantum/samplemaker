@@ -14,8 +14,12 @@ directly.
 """
 
 import math
+from collections.abc import Sequence
+
+from numpy.typing import ArrayLike
 
 import samplemaker.shapes as smsh
+from samplemaker import _legacy
 from samplemaker.shapes import GeomGroup
 
 
@@ -41,16 +45,16 @@ def make_dot(x0: float, y0: float) -> smsh.Dot:
     return smsh.Dot(x0, y0)
 
 
-def make_poly(xpts: list[float], ypts: list[float], layer: int = 1) -> GeomGroup:
+def make_poly(xpts: ArrayLike, ypts: ArrayLike, layer: int = 1) -> GeomGroup:
     """Create a closed polygon object.
 
     The first and last point should not be specified twice.
 
     Parameters
     ----------
-    xpts : list[float]
+    xpts : ArrayLike
         x coordinates in um.
-    ypts : list[float]
+    ypts : ArrayLike
         y coordinates in um.
     layer : int, optional
         layer, by default 1.
@@ -67,8 +71,8 @@ def make_poly(xpts: list[float], ypts: list[float], layer: int = 1) -> GeomGroup
 
 
 def make_path(
-    xpts: list[float],
-    ypts: list[float],
+    xpts: Sequence[float],
+    ypts: Sequence[float],
     width: float,
     layer: int = 1,
     to_poly: bool = False,
@@ -79,16 +83,16 @@ def make_path(
 
     Parameters
     ----------
-    xpts : list[float]
+    xpts : Sequence[float]
         x coordinates in um.
-    ypts : list[float]
+    ypts : Sequence[float]
         y coordinates in um.
     width : float
         path width in um.
     layer : int, optional
         The path layer, by default 1.
     to_poly : bool, optional
-        If true, the path is converted to a polygon, by default 0.
+        If true, the path is converted to a polygon, by default False.
 
     Returns
     -------
@@ -174,7 +178,7 @@ def make_sref(
     group: GeomGroup,
     mag: float = 1.0,
     angle: float = 0,
-    mirror: bool = 0,
+    mirror: bool = False,
 ) -> GeomGroup:
     """Create a CELL reference or SREF element in GDS.
 
@@ -193,7 +197,7 @@ def make_sref(
     angle : float, optional
         Rotation angle of the cell in degrees, by default 0.
     mirror : bool, optional
-        If true, the cell is mirrored along X, by default 0.
+        If true, the cell is mirrored along X, by default False.
 
     Returns
     -------
@@ -219,7 +223,7 @@ def make_aref(
     by: float,
     mag: float = 1.0,
     angle: float = 0,
-    mirror: bool = 0,
+    mirror: bool = False,
 ) -> GeomGroup:
     """Create an ARRAY of cell references or AREF element in GDS.
 
@@ -250,7 +254,7 @@ def make_aref(
     angle : float, optional
         Rotation angle of the cell in degrees, by default 0.
     mirror : bool, optional
-        If true, the cell is mirrored along X, by default 0.
+        If true, the cell is mirrored along X, by default False.
 
     Returns
     -------
@@ -311,12 +315,13 @@ def make_circle(
 def make_ellipse(
     x0: float,
     y0: float,
-    rX: float,
-    rY: float,
-    rot: float,
+    rx: float | _legacy.MissingType = _legacy.MISSING,
+    ry: float | _legacy.MissingType = _legacy.MISSING,
+    rot: float | _legacy.MissingType = _legacy.MISSING,
     layer: int = 1,
     to_poly: bool = False,
     vertices: int = 32,
+    **kwargs: float,
 ) -> GeomGroup:
     """Create a filled ellipse.
 
@@ -326,9 +331,9 @@ def make_ellipse(
         x coordinate of the center in um.
     y0 : float
         y coordinate of the center in um.
-    rX : float
+    rx : float
         Radius of the ellipse in X direction in um.
-    rY : float
+    ry : float
         Radius of the ellipse in Y direction in um.
     rot: float
         Rotation angle (counterclockwise) in degrees.
@@ -339,6 +344,8 @@ def make_ellipse(
     vertices : int, optional
         Specify the number of vertices to be used for conversion to polygon, by
         default 32.
+    kwargs : float
+        Additional keyword arguments. Supports 'rX' and 'rY' for backward compatibility.
 
     Returns
     -------
@@ -346,8 +353,16 @@ def make_ellipse(
         A geometry containing a single ellipse.
 
     """
+    rx = _legacy.get_kwarg("rx", rx, "rX", kwargs)
+    ry = _legacy.get_kwarg("ry", ry, "rY", kwargs)
+    _legacy.ensure_empty_kwargs("make_ellipse", kwargs)
+    _legacy.check_missing_args("make_ellipse", rx=rx, ry=ry, rot=rot)
+
+    rx = _legacy.ensure_arg_type("rx", rx)
+    ry = _legacy.ensure_arg_type("ry", ry)
+
     g = GeomGroup()
-    c = smsh.Ellipse(x0, y0, rX, rY, layer, rot)
+    c = smsh.Ellipse(x0, y0, rx, ry, layer, rot)
     if to_poly:
         g = c.to_polygon(vertices)
     else:
@@ -358,13 +373,14 @@ def make_ellipse(
 def make_ring(
     x0: float,
     y0: float,
-    rX: float,
-    rY: float,
-    rot: float,
-    w: float,
+    rx: float | _legacy.MissingType = _legacy.MISSING,
+    ry: float | _legacy.MissingType = _legacy.MISSING,
+    rot: float | _legacy.MissingType = _legacy.MISSING,
+    w: float | _legacy.MissingType = _legacy.MISSING,
     layer: int = 1,
     to_poly: bool = False,
     vertices: int = 32,
+    **kwargs: float,
 ) -> GeomGroup:
     """Create an elliptical ring.
 
@@ -374,11 +390,11 @@ def make_ring(
         x coordinate of the center in um.
     y0 : float
         y coordinate of the center in um.
-    rX : float
+    rx : float
         Radius of the elliptical ring in X direction in um.
-    rY : float
+    ry : float
         Radius of the elliptical ring in Y direction in um.
-    rot: float
+    rot : float
         Rotation angle (counterclockwise) in degrees.
     w : float
         Ring width in um.
@@ -389,6 +405,8 @@ def make_ring(
     vertices : int, optional
         Specify the number of vertices to be used for conversion to polygon, by
         default 32.
+    kwargs : float
+        Additional keyword arguments. Supports 'rX' and 'rY' for backward compatibility.
 
     Returns
     -------
@@ -396,8 +414,16 @@ def make_ring(
         A geometry containing a single ring.
 
     """
+    rx = _legacy.get_kwarg("rx", rx, "rX", kwargs)
+    ry = _legacy.get_kwarg("ry", ry, "rY", kwargs)
+    _legacy.ensure_empty_kwargs("make_ring", kwargs)
+    _legacy.check_missing_args("make_ring", rx=rx, ry=ry, rot=rot, w=w)
+
+    rx = _legacy.ensure_arg_type("rx", rx)
+    ry = _legacy.ensure_arg_type("ry", ry)
+
     g = GeomGroup()
-    c = smsh.Ring(x0, y0, rX, rY, layer, rot, w)
+    c = smsh.Ring(x0, y0, rx, ry, layer, rot, w)
     if to_poly:
         g = c.to_polygon(vertices)
     else:
@@ -408,16 +434,17 @@ def make_ring(
 def make_arc(
     x0: float,
     y0: float,
-    rX: float,
-    rY: float,
-    rot: float,
-    w: float,
-    a1: float,
-    a2: float,
+    rx: float | _legacy.MissingType = _legacy.MISSING,
+    ry: float | _legacy.MissingType = _legacy.MISSING,
+    rot: float | _legacy.MissingType = _legacy.MISSING,
+    w: float | _legacy.MissingType = _legacy.MISSING,
+    a1: float | _legacy.MissingType = _legacy.MISSING,
+    a2: float | _legacy.MissingType = _legacy.MISSING,
     layer: int = 1,
     to_poly: bool = False,
     vertices: int = 32,
     split: bool = False,
+    **kwargs: float,
 ) -> GeomGroup:
     """Create an elliptical arc.
 
@@ -429,11 +456,11 @@ def make_arc(
         x coordinate of the center in um.
     y0 : float
         y coordinate of the center in um.
-    rX : float
+    rx : float
         Radius of the elliptical arc in X direction in um.
-    rY : float
+    ry : float
         Radius of the elliptical arc in Y direction in um.
-    rot: float
+    rot : float
         Rotation angle (counterclockwise) in degrees.
     w : float
         Arc width in um.
@@ -450,15 +477,29 @@ def make_arc(
         default 32.
     split : bool, optional
         Will also split the arc in quadrangles if to_poly is True, by default False.
+    kwargs : float
+        Additional keyword arguments. Supports 'rX' and 'rY' for backward compatibility.
 
     Returns
     -------
     GeomGroup
-        A geometry containing a single ring.
+        A geometry containing a single arc.
 
     """
+    rx = _legacy.get_kwarg("rx", rx, "rX", kwargs)
+    ry = _legacy.get_kwarg("ry", ry, "rY", kwargs)
+    _legacy.ensure_empty_kwargs("make_arc", kwargs)
+    _legacy.check_missing_args("make_arc", rx=rx, ry=ry, rot=rot, w=w, a1=a1, a2=a2)
+
+    rx = _legacy.ensure_arg_type("rx", rx)
+    ry = _legacy.ensure_arg_type("ry", ry)
+    rot = _legacy.ensure_arg_type("rot", rot)
+    w = _legacy.ensure_arg_type("w", w)
+    a1 = _legacy.ensure_arg_type("a1", a1)
+    a2 = _legacy.ensure_arg_type("a2", a2)
+
     g = GeomGroup()
-    c = smsh.Arc(x0, y0, rX, rY, layer, rot, w, a1, a2)
+    c = smsh.Arc(x0, y0, rx, ry, layer, rot, w, a1, a2)
     if to_poly:
         g = c.to_polygon(vertices, split)
     else:
@@ -585,17 +626,20 @@ def make_rounded_rect(
 
 
 def make_tapered_path(
-    xpts: list[float], ypts: list[float], widths: list[float], layer: int = 1
+    xpts: Sequence[float],
+    ypts: Sequence[float],
+    widths: Sequence[float],
+    layer: int = 1,
 ) -> GeomGroup:
     """Create a path with variable width.
 
     Parameters
     ----------
-    xpts : list[float]
+    xpts : Sequence[float]
         x coordinates in um.
-    ypts : list[float]
+    ypts : Sequence[float]
         y coordinates in um.
-    widths : list[float]
+    widths : Sequence[float]
         path widths in um at each point (should be the same size as xpts).
     layer : int, optional
         The path layer, by default 1.
@@ -610,14 +654,14 @@ def make_tapered_path(
     y = ypts
     w = widths
     p1 = smsh.Poly([0], [0], layer)
-    Npts = len(x)
-    if Npts == 1:
+    npts = len(x)
+    if npts == 1:
         p1.set_points(
             [-w[0] / 2, w[0] / 2, w[0] / 2, -w[0] / 2],
             [-w[0] / 2, -w[0] / 2, w[0] / 2, w[0] / 2],
         )
         p1.translate(x[0], y[0])
-    if Npts == 2:
+    if npts == 2:
         ang1 = math.atan2(y[1] - y[0], x[1] - x[0])
         c1 = 1 / 2 * math.cos(ang1 - math.pi / 2)
         c2 = 1 / 2 * math.cos(ang1 + math.pi / 2)
@@ -628,12 +672,12 @@ def make_tapered_path(
             [y[0] + s1 * w[0], y[1] + s1 * w[1], y[1] + s2 * w[1], y[0] + s2 * w[0]],
         )
 
-    if Npts > 2:
+    if npts > 2:
         xp1 = []
         yp1 = []
         xp2 = []
         yp2 = []
-        for j in range(1, Npts - 1):
+        for j in range(1, npts - 1):
             ang1 = math.atan2(y[j] - y[j - 1], x[j] - x[j - 1])
             ang2 = math.atan2(y[j + 1] - y[j], x[j + 1] - x[j])
             d = (x[j + 1] - x[j - 1]) * (y[j] - y[j - 1]) - (y[j + 1] - y[j - 1]) * (
@@ -663,7 +707,7 @@ def make_tapered_path(
                 a0 = math.pi / 2 - (ang1 + ang2) / 2
                 xp1.append(x[j] + wx * math.cos(a0))
                 yp1.append(y[j] - wx * math.sin(a0))
-            if j == Npts - 2:
+            if j == npts - 2:
                 xp1.append(x[j + 1] + w[j + 1] / 2 * math.cos(ang2 - math.pi / 2))
                 yp1.append(y[j + 1] + w[j + 1] / 2 * math.sin(ang2 - math.pi / 2))
                 xp2.append(x[j + 1] + w[j + 1] / 2 * math.cos(ang2 + math.pi / 2))

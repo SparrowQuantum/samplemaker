@@ -330,8 +330,8 @@ class FocusingGratingCoupler(Device):
             g += sm.make_arc(
                 x0=x0,
                 y0=0,
-                rX=a,
-                rY=b,
+                rx=a,
+                ry=b,
                 rot=0,
                 w=w,
                 a1=-div_angle - 5,
