@@ -99,9 +99,9 @@ g += ffm_dev.run()
 # instantiate them in tables.
 
 # Let's add all to main cell.
-themask.addToMainCell(g)
+themask.add_to_main_cell(g)
 
 # Export to GDS.
-themask.exportGDS()
+themask.export_gds()
 
 # Finished!

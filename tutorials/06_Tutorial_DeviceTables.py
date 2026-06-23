@@ -58,9 +58,9 @@ tab.set_annotations(
 
 # Finally, we add the device table to the mask and place it so that its center is at
 # position 150,150.
-themask.addDeviceTable(tab, 150, 150)
+themask.add_device_table(tab, 150, 150)
 
 # Export to GDS
-themask.exportGDS()
+themask.export_gds()
 
 # Finished!

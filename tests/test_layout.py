@@ -343,7 +343,7 @@ class TestDeviceTable:
         tab._geometries = [[GeomGroup()]]
         tab._portmap = [[{"in": object()}]]
 
-        positions = (((1.0, 2.0), (3.0, 4.0)), ((5.0, 6.0), (7.0, 8.0)))
+        positions = [[(1.0, 2.0), (3.0, 4.0)], [(5.0, 6.0), (7.0, 8.0)]]
         tab.set_table_positions(positions)
         assert tab.pos_xy == positions
         assert tab._geometries == []
@@ -372,19 +372,21 @@ class TestDeviceTable:
         self, dummy_device: smdev.Device
     ) -> None:
         tab = smlay.DeviceTable(dummy_device, 2, 2, {}, {})
-        tab.set_table_positions((((0.0, 0.0), (1.0, 1.0)), ((2.0, 2.0), (3.0, 3.0))))
+        tab.set_table_positions([[(0.0, 0.0), (1.0, 1.0)], [(2.0, 2.0), (3.0, 3.0)]])
         tab.shift_table_origin(10.0, -5.0)
-        assert tab.pos_xy == (
-            ((10.0, -5.0), (11.0, -4.0)),
-            ((12.0, -3.0), (13.0, -2.0)),
-        )
+        assert tab.pos_xy == [
+            [(10.0, -5.0), (11.0, -4.0)],
+            [(12.0, -3.0), (13.0, -2.0)],
+        ]
 
     def test_regular_returns_expected_coordinate_grid(self) -> None:
-        reg = smlay.DeviceTable.Regular(2, 3, 5.0, 1.0, -2.0, 7.0, x0=100.0, y0=200.0)
-        assert reg == (
-            ((100.0, 200.0), (105.0, 201.0), (110.0, 202.0)),
-            ((98.0, 207.0), (103.0, 208.0), (108.0, 209.0)),
+        reg = smlay.DeviceTable.create_regular_grid(
+            2, 3, 5.0, 1.0, -2.0, 7.0, x0=100.0, y0=200.0
         )
+        assert reg == [
+            [(100.0, 200.0), (105.0, 201.0), (110.0, 202.0)],
+            [(98.0, 207.0), (103.0, 208.0), (108.0, 209.0)],
+        ]
 
     def test_get_geometries_builds_table_with_param_sweep(
         self, dummy_device: smdev.Device
@@ -394,7 +396,7 @@ class TestDeviceTable:
         tab = smlay.DeviceTable(dummy_device, 2, 2, rowvars, colvars)
         tab.use_references = False
         tab.set_table_positions(
-            (((0.0, 0.0), (20.0, 0.0)), ((0.0, 20.0), (20.0, 20.0)))
+            [[(0.0, 0.0), (20.0, 0.0)], [(0.0, 20.0), (20.0, 20.0)]]
         )
 
         g = tab.get_geometries()
@@ -420,7 +422,7 @@ class TestDeviceTable:
         colvars = {"width": [3.0, 5.0]}
         tab = smlay.DeviceTable(dummy_device, 2, 2, rowvars, colvars)
         monkeypatch.setattr(smdev.Device, "set_param", _capture_set_param)
-        tab.set_table_positions((((0.0, 0.0), (1.0, 1.0)), ((2.0, 2.0), (3.0, 3.0))))
+        tab.set_table_positions([[(0.0, 0.0), (1.0, 1.0)], [(2.0, 2.0), (3.0, 3.0)]])
         tab.get_geometries()
         assert captured_params == {
             "height": [2.0, 4.0, 2.0, 4.0],  # Set in inner loop: ncol calls per value
@@ -431,7 +433,7 @@ class TestDeviceTable:
         self, dummy_device: smdev.Device
     ) -> None:
         tab = smlay.DeviceTable(dummy_device, 1, 2, {}, {"width": [5.0, 7.0]})
-        tab.set_table_positions((((0.0, 0.0), (12.0, 0.0)),))
+        tab.set_table_positions([[(0.0, 0.0), (12.0, 0.0)]])
 
         g1 = tab.get_geometries()
         g2 = tab.get_geometries()
@@ -468,7 +470,7 @@ class TestDeviceTable:
         monkeypatch.setattr(dm, "_dummy_connector", _capture_connector)
         tab = smlay.DeviceTable(dummy_connector_device, 2, 2, {}, {})
         tab.set_table_positions(
-            (((0.0, 0.0), (20.0, 0.0)), ((0.0, 20.0), (20.0, 20.0)))
+            [[(0.0, 0.0), (20.0, 0.0)], [(0.0, 20.0), (20.0, 20.0)]]
         )
         tab.set_linked_ports(
             row_linkports=(("io", "io"),), col_linkports=(("io", "io"),)
@@ -484,33 +486,39 @@ class TestDeviceTable:
     ) -> None:
         tab = smlay.DeviceTable(dummy_device, 1, 2, {}, {})
 
-        original_build = tab._DeviceTable__build_geomarray
+        original_build = tab._build_geomarray
 
         def _build_with_incompatible_ports() -> None:
             original_build()
             tab._portmap[0][0]["in"].connector_function = lambda p1, p2: GeomGroup()
             tab._portmap[0][1]["in"].connector_function = lambda p1, p2: GeomGroup()
 
-        monkeypatch.setattr(
-            tab, "_DeviceTable__build_geomarray", _build_with_incompatible_ports
-        )
+        monkeypatch.setattr(tab, "_build_geomarray", _build_with_incompatible_ports)
         tab.set_linked_ports(col_linkports=(("in", "in"),))
 
         with pytest.raises(smdev.IncompatiblePortError, match="Incompatible ports"):
             tab.get_geometries()
 
-    @pytest.mark.xfail(reason="Row alignment uses p2.yx typo", strict=True)
-    def test_get_geometries_row_alignment_bug_path(
+    def test_get_geometries_row_alignment(
         self,
         dummy_connector_device: smdev.Device,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        captured: list[tuple[float, float, float, float]] = []
+
+        def _capture_connector(
+            port1: smdev.DevicePort, port2: smdev.DevicePort
+        ) -> GeomGroup:
+            captured.append((port1.x0, port1.y0, port2.x0, port2.y0))
+            return GeomGroup()
+
+        monkeypatch.setattr(dm, "_dummy_connector", _capture_connector)
         tab = smlay.DeviceTable(dummy_connector_device, 2, 1, {}, {})
-        tab.set_table_positions((((0.0, 0.0),), ((10.0, 20.0),)))
+        tab.set_table_positions([[(0.0, 0.0)], [(10.0, 20.0)]])
         tab.set_linked_ports(row_linkports=(("io", "io"),))
         tab.set_aligned_ports(align_rows=True, align_columns=False)
 
-        original_build = tab._DeviceTable__build_geomarray
+        original_build = tab._build_geomarray
 
         def _build_with_vertical_ports() -> None:
             original_build()
@@ -519,10 +527,18 @@ class TestDeviceTable:
                     pmap["io"].hv = False
                     pmap["io"].bf = True
 
-        monkeypatch.setattr(
-            tab, "_DeviceTable__build_geomarray", _build_with_vertical_ports
-        )
-        tab.get_geometries()
+        monkeypatch.setattr(tab, "_build_geomarray", _build_with_vertical_ports)
+        g = tab.get_geometries()
+
+        assert captured == [(0.0, 0.0, 0.0, 20.0)]
+
+        ports = tab.get_external_ports()
+        assert ports["io_0_0"].x0 == pytest.approx(ports["io_1_0"].x0)
+        assert ports["io_0_0"].y0 == pytest.approx(0.0)
+        assert ports["io_1_0"].y0 == pytest.approx(20.0)
+
+        bb = g.bounding_box()
+        assert bb.cx() == pytest.approx(5.0)
 
     def test_get_geometries_renders_annotations(
         self, dummy_device: smdev.Device, monkeypatch: pytest.MonkeyPatch
@@ -601,38 +617,38 @@ class TestMask:
         g1 = simple_rect_geometry.copy()
         g2 = simple_rect_geometry.copy()
 
-        themask.addToMainCell(g1)
-        themask.addToMainCell(g2)
+        themask.add_to_main_cell(g1)
+        themask.add_to_main_cell(g2)
         assert themask.mainsymbol in LayoutPool
         assert len(LayoutPool[themask.mainsymbol].group) == 2
 
-        themask.addCell("EXTRA", simple_rect_geometry.copy())
-        cell = themask.getCell("EXTRA")
+        themask.add_cell("EXTRA", simple_rect_geometry.copy())
+        cell = themask.get_cell("EXTRA")
         assert isinstance(cell, GeomGroup)
         assert cell is LayoutPool["EXTRA"]
 
         with pytest.raises(ValueError, match="does not exist"):
-            themask.getCell("MISSING")
+            themask.get_cell("MISSING")
 
     def test_add_markers_add_writefield_and_writefield_grid(self) -> None:
         mask1 = smlay.Mask("test_wf")
         markerset1 = smlay.MarkerSet("M1", CrossMark.build(), x0=2, y0=3, mset=2)
-        mask1.addMarkers(markerset1)
+        mask1.add_markers(markerset1)
         assert mask1.mainsymbol in LayoutPool
         assert len(LayoutPool[mask1.mainsymbol].group) == 1
         assert isinstance(LayoutPool[mask1.mainsymbol].group[0], ARef)
 
         markerset2 = smlay.MarkerSet("M2", CrossMark.build(), x0=5, y0=6, mset=4)
-        mask1.addMarkers(markerset2)
+        mask1.add_markers(markerset2)
         assert mask1.mainsymbol in LayoutPool
         assert len(LayoutPool[mask1.mainsymbol].group) == 2
         assert isinstance(LayoutPool[mask1.mainsymbol].group[1], ARef)
 
-        mask1.addWriteField(500, 10, 20, passes=2, shift=0.5)
+        mask1.add_writefield(500, 10, 20, passes=2, shift=0.5)
         assert mask1.writefields[-1] == (500, 10, 20, 2, 0.5)
 
         mask2 = smlay.Mask("test_wf_grid")
-        mask2.addWriteFieldGrid(50, 0, 0, 2, 3, passes=3, shift=1.5)
+        mask2.add_writefield_grid(50, 0, 0, 2, 3, passes=3, shift=1.5)
         assert len(mask2.writefields) == 6
         assert mask2.mainsymbol in LayoutPool
         assert len(LayoutPool[mask2.mainsymbol].group) == 6
@@ -643,13 +659,13 @@ class TestMask:
         tab1 = smlay.DeviceTable(dummy_device, 1, 1, {}, {})
         themask = smlay.Mask("test_table")
 
-        themask.addDeviceTable(tab1, x0=100, y0=200)
+        themask.add_device_table(tab1, x0=100, y0=200)
         bb_main = LayoutPool[themask.mainsymbol].bounding_box()
         assert bb_main.cx() == pytest.approx(100)
         assert bb_main.cy() == pytest.approx(200)
 
         tab2 = smlay.DeviceTable(dummy_device, 1, 1, {}, {})
-        themask.addDeviceTable(tab2, x0=10, y0=20, cell="TABLE_CELL")
+        themask.add_device_table(tab2, x0=10, y0=20, cell="TABLE_CELL")
         assert "TABLE_CELL" in LayoutPool
         bb_cell = LayoutPool["TABLE_CELL"].bounding_box()
         assert bb_cell.cx() == pytest.approx(10)
@@ -664,7 +680,7 @@ class TestMask:
         def _capture_import() -> None:
             calls.append(True)
 
-        monkeypatch.setattr(themask, "_Mask__import_cache", _capture_import)
+        monkeypatch.setattr(themask, "_import_cache", _capture_import)
 
         themask.set_cache(False)
         assert themask.cache is False
@@ -689,17 +705,17 @@ class TestMask:
         themask = smlay.Mask("test_export")
         child = make_rect(0, 0, 5, 5)
         unref = make_rect(0, 0, 1, 1)
-        themask.addCell("CHILD", child)
-        themask.addCell("UNREF", unref)
+        themask.add_cell("CHILD", child)
+        themask.add_cell("UNREF", unref)
         main = make_sref(0, 0, "CHILD", LayoutPool["CHILD"])
-        themask.addToMainCell(main)
+        themask.add_to_main_cell(main)
 
         _DevicePool["h_keep"] = "CHILD"
         _DevicePool["h_drop"] = "UNREF"
         _DeviceLocalParamPool["h_keep"] = {}
         _DeviceLocalParamPool["h_drop"] = {}
 
-        themask.exportGDS()
+        themask.export_gds()
 
         assert "UNREF" not in LayoutPool
         assert "CHILD" in LayoutPool
@@ -728,15 +744,15 @@ class TestMask:
         monkeypatch.setattr(smlay, "GDSReader", lambda: fake_reader)
 
         themask = smlay.Mask("test_cache_export")
-        themask.addToMainCell(make_rect(0, 0, 2, 2))
+        themask.add_to_main_cell(make_rect(0, 0, 2, 2))
         themask.cache = True
 
         def _capture_export_cache() -> None:
             export_cache_calls.append(True)
 
-        monkeypatch.setattr(themask, "_Mask__export_cache", _capture_export_cache)
+        monkeypatch.setattr(themask, "_export_cache", _capture_export_cache)
 
-        themask.exportGDS()
+        themask.export_gds()
 
         assert fake_reader.quick_read_calls == ["test_cache_export.gds"]
         writer = created_writers[0]
@@ -757,7 +773,7 @@ class TestMask:
         monkeypatch.setattr(smlay, "GDSReader", lambda: fake_reader)
 
         themask = smlay.Mask("test_import_single")
-        themask.importGDS("fake.gds")
+        themask.import_gds("fake.gds")
 
         assert themask.mainsymbol == "TOP"
         sref = LayoutPool["TOP"].group[0]
@@ -781,7 +797,7 @@ class TestMask:
         monkeypatch.setattr(smlay, "GDSReader", lambda: fake_reader)
 
         themask = smlay.Mask("test_import_multi")
-        themask.importGDS("fake.gds")
+        themask.import_gds("fake.gds")
 
         assert themask.mainsymbol == "A"
 
@@ -789,14 +805,14 @@ class TestMask:
         _ = tmp_cwd_dir
         name = "test_cache_restore"
         themask = smlay.Mask(name)
-        themask.addToMainCell(make_rect(0, 0, 5, 5))
-        themask.addCell("EXTRA", make_rect(0, 0, 1, 1))
+        themask.add_to_main_cell(make_rect(0, 0, 5, 5))
+        themask.add_cell("EXTRA", make_rect(0, 0, 1, 1))
         _DevicePool["h_extra"] = "EXTRA"
         _DeviceLocalParamPool["h_extra"] = {"param": 42}
         _DeviceCountPool["EXTRA"] = 1
         _BoundingBoxPool["EXTRA"] = Box(0, 0, 1, 1)
 
-        themask._Mask__export_cache()
+        themask._export_cache()
         expected_filepath = tmp_cwd_dir / f"{name}.cache"
         assert Path(expected_filepath).is_file()
 
@@ -807,7 +823,7 @@ class TestMask:
         assert "EXTRA" not in _DeviceCountPool
         assert "EXTRA" not in _BoundingBoxPool
 
-        themask._Mask__import_cache()
+        themask._import_cache()
         assert "EXTRA" in LayoutPool
         assert "_CIRCLE" in LayoutPool
         assert _DevicePool["h_extra"] == "EXTRA"

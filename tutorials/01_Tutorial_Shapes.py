@@ -80,9 +80,9 @@ g += sm.make_tapered_path([50, 55, 60], [15, 20, 23], [1, 0.5, 2])
 # AREF which will be the topic of next tutorial.
 
 # Time to add this to the mask
-themask.addToMainCell(g)
+themask.add_to_main_cell(g)
 
 # Export to GDS
-themask.exportGDS()
+themask.export_gds()
 
 # Finished!

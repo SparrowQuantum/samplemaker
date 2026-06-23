@@ -48,9 +48,9 @@ re0.mirror_y(0)
 view_geometry(re0)
 
 # To add the rectangles to the final layout use addToMainCell()
-themask.addToMainCell(re0)
+themask.add_to_main_cell(re0)
 
 # Export to GDS
-themask.exportGDS()
+themask.export_gds()
 
 # Finished!

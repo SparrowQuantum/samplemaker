@@ -86,7 +86,7 @@ tab = smlay.DeviceTable(cir, 1, 10, {}, {})
 
 # Specify the position (let's offset them a little bit as we move over columns). We do
 # this by setting ax=30 and ay = 15
-tab.set_table_positions(tab.Regular(1, 10, 40, 15, 0, 0))
+tab.set_table_positions(tab.create_regular_grid(1, 10, 40, 15, 0, 0))
 
 # Now we can auto-link columns!
 tab.set_linked_ports((), (("BBB", "AAA"),))  # links BBB to AAA of the next
@@ -97,9 +97,9 @@ tabg.translate(0, 100)
 g += tabg
 
 # Let's add all to main cell
-themask.addToMainCell(g)
+themask.add_to_main_cell(g)
 
 # Export to GDS
-themask.exportGDS()
+themask.export_gds()
 
 # Finished!
