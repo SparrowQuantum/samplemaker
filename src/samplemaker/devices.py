@@ -452,7 +452,7 @@ class DevicePort:
     def BL(self, radius: float) -> None:  # noqa: N802
         """Make a 90 degree left bend with the given radius.
 
-        DEPRECATED: Use bend_left() instead.
+        DEPRECATED: Use DevicePort.bend_left() instead.
 
         Parameters
         ----------
@@ -493,7 +493,7 @@ class DevicePort:
     def BR(self, radius: float) -> None:  # noqa: N802
         """Make a 90 degree right bend with the given radius.
 
-        DEPRECATED: Use bend_right() instead.
+        DEPRECATED: Use DevicePort.bend_right() instead.
 
         Parameters
         ----------

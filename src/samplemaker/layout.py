@@ -96,6 +96,8 @@ from pathlib import Path as _Path
 from typing import Any, TypeAlias
 from warnings import deprecated
 
+import numpy as np
+
 from samplemaker import (
     LayoutPool,
     _BoundingBoxPool,
@@ -331,8 +333,8 @@ class DeviceTableAnnotations:
         cols: int,
         x0: float,
         y0: float,
-        rowdict: Mapping[str, Sequence[Any]],
-        coldict: Mapping[str, Sequence[Any]],
+        rowdict: Mapping[str, Sequence[Any] | np.ndarray],
+        coldict: Mapping[str, Sequence[Any] | np.ndarray],
     ) -> GeomGroup:
         """Render the text for a given element in a table.
 
@@ -424,8 +426,8 @@ class DeviceTable:
         dev: Device,
         nrow: int,
         ncol: int,
-        rowvars: Mapping[str, Sequence[Any]],
-        colvars: Mapping[str, Sequence[Any]],
+        rowvars: Mapping[str, Sequence[Any] | np.ndarray],
+        colvars: Mapping[str, Sequence[Any] | np.ndarray],
     ) -> None:
         """Initialize the DeviceTable class.
 

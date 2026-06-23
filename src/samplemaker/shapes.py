@@ -1590,6 +1590,7 @@ class Dot:
         None
 
         """
+        self.mirror_y(y0)
 
 
 class Box:
