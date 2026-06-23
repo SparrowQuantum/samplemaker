@@ -130,11 +130,11 @@ def _connectable_bend(
         # ystp = (s-rad)*port2.dy()
         # s2 = math.sqrt(xstp*xstp+ystp*ystp)
         p1 = deepcopy(port1)
-        p1.S(s1)
+        p1.move_straight(s1)
         if det > 0:
-            p1.BL(rad)
+            p1.bend_left(rad)
         else:
-            p1.BR(rad)
+            p1.bend_right(rad)
         res = _connectable_facing(p1, port2, rad)
         seq = [["S", s1], ["B", det * 90, rad]] + res[1]
         return True, seq
@@ -192,12 +192,12 @@ def _connect_step(
 
     if s_len > 0:
         # print("Guessing I should move S by ", s_len)
-        port1.S(s_len)
+        port1.move_straight(s_len)
         seq = [["S", s_len]]
     # Now see if we get closer by going left or right
     p1 = deepcopy(port1)
     p1.fix()
-    p1.BL(rad)
+    p1.bend_left(rad)
     dl = p1.dist(port2)
     res = _connectable_bend(p1, port2, rad)
     if res[0]:
@@ -205,7 +205,7 @@ def _connect_step(
         return True, seq
 
     p1.reset()
-    p1.BR(rad)
+    p1.bend_right(rad)
     dr = p1.dist(port2)
     res = _connectable_bend(p1, port2, rad)
     if res[0]:
@@ -216,10 +216,10 @@ def _connect_step(
     # print("R distance is ", dr)
     # Should I go left or right?
     if dl < dr:
-        port1.BL(rad)
+        port1.bend_left(rad)
         port1.fix()
         return False, [*seq, ["B", 90, rad]]
-    port1.BR(rad)
+    port1.bend_right(rad)
     port1.fix()
     return False, [*seq, ["B", -90, rad]]
 

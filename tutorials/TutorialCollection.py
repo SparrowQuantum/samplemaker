@@ -7,7 +7,7 @@ Tutorial device collection
 # Check the end of this file, we run a command to make samplemaker aware of our devices
 
 import samplemaker.makers as sm  # used for drawing
-from samplemaker.devices import Device, registerDevicesInModule
+from samplemaker.devices import Device, register_devices_in_module
 
 
 # class definition
@@ -58,4 +58,4 @@ class FreeFreeMembrane(Device):
 
 
 # Important: register all devices in this module
-registerDevicesInModule(__name__)
+register_devices_in_module(__name__)

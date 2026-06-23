@@ -15,9 +15,9 @@ import samplemaker.layout as smlay  # used for layout
 # Create a simple mask layout
 themask = smlay.Mask("12_Tutorial_ImportCircuits")
 
-# To create a circuit we need to define a netlist. This time we use the ImportCircuit
+# To create a circuit we need to define a netlist. This time we use the import_circuit
 # function for netlist
-netlist = smdev.NetList.ImportCircuit("CircuitFile.txt", "bigger")
+netlist = smdev.NetList.import_circuit("CircuitFile.txt", "bigger")
 
 # as before we just create a circuit device and set the netlist
 cir2 = smdev.Circuit.build()

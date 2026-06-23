@@ -14,7 +14,7 @@ import numpy as np
 
 import samplemaker.makers as sm
 from samplemaker.baselib.waveguides import BaseWaveguidePort, BaseWaveguideSequencer
-from samplemaker.devices import Device, registerDevicesInModule
+from samplemaker.devices import Device, register_devices_in_module
 from samplemaker.shapes import GeomGroup
 
 
@@ -364,4 +364,4 @@ class FocusingGratingCoupler(Device):
 
 
 # Register all devices here in this module
-registerDevicesInModule(__name__)
+register_devices_in_module(__name__)
