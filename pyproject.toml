@@ -75,6 +75,7 @@ ignore = ["D203", "D213", "PLR2004", "PLR091"]
 
 [tool.ruff.lint.extend-per-file-ignores]
 "tests/*" = ["D1", "S101", "ARG"]
+"*.pyi" = ["N802"]
 
 [tool.scikit-build]
 minimum-version = "0.11.6"
