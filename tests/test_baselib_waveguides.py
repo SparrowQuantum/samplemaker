@@ -18,7 +18,7 @@ def test_base_waveguide_options(monkeypatch: pytest.MonkeyPatch) -> None:
         return {}
 
     monkeypatch.setattr(smseq, "default_options", mock_default_options)
-    opts = smwvg.BaseWaveguideOptions()
+    opts = smwvg.create_base_waveguide_options()
     assert called == [True]
     assert isinstance(opts, dict)
     assert "wgLayer" in opts
@@ -39,13 +39,13 @@ def test_base_waveguide_state() -> None:
 def test_base_waveguide_init(monkeypatch: pytest.MonkeyPatch) -> None:
     called = []
 
-    def mock_init_state(state: dict, options: dict) -> None:
+    def mock_init_state(args: list, state: dict, options: dict) -> None:
         called.append(state.copy())
 
-    monkeypatch.setattr(smseq, "__initState", mock_init_state)
+    monkeypatch.setattr(smseq, "_init_state", mock_init_state)
     state = smseq.SequencerState()
     options = {"defaultWidth": 0.5, "__no_init__": False}
-    smwvg.BaseWaveguideINIT(state.state, options)
+    smwvg.base_waveguide_init([], state.state, options)
     assert len(called) == 1
     assert "w" not in called[0]  # init first
     assert state.state["w"] == 0.5
@@ -54,13 +54,13 @@ def test_base_waveguide_init(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_base_waveguide_init_no_init(monkeypatch: pytest.MonkeyPatch) -> None:
     called = []
 
-    def mock_init_state(state: dict, options: dict) -> None:
+    def mock_init_state(args: list, state: dict, options: dict) -> None:
         called.append(state.copy())
 
-    monkeypatch.setattr(smseq, "__initState", mock_init_state)
+    monkeypatch.setattr(smseq, "_init_state", mock_init_state)
     state = smseq.SequencerState()
     options = {"defaultWidth": 0.5, "__no_init__": True}
-    smwvg.BaseWaveguideINIT(state.state, options)
+    smwvg.base_waveguide_init([], state.state, options)
     assert len(called) == 1
     assert "w" not in called[0]  # init first
     assert "w" not in state.state  # No init, so w should not be set
@@ -70,7 +70,7 @@ def test_base_waveguide_s_horizontal() -> None:
     args = [10]
     state = {"w": 0.4, "x": 0, "y": 0, "a": 0, "__OL__": 0}
     options = {"wgLayer": 1, "bendResolution": 30}
-    g = smwvg.BaseWaveguideS(args, state, options)
+    g = smwvg.base_waveguide_straight(args, state, options)
 
     assert isinstance(g, smseq.GeomGroup)
     assert len(g.group) == 1
@@ -92,7 +92,7 @@ def test_base_waveguide_s_vertical() -> None:
     args = [10]
     state = {"w": 0.4, "x": 0, "y": 0, "a": 90, "__OL__": 0}
     options = {"wgLayer": 1, "bendResolution": 30}
-    g = smwvg.BaseWaveguideS(args, state, options)
+    g = smwvg.base_waveguide_straight(args, state, options)
 
     assert isinstance(g, smseq.GeomGroup)
     assert len(g.group) == 1
@@ -114,7 +114,7 @@ def test_base_waveguide_s_zero_length() -> None:
     args = [0]
     state = {"w": 0.4, "x": 0, "y": 0, "a": 0, "__OL__": 0}
     options = {"wgLayer": 1, "bendResolution": 30}
-    g = smwvg.BaseWaveguideS(args, state, options)
+    g = smwvg.base_waveguide_straight(args, state, options)
 
     assert isinstance(g, smseq.GeomGroup)
     assert len(g.group) == 0
@@ -130,7 +130,7 @@ def test_base_waveguide_b_positive_angle() -> None:
     state = {"w": 0.4, "x": 0, "y": 0, "a": 0, "__OL__": 0}
     options = {"wgLayer": 2, "bendResolution": 30}
 
-    g = smwvg.BaseWaveguideB(args, state, options)
+    g = smwvg.base_waveguide_bend(args, state, options)
 
     assert isinstance(g, GeomGroup)
     assert len(g.group) == 1
@@ -147,7 +147,7 @@ def test_base_waveguide_b_negative_angle() -> None:
     state = {"w": 0.3, "x": 1, "y": 2, "a": 0, "__OL__": 0}
     options = {"wgLayer": 1, "bendResolution": 20}
 
-    smwvg.BaseWaveguideB(args, state, options)
+    smwvg.base_waveguide_bend(args, state, options)
 
     assert state["x"] == pytest.approx(5)
     assert state["y"] == pytest.approx(-2)
@@ -160,7 +160,7 @@ def test_base_waveguide_b_zero_angle() -> None:
     state = {"w": 0.4, "x": 2, "y": 3, "a": 45, "__OL__": 1}
     options = {"wgLayer": 1, "bendResolution": 30}
 
-    g = smwvg.BaseWaveguideB(args, state, options)
+    g = smwvg.base_waveguide_bend(args, state, options)
 
     assert isinstance(g, GeomGroup)
     assert len(g.group) == 0
@@ -172,7 +172,7 @@ def test_base_waveguide_c_changes_state() -> None:
     state = {"w": 0.35, "x": 0, "y": 0, "a": 0, "__OL__": 0}
     options = {"wgLayer": 7, "bendResolution": 40}
 
-    g = smwvg.BaseWaveguideC(args, state, options)
+    g = smwvg.base_waveguide_cosine_bend(args, state, options)
 
     assert isinstance(g, GeomGroup)
     assert len(g.group) == 1
@@ -187,7 +187,7 @@ def test_base_waveguide_c_zero_radius() -> None:
     state = {"w": 0.3, "x": 0, "y": 0, "a": 0, "__OL__": 0}
     options = {"wgLayer": 1, "bendResolution": 10}
 
-    g = smwvg.BaseWaveguideC(args, state, options)
+    g = smwvg.base_waveguide_cosine_bend(args, state, options)
 
     assert isinstance(g, GeomGroup)
     assert len(g.group) == 0
@@ -202,7 +202,7 @@ def test_base_waveguide_t_uses_default_width() -> None:
     state = {"w": 0.4, "x": 0, "y": 0, "a": 0, "__OL__": 0}
     options = {"wgLayer": 3, "bendResolution": 30, "defaultWidth": 0.8}
 
-    g = smwvg.BaseWaveguideT(args, state, options)
+    g = smwvg.base_waveguide_taper(args, state, options)
 
     assert isinstance(g, GeomGroup)
     assert len(g.group) == 1
@@ -217,7 +217,7 @@ def test_base_waveguide_t_zero_length() -> None:
     state = {"w": 0.4, "x": 4, "y": 5, "a": 90, "__OL__": 3}
     options = {"wgLayer": 1, "bendResolution": 30, "defaultWidth": 0.7}
 
-    g = smwvg.BaseWaveguideT(args, state, options)
+    g = smwvg.base_waveguide_taper(args, state, options)
 
     assert isinstance(g, GeomGroup)
     assert len(g.group) == 0
@@ -229,7 +229,7 @@ def test_base_waveguide_off() -> None:
     state = {"w": 0.3, "x": 0, "y": 0, "a": 0, "__OL__": 1}
     options = {"wgLayer": 1, "bendResolution": 30}
 
-    g = smwvg.BaseWaveguideOFF(args, state, options)
+    g = smwvg.base_waveguide_offset(args, state, options)
 
     assert isinstance(g, GeomGroup)
     assert len(g.group) == 0
@@ -239,7 +239,7 @@ def test_base_waveguide_off() -> None:
 
 
 def test_base_waveguide_commands() -> None:
-    commands = smwvg.BaseWaveguideCommands()
+    commands = smwvg.create_base_waveguide_commands()
 
     assert commands["INIT"][0] == 0
     assert commands["S"][0] == 1
@@ -247,8 +247,8 @@ def test_base_waveguide_commands() -> None:
     assert commands["C"][0] == 2
     assert commands["T"][0] == 2
     assert commands["OFF"][0] == 1
-    assert commands["S"][1] is smwvg.BaseWaveguideS
-    assert commands["B"][1] is smwvg.BaseWaveguideB
+    assert commands["S"][1] is smwvg.base_waveguide_straight
+    assert commands["B"][1] is smwvg.base_waveguide_bend
 
 
 def test_base_waveguide_sequencer_runs() -> None:
@@ -289,7 +289,7 @@ def test_base_waveguide_connector_success(monkeypatch: pytest.MonkeyPatch) -> No
 
     p1 = smwvg.BaseWaveguidePort(0, 0, "E")
     p2 = smwvg.BaseWaveguidePort(10, 0, "W")
-    g = smwvg.BaseWaveguideConnector(p1, p2)
+    g = smwvg.connect_ports(p1, p2)
 
     assert isinstance(g, GeomGroup)
     assert captured["radius"] == smwvg.BaseWaveguideConnectorOptions["bending_radius"]
@@ -308,7 +308,7 @@ def test_base_waveguide_connector_failure(monkeypatch: pytest.MonkeyPatch) -> No
 
     p1 = smwvg.BaseWaveguidePort(0, 0, "E")
     p2 = smwvg.BaseWaveguidePort(1, 1, "N")
-    g = smwvg.BaseWaveguideConnector(p1, p2)
+    g = smwvg.connect_ports(p1, p2)
 
     assert isinstance(g, GeomGroup)
     assert len(g.group) == 0
@@ -329,4 +329,4 @@ def test_base_waveguide_port_orientation(orient: str, expected: str) -> None:
     assert port.angle_to_text() == expected
     assert port.width == pytest.approx(0.45)
     assert port.name == "io"
-    assert port.connector_function is smwvg.BaseWaveguideConnector
+    assert port.connector_function is smwvg.connect_ports

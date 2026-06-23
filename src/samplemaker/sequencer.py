@@ -53,7 +53,7 @@ with `samplemaker`.
 """
 
 import math
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, MutableMapping, Sequence
 from copy import deepcopy
 from typing import Any, TypeAlias
 
@@ -61,19 +61,18 @@ from samplemaker.devices import _DeviceList
 from samplemaker.shapes import GeomGroup
 
 ARGS_TYPE: TypeAlias = Sequence[Any]
-STATE_TYPE: TypeAlias = dict[str, Any]
-OPTIONS_TYPE: TypeAlias = dict[str, Any]
+STATE_TYPE: TypeAlias = MutableMapping[str, Any]
+OPTIONS_TYPE: TypeAlias = MutableMapping[str, Any]
 SEQ_TYPE: TypeAlias = Sequence[Sequence[Any]]
 
-INIT_CALLABLE_TYPE: TypeAlias = Callable[[STATE_TYPE, OPTIONS_TYPE], None]
 COMMAND_CALLABLE_TYPE: TypeAlias = Callable[
     [ARGS_TYPE, STATE_TYPE, OPTIONS_TYPE], GeomGroup
 ]
-_CMD_DICT_VAL_TYPE: TypeAlias = tuple[int, INIT_CALLABLE_TYPE | COMMAND_CALLABLE_TYPE]
+_CMD_DICT_VAL_TYPE: TypeAlias = tuple[int, COMMAND_CALLABLE_TYPE]
 COMMANDS_DICT_TYPE: TypeAlias = dict[str, _CMD_DICT_VAL_TYPE]
 
 
-def __changeState(
+def _change_state(
     args: ARGS_TYPE,
     state: STATE_TYPE,
     options: OPTIONS_TYPE,  # noqa: ARG001
@@ -82,7 +81,7 @@ def __changeState(
     return GeomGroup()
 
 
-def __centerState(
+def _center_state(
     args: ARGS_TYPE,
     state: STATE_TYPE,
     options: OPTIONS_TYPE,  # noqa: ARG001
@@ -92,7 +91,7 @@ def __centerState(
     return GeomGroup()
 
 
-def __storeState(
+def _store_state(
     args: ARGS_TYPE,  # noqa: ARG001
     state: STATE_TYPE,
     options: OPTIONS_TYPE,  # noqa: ARG001
@@ -101,7 +100,11 @@ def __storeState(
     return GeomGroup()
 
 
-def __initState(state: STATE_TYPE, options: OPTIONS_TYPE) -> None:
+def _init_state(
+    args: ARGS_TYPE,  # noqa: ARG001
+    state: STATE_TYPE,
+    options: OPTIONS_TYPE,
+) -> GeomGroup:
     if not options["__no_init__"]:
         state["x"] = 0
         state["y"] = 0
@@ -110,9 +113,10 @@ def __initState(state: STATE_TYPE, options: OPTIONS_TYPE) -> None:
         state["__XC__"] = 0
         state["__YC__"] = 0
         state["STORED"] = []
+    return GeomGroup()
 
 
-def __insertDevice(
+def _insert_device(
     args: ARGS_TYPE, state: STATE_TYPE, options: OPTIONS_TYPE
 ) -> GeomGroup:
     devname = args[0]
@@ -174,11 +178,11 @@ def default_command_list() -> COMMANDS_DICT_TYPE:
 
     """
     return {
-        "INIT": (0, __initState),
-        "STATE": (2, __changeState),
-        "CENTER": (2, __centerState),
-        "STORE": (0, __storeState),
-        "DEV": (3, __insertDevice),
+        "INIT": (0, _init_state),
+        "STATE": (2, _change_state),
+        "CENTER": (2, _center_state),
+        "STORE": (0, _store_state),
+        "DEV": (3, _insert_device),
     }
 
 
@@ -318,7 +322,7 @@ class Sequencer:
 
         """
         g = GeomGroup()
-        self.dic["INIT"][1](self.state, self.options)
+        self.dic["INIT"][1]([], self.state, self.options)
         for instr in self.seq:
             if not len(instr):
                 continue
