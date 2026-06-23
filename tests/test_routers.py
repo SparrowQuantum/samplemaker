@@ -5,10 +5,6 @@ import pytest
 import samplemaker.routers as rt
 from samplemaker.devices import DevicePort
 
-CONNECTABLE_FACING = getattr(rt, "__connectable_facing")
-CONNECTABLE_BEND = getattr(rt, "__connectable_bend")
-CONNECT_STEP = getattr(rt, "__connect_step")
-
 
 def _make_port(x0: float, y0: float, direction: str) -> DevicePort:
     direction_to_flags = {
@@ -26,7 +22,7 @@ class TestConnectableFacing:
         p1 = _make_port(0.0, 0.0, "E")
         p2 = _make_port(10.0, 0.0, "W")
 
-        ok, seq = CONNECTABLE_FACING(p1, p2, rad=3)
+        ok, seq = rt._connectable_facing(p1, p2, rad=3)
 
         assert ok is True
         assert seq == [["S", 10.0]]
@@ -35,7 +31,7 @@ class TestConnectableFacing:
         p1 = _make_port(0.0, 0.0, "E")
         p2 = _make_port(10.0, 2.0, "W")
 
-        ok, seq = CONNECTABLE_FACING(p1, p2, rad=3)
+        ok, seq = rt._connectable_facing(p1, p2, rad=3)
 
         assert ok is True
         assert seq == [["S", 2.0], ["C", 2.0, 3], ["S", 2.0]]
@@ -44,7 +40,7 @@ class TestConnectableFacing:
         p1 = _make_port(0.0, 0.0, "E")
         p2 = _make_port(4.0, 2.0, "W")
 
-        ok, seq = CONNECTABLE_FACING(p1, p2, rad=3)
+        ok, seq = rt._connectable_facing(p1, p2, rad=3)
 
         assert ok is True
         assert seq == [["C", 2.0, 2.0]]
@@ -53,7 +49,7 @@ class TestConnectableFacing:
         p1 = _make_port(0.0, 0.0, "N")
         p2 = _make_port(0.0, 10.0, "S")
 
-        ok, seq = CONNECTABLE_FACING(p1, p2, rad=3)
+        ok, seq = rt._connectable_facing(p1, p2, rad=3)
 
         assert ok is True
         assert seq == [["S", 10.0]]
@@ -62,7 +58,7 @@ class TestConnectableFacing:
         p1 = _make_port(0.0, 0.0, "N")
         p2 = _make_port(2.0, 10.0, "S")
 
-        ok, seq = CONNECTABLE_FACING(p1, p2, rad=3)
+        ok, seq = rt._connectable_facing(p1, p2, rad=3)
 
         assert ok is True
         assert seq == [["S", 2.0], ["C", -2.0, 3], ["S", 2.0]]
@@ -71,7 +67,7 @@ class TestConnectableFacing:
         p1 = _make_port(0.0, 0.0, "N")
         p2 = _make_port(2.0, 4.0, "S")
 
-        ok, seq = CONNECTABLE_FACING(p1, p2, rad=3)
+        ok, seq = rt._connectable_facing(p1, p2, rad=3)
 
         assert ok is True
         assert seq == [["C", -2.0, 2.0]]
@@ -80,7 +76,7 @@ class TestConnectableFacing:
         p1 = _make_port(0.0, 0.0, "E")
         p2 = _make_port(10.0, 0.0, "E")
 
-        ok, seq = CONNECTABLE_FACING(p1, p2, rad=3)
+        ok, seq = rt._connectable_facing(p1, p2, rad=3)
 
         assert ok is False
         assert seq == []
@@ -91,7 +87,7 @@ class TestConnectableBend:
         p1 = _make_port(0.0, 0.0, "E")
         p2 = _make_port(10.0, 10.0, "S")
 
-        ok, seq = CONNECTABLE_BEND(p1, p2, rad=3)
+        ok, seq = rt._connectable_bend(p1, p2, rad=3)
 
         assert ok is True
         assert seq == [["S", 7.0], ["B", 90, 3], ["S", 7.0]]
@@ -100,7 +96,7 @@ class TestConnectableBend:
         p1 = _make_port(0.0, 0.0, "E")
         p2 = _make_port(10.0, -10.0, "N")
 
-        ok, seq = CONNECTABLE_BEND(p1, p2, rad=3)
+        ok, seq = rt._connectable_bend(p1, p2, rad=3)
 
         assert ok is True
         assert seq == [["S", 7.0], ["B", -90, 3], ["S", 7.0]]
@@ -109,7 +105,7 @@ class TestConnectableBend:
         p1 = _make_port(0.0, 0.0, "E")
         p2 = _make_port(5.0, 2.0, "E")
 
-        ok, seq = CONNECTABLE_BEND(p1, p2, rad=3)
+        ok, seq = rt._connectable_bend(p1, p2, rad=3)
 
         assert ok is False
         assert seq == []
@@ -120,7 +116,7 @@ class TestConnectStep:
         p1 = _make_port(0.0, 0.0, "E")
         p2 = _make_port(-14.0, 4.0, "E")
 
-        ok, seq = CONNECT_STEP(p1, p2, rad=3)
+        ok, seq = rt._connect_step(p1, p2, rad=3)
 
         assert ok is True
         assert seq == [
@@ -136,7 +132,7 @@ class TestConnectStep:
         p1 = _make_port(0.0, 0.0, "E")
         p2 = _make_port(-12.0, -12.0, "E")
 
-        ok, seq = CONNECT_STEP(p1, p2, rad=3)
+        ok, seq = rt._connect_step(p1, p2, rad=3)
 
         assert ok is True
         assert seq == [
@@ -150,7 +146,7 @@ class TestConnectStep:
         p1 = _make_port(0.0, 0.0, "E")
         p2 = _make_port(-12.0, 2.0, "E")
 
-        ok, seq = CONNECT_STEP(p1, p2, rad=3)
+        ok, seq = rt._connect_step(p1, p2, rad=3)
 
         assert ok is False
         assert seq == [["B", 90, 3]]
@@ -162,7 +158,7 @@ class TestWaveguideConnect:
         p1 = _make_port(0.0, 0.0, "E")
         p2 = _make_port(10.0, 0.0, "W")
 
-        ok, seq = rt.WaveguideConnect(p1, p2, rad=3)
+        ok, seq = rt.connect_waveguide_ports(p1, p2, rad=3)
 
         assert ok is True
         assert seq == [["S", 10.0]]
@@ -171,7 +167,7 @@ class TestWaveguideConnect:
         p1 = _make_port(0.0, 0.0, "E")
         p2 = _make_port(10.0, 10.0, "S")
 
-        ok, seq = rt.WaveguideConnect(p1, p2, rad=3)
+        ok, seq = rt.connect_waveguide_ports(p1, p2, rad=3)
 
         assert ok is True
         assert seq == [["S", 7.0], ["B", 90, 3], ["S", 7.0]]
@@ -180,7 +176,7 @@ class TestWaveguideConnect:
         p1 = _make_port(0.0, 0.0, "E")
         p2 = _make_port(0.0, 0.0, "E")
 
-        ok, seq = rt.WaveguideConnect(p1, p2, rad=3)
+        ok, seq = rt.connect_waveguide_ports(p1, p2, rad=3)
 
         assert ok is False
         assert seq == []
@@ -191,7 +187,7 @@ class TestElbowRouter:
         p1 = _make_port(0.0, 0.0, "E")
         p2 = _make_port(10.0, 0.0, "W")
 
-        xpts, ypts = rt.ElbowRouter(p1, p2, offset=5)
+        xpts, ypts = rt.calculate_elbow_path(p1, p2, offset=5)
 
         assert xpts == pytest.approx([0.0, 10.0])
         assert ypts == pytest.approx([0.0, 0.0])
@@ -200,7 +196,7 @@ class TestElbowRouter:
         p1 = _make_port(1.0, 2.0, "E")
         p2 = _make_port(11.0, 5.0, "N")
 
-        xpts, ypts = rt.ElbowRouter(p1, p2, offset=2)
+        xpts, ypts = rt.calculate_elbow_path(p1, p2, offset=2)
 
         assert len(xpts) == 7
         assert len(ypts) == 7
@@ -213,7 +209,7 @@ class TestElbowRouter:
         p1 = _make_port(0.0, 0.0, "N")
         p2 = _make_port(-3.0, 8.0, "E")
 
-        xpts, ypts = rt.ElbowRouter(p1, p2, offset=1.5)
+        xpts, ypts = rt.calculate_elbow_path(p1, p2, offset=1.5)
 
         assert xpts[0] == pytest.approx(p1.x0)
         assert ypts[0] == pytest.approx(p1.y0)

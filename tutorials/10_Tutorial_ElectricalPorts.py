@@ -18,7 +18,7 @@ import samplemaker.makers as sm  # used for drawing
 from samplemaker.devices import DevicePort
 
 # We take the default router from sample maker
-from samplemaker.routers import ElbowRouter
+from samplemaker.routers import calculate_elbow_path
 
 # Create a simple mask layout
 themask = smlay.Mask("10_Tutorial_ElectricalPorts")
@@ -30,7 +30,9 @@ ElectricalConnectorOptions = {"elbow_offset": 5, "metal_layer": 3}
 
 # Then the connector function, which takes care of returning a geometry when called
 def connect_electrical_ports(port1: "ElectricalPort", port2: "ElectricalPort"):
-    xpts, ypts = ElbowRouter(port1, port2, ElectricalConnectorOptions["elbow_offset"])
+    xpts, ypts = calculate_elbow_path(
+        port1, port2, ElectricalConnectorOptions["elbow_offset"]
+    )
 
     # Let's also taper the width of the connector for non-uniform port size
     widths = np.linspace(port1.width, port2.width, len(xpts)).tolist()

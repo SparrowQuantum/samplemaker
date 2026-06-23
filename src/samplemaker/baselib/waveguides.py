@@ -15,7 +15,7 @@ import numpy as np
 import samplemaker.makers as sm
 import samplemaker.sequencer as smseq
 from samplemaker.devices import DevicePort
-from samplemaker.routers import WaveguideConnect
+from samplemaker.routers import connect_waveguide_ports
 from samplemaker.shapes import GeomGroup
 
 # First step in defining a waveguide library is to define a sequencer
@@ -563,7 +563,7 @@ BaseWaveguideConnectorOptions: dict[str, float | smseq.OPTIONS_TYPE] = {
 }
 
 
-def connect_ports(port1: DevicePort, port2: DevicePort) -> GeomGroup:
+def connect_base_waveguide_ports(port1: DevicePort, port2: DevicePort) -> GeomGroup:
     """Connect two waveguide ports using the BaseWaveguideSequencer.
 
     Parameters
@@ -584,7 +584,7 @@ def connect_ports(port1: DevicePort, port2: DevicePort) -> GeomGroup:
         msg = "BaseWaveguideConnectorOptions['bending_radius'] must be a float"
         raise TypeError(msg)
 
-    res = WaveguideConnect(port1, port2, radius)
+    res = connect_waveguide_ports(port1, port2, radius)
     if res[0]:
         so = BaseWaveguideSequencer(res[1])
         seq_options = BaseWaveguideConnectorOptions["sequencer_options"]
@@ -601,12 +601,12 @@ def connect_ports(port1: DevicePort, port2: DevicePort) -> GeomGroup:
 
 @deprecated(
     "BaseWaveguideConnector is deprecated and will be removed"
-    "in a future version, use connect_ports instead"
+    "in a future version, use connect_base_waveguide_ports instead"
 )
 def BaseWaveguideConnector(port1: DevicePort, port2: DevicePort) -> GeomGroup:  # noqa: N802
     """Connect two waveguide ports using the BaseWaveguideSequencer.
 
-    DEPRECATED. Use connect_ports instead.
+    DEPRECATED. Use connect_base_waveguide_ports instead.
 
     Parameters
     ----------
@@ -621,7 +621,7 @@ def BaseWaveguideConnector(port1: DevicePort, port2: DevicePort) -> GeomGroup:  
         The waveguide geometry.
 
     """
-    return connect_ports(port1, port2)
+    return connect_base_waveguide_ports(port1, port2)
 
 
 # Now let's create a new DevicePort with a connector function
@@ -667,4 +667,4 @@ class BaseWaveguidePort(DevicePort):
         super().__init__(x0, y0, horizontal, forward)
         self.width = width
         self.name = name
-        self.connector_function = connect_ports
+        self.connector_function = connect_base_waveguide_ports
