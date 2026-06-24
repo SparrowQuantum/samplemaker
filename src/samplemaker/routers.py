@@ -315,7 +315,7 @@ def WaveguideConnect(  # noqa: N802
 
 def calculate_elbow_path(
     port1: DevicePort, port2: DevicePort, offset: float = 5
-) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+) -> tuple[list[float], list[float]]:
     """Calculate the connector path between two ports using an elbow style connection.
 
     Typically used for electrical interconnects. Does not check collisions.
@@ -333,10 +333,10 @@ def calculate_elbow_path(
 
     Returns
     -------
-    xpts : np.ndarray
-        1D array of X coordinates of the connector path.
-    ypts : np.ndarray
-        1D array of Y coordinates of the connector path.
+    xpts : list[float]
+        1D list of X coordinates of the connector path.
+    ypts : list[float]
+        1D list of Y coordinates of the connector path.
 
     """
     x0 = port1.x0
@@ -379,12 +379,12 @@ def calculate_elbow_path(
     xpts = cost * x - sint * y + x0
     ypts = sint * x + cost * y + y0
 
-    return xpts, ypts
+    return xpts.tolist(), ypts.tolist()
 
 
 def ElbowRouter(  # noqa: N802
     port1: DevicePort, port2: DevicePort, offset: float = 5
-) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+) -> tuple[list[float], list[float]]:
     """Calculate the connector path between two ports using an elbow style connection.
 
     Typically used for electrical interconnects. Does not check collisions.
@@ -405,10 +405,10 @@ def ElbowRouter(  # noqa: N802
 
     Returns
     -------
-    xpts : np.ndarray
-        1D array of X coordinates of the connector path.
-    ypts : np.ndarray
-        1D array of Y coordinates of the connector path.
+    xpts : list[float]
+        1D list of X coordinates of the connector path.
+    ypts : list[float]
+        1D list of Y coordinates of the connector path.
 
     """
     warnings.warn(
