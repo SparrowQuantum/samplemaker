@@ -6,9 +6,9 @@ This module can be used as template to develop different waveguide libraries.
 """
 
 import math
+import warnings
 from copy import deepcopy
 from typing import Any
-from warnings import deprecated
 
 import numpy as np
 
@@ -42,10 +42,6 @@ def create_base_waveguide_options() -> smseq.OPTIONS_TYPE:
     return options
 
 
-@deprecated(
-    "This function is deprecated and will be removed "
-    "in a future version. Use create_base_waveguide_options() instead."
-)
 def BaseWaveguideOptions() -> smseq.OPTIONS_TYPE:  # noqa: N802
     """Create a dictionary with the default options for the BaseWaveguide sequencer.
 
@@ -57,6 +53,12 @@ def BaseWaveguideOptions() -> smseq.OPTIONS_TYPE:  # noqa: N802
         The default options for the BaseWaveguide sequencer.
 
     """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use create_base_waveguide_options() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return create_base_waveguide_options()
 
 
@@ -104,10 +106,6 @@ def base_waveguide_init(
     return GeomGroup()
 
 
-@deprecated(
-    "This function is deprecated and will be removed "
-    "in a future version. Use base_waveguide_init() instead."
-)
 def BaseWaveguideINIT(  # noqa: N802
     args: smseq.ARGS_TYPE,
     state: smseq.STATE_TYPE,
@@ -130,6 +128,12 @@ def BaseWaveguideINIT(  # noqa: N802
         Empty geometry group.
 
     """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use base_waveguide_init() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return base_waveguide_init(args, state, options)
 
 
@@ -168,10 +172,6 @@ def base_waveguide_straight(
     return wg
 
 
-@deprecated(
-    "This function is deprecated and will be removed "
-    "in a future version. Use base_waveguide_straight() instead."
-)
 def BaseWaveguideS(  # noqa: N802
     args: smseq.ARGS_TYPE, state: smseq.STATE_TYPE, options: smseq.OPTIONS_TYPE
 ) -> GeomGroup:
@@ -194,6 +194,12 @@ def BaseWaveguideS(  # noqa: N802
         The waveguide geometry.
 
     """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use base_waveguide_straight() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return base_waveguide_straight(args, state, options)
 
 
@@ -253,10 +259,6 @@ def base_waveguide_bend(
     return wg
 
 
-@deprecated(
-    "This function is deprecated and will be removed "
-    "in a future version. Use base_waveguide_bend() instead."
-)
 def BaseWaveguideB(  # noqa: N802
     args: smseq.ARGS_TYPE, state: smseq.STATE_TYPE, options: smseq.OPTIONS_TYPE
 ) -> GeomGroup:
@@ -279,6 +281,12 @@ def BaseWaveguideB(  # noqa: N802
         The waveguide geometry.
 
     """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use base_waveguide_bend() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return base_waveguide_bend(args, state, options)
 
 
@@ -338,10 +346,6 @@ def base_waveguide_cosine_bend(
     return wg
 
 
-@deprecated(
-    "This function is deprecated and will be removed "
-    "in a future version. Use base_waveguide_cosine_bend() instead."
-)
 def BaseWaveguideC(  # noqa: N802
     args: smseq.ARGS_TYPE, state: smseq.STATE_TYPE, options: smseq.OPTIONS_TYPE
 ) -> GeomGroup:
@@ -367,6 +371,12 @@ def BaseWaveguideC(  # noqa: N802
         The waveguide geometry.
 
     """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use base_waveguide_cosine_bend() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return base_waveguide_cosine_bend(args, state, options)
 
 
@@ -410,10 +420,6 @@ def base_waveguide_taper(
     return wg
 
 
-@deprecated(
-    "This function is deprecated and will be removed "
-    "in a future version. Use base_waveguide_taper() instead."
-)
 def BaseWaveguideT(  # noqa: N802
     args: smseq.ARGS_TYPE, state: smseq.STATE_TYPE, options: smseq.OPTIONS_TYPE
 ) -> GeomGroup:
@@ -437,6 +443,12 @@ def BaseWaveguideT(  # noqa: N802
         The waveguide geometry.
 
     """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use base_waveguide_taper() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return base_waveguide_taper(args, state, options)
 
 
@@ -469,10 +481,6 @@ def base_waveguide_offset(
     return GeomGroup()
 
 
-@deprecated(
-    "This function is deprecated and will be removed "
-    "in a future version. Use base_waveguide_offset() instead."
-)
 def BaseWaveguideOFF(  # noqa: N802
     args: smseq.ARGS_TYPE,
     state: smseq.STATE_TYPE,
@@ -497,6 +505,12 @@ def BaseWaveguideOFF(  # noqa: N802
         The waveguide geometry.
 
     """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use base_waveguide_offset() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return base_waveguide_offset(args, state, options)
 
 
@@ -519,10 +533,6 @@ def create_base_waveguide_commands() -> smseq.COMMANDS_DICT_TYPE:
     return command_list
 
 
-@deprecated(
-    "This function is deprecated and will be removed "
-    "in a future version. Use init_waveguide_commands() instead."
-)
 def BaseWaveguideCommands() -> smseq.COMMANDS_DICT_TYPE:  # noqa: N802
     """Create a dictionary with the command list and corresponding functions.
 
@@ -534,6 +544,12 @@ def BaseWaveguideCommands() -> smseq.COMMANDS_DICT_TYPE:  # noqa: N802
         The command list to be used by the sequencer.
 
     """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use init_waveguide_commands() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return create_base_waveguide_commands()
 
 
@@ -599,10 +615,6 @@ def connect_base_waveguide_ports(port1: DevicePort, port2: DevicePort) -> GeomGr
     return GeomGroup()
 
 
-@deprecated(
-    "This function is deprecated and will be removed "
-    "in a future version. Use connect_base_waveguide_ports() instead."
-)
 def BaseWaveguideConnector(port1: DevicePort, port2: DevicePort) -> GeomGroup:  # noqa: N802
     """Connect two waveguide ports using the BaseWaveguideSequencer.
 
@@ -621,6 +633,12 @@ def BaseWaveguideConnector(port1: DevicePort, port2: DevicePort) -> GeomGroup:  
         The waveguide geometry.
 
     """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use connect_base_waveguide_ports() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return connect_base_waveguide_ports(port1, port2)
 
 

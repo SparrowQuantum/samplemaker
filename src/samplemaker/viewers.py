@@ -6,7 +6,6 @@ viewers.
 """
 
 import warnings
-from warnings import deprecated
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -113,10 +112,6 @@ def view_geometry(grp: GeomGroup) -> None:
     plt.show()
 
 
-@deprecated(
-    "This function is deprecated and will be removed "
-    "in a future version. Use view_geometry() instead."
-)
 def GeomView(grp: GeomGroup) -> None:  # noqa: N802
     """Plot a geometry in a matplotlib window.
 
@@ -135,6 +130,12 @@ def GeomView(grp: GeomGroup) -> None:  # noqa: N802
     None
 
     """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use view_geometry() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     view_geometry(grp)
 
 
@@ -265,10 +266,6 @@ def inspect_device(devcl: Device | type[Device]) -> None:
     plt.show()
 
 
-@deprecated(
-    "This function is deprecated and will be removed "
-    "in a future version. Use inspect_device() instead."
-)
 def DeviceInspect(devcl: Device | type[Device]) -> None:  # noqa: N802
     """Interactive display of devices defined from `samplemaker.devices`.
 
@@ -290,4 +287,10 @@ def DeviceInspect(devcl: Device | type[Device]) -> None:  # noqa: N802
     None
 
     """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use inspect_device() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     inspect_device(devcl)

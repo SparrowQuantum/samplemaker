@@ -90,11 +90,11 @@ This is done via the `DeviceTableAnnotations` class.
 
 import math
 import pickle  # for caching
+import warnings
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
 from typing import Any, TypeAlias
-from warnings import deprecated
 
 import numpy as np
 
@@ -843,10 +843,6 @@ class DeviceTable:
             for j in range(rows)
         ]
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use DeviceTable.create_regular_grid() instead."
-    )
     @staticmethod
     def Regular(  # noqa: N802
         rows: int,
@@ -887,6 +883,12 @@ class DeviceTable:
             3-dimensional list of positions.
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use DeviceTable.create_regular_grid() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return DeviceTable.create_regular_grid(rows, cols, ax, ay, bx, by, x0, y0)
 
 
@@ -978,10 +980,6 @@ class Mask:
         else:
             LayoutPool[self.mainsymbol] += geom_group
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Mask.add_to_main_cell() instead."
-    )
     def addToMainCell(self, geom_group: GeomGroup) -> None:  # noqa: N802
         """Add a geometry to the main cell.
 
@@ -997,6 +995,12 @@ class Mask:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.add_to_main_cell() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.add_to_main_cell(geom_group)
 
     def add_cell(self, cellname: str, geom_group: GeomGroup) -> None:
@@ -1016,10 +1020,6 @@ class Mask:
         """
         LayoutPool[cellname] = geom_group
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Mask.add_cell() instead."
-    )
     def addCell(self, cellname: str, geom_group: GeomGroup) -> None:  # noqa: N802
         """Add a new cell to the GDS structure and assigns a geometry to it.
 
@@ -1037,6 +1037,12 @@ class Mask:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.add_cell() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.add_cell(cellname, geom_group)
 
     def get_cell(self, cellname: str) -> GeomGroup:
@@ -1061,10 +1067,6 @@ class Mask:
 
         return LayoutPool[cellname]
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Mask.get_cell() instead."
-    )
     def getCell(self, cellname: str) -> GeomGroup:  # noqa: N802
         """Get a reference to the GeomGroup corresponding to the cellname.
 
@@ -1083,6 +1085,12 @@ class Mask:
             Reference to the geometry group.
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.get_cell() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.get_cell(cellname)
 
     def _export_cache(self) -> None:
@@ -1175,10 +1183,6 @@ class Mask:
         if self.cache:
             self._export_cache()
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Mask.export_gds() instead."
-    )
     def exportGDS(self) -> None:  # noqa: N802
         """Finalize the mask, perform cache operations, if any, and write to GDS.
 
@@ -1189,6 +1193,12 @@ class Mask:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.export_gds() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.export_gds()
 
     def import_gds(self, filename: str) -> None:
@@ -1233,10 +1243,6 @@ class Mask:
                 if isinstance(e, SRef):
                     e.group = LayoutPool[e.cellname]
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Mask.import_gds() instead."
-    )
     def importGDS(self, filename: str) -> None:  # noqa: N802
         """Import the full mask from GDS file.
 
@@ -1252,6 +1258,12 @@ class Mask:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.import_gds() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.import_gds(filename)
 
     def add_markers(self, markerset: "MarkerSet") -> None:
@@ -1273,10 +1285,6 @@ class Mask:
         else:
             LayoutPool[self.mainsymbol] += g
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Mask.add_markers() instead."
-    )
     def addMarkers(self, markerset: "MarkerSet") -> None:  # noqa: N802
         """Add a marker set to the mask.
 
@@ -1292,6 +1300,12 @@ class Mask:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.add_markers() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.add_markers(markerset)
 
     def add_writefield(
@@ -1319,10 +1333,6 @@ class Mask:
         """
         self.writefields += [(wf_size, x0, y0, passes, shift)]
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Mask.add_writefield() instead."
-    )
     def addWriteField(  # noqa: N802
         self, wf_size: float, x0: float, y0: float, passes: int = 1, shift: float = 0
     ) -> None:
@@ -1348,6 +1358,12 @@ class Mask:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.add_writefield() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.add_writefield(wf_size, x0, y0, passes, shift)
 
     def add_writefield_grid(
@@ -1419,10 +1435,6 @@ class Mask:
                 wfs += wfpath
             self.add_to_main_cell(wfs)
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Mask.add_writefield_grid() instead."
-    )
     def addWriteFieldGrid(  # noqa: N802
         self,
         wf_size: float,
@@ -1463,6 +1475,12 @@ class Mask:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.add_writefield_grid() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.add_writefield_grid(
             wf_size, x0, y0, nx=nx, ny=ny, passes=passes, shift=shift, **kwargs
         )
@@ -1496,10 +1514,6 @@ class Mask:
         else:
             self.add_cell(cell, geoms)
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Mask.add_device_table() instead."
-    )
     def addDeviceTable(  # noqa: N802
         self, device_table: DeviceTable, x0: float, y0: float, cell: str = ""
     ) -> None:
@@ -1523,4 +1537,10 @@ class Mask:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.add_device_table() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.add_device_table(device_table, x0, y0, cell)

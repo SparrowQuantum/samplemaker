@@ -74,7 +74,6 @@ from collections.abc import Collection, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
 from typing import Any, Self
-from warnings import deprecated
 
 import numpy as np
 from asteval import Interpreter
@@ -322,10 +321,6 @@ class GeomGroup:
             geom.mirror_x(x0)
         return self
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use GeomGroup.mirror_x() instead."
-    )
     def mirrorX(self, x0: float) -> Self:  # noqa: N802
         """Mirror the geometry around x-axis.
 
@@ -342,6 +337,12 @@ class GeomGroup:
             Reference to the object.
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use GeomGroup.mirror_x() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.mirror_x(x0)
 
     def mirror_y(self, y0: float) -> Self:
@@ -364,10 +365,6 @@ class GeomGroup:
             geom.mirror_y(y0)
         return self
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use GeomGroup.mirror_y() instead."
-    )
     def mirrorY(self, y0: float) -> Self:  # noqa: N802
         """Mirror the geometry around y-axis.
 
@@ -382,6 +379,12 @@ class GeomGroup:
             Reference to the object.
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use GeomGroup.mirror_y() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.mirror_y(y0)
 
     def __entity_count(
@@ -1536,10 +1539,6 @@ class Dot:
         """
         self.x = 2 * x0 - self.x
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Dot.mirror_x() instead."
-    )
     def mirrorX(self, x0: float) -> None:  # noqa: N802
         """Mirror the point with respect to a vertical axis.
 
@@ -1555,6 +1554,12 @@ class Dot:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Dot.mirror_x() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.mirror_x(x0)
 
     def mirror_y(self, y0: float) -> None:
@@ -1572,10 +1577,6 @@ class Dot:
         """
         self.y = 2 * y0 - self.y
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Dot.mirror_y() instead."
-    )
     def mirrorY(self, y0: float) -> None:  # noqa: N802
         """Mirror the point with respect to a horizontal axis.
 
@@ -1591,6 +1592,12 @@ class Dot:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Dot.mirror_y() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.mirror_y(y0)
 
 
@@ -1734,10 +1741,6 @@ class Box:
             0,
         )
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Box.to_poly() instead."
-    )
     def toPoly(self) -> "Poly":  # noqa: N802
         """Convert the box to a `Poly` object that can be added to geometry groups.
 
@@ -1749,6 +1752,12 @@ class Box:
             The poly representing the box.
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Box.to_poly() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.to_poly()
 
     def to_rect(self) -> GeomGroup:
@@ -1764,10 +1773,6 @@ class Box:
         g.add(self.to_poly())
         return g
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Box.to_rect() instead."
-    )
     def toRect(self) -> GeomGroup:  # noqa: N802
         """Create a group with a rectangle for drawing.
 
@@ -1777,6 +1782,12 @@ class Box:
             The group containing the bounding box rectangle.
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Box.to_rect() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.to_rect()
 
     def get_numkey_point(self, numkey: int) -> tuple[float, float]:
@@ -1996,10 +2007,6 @@ class Poly:
         """
         self.data[0::2] = 2 * x0 - self.data[0::2]
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Poly.mirror_x() instead."
-    )
     def mirrorX(self, x0: float) -> None:  # noqa: N802
         """Mirror polygon vertices with respect to a vertical axis.
 
@@ -2015,6 +2022,12 @@ class Poly:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Poly.mirror_x() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.mirror_x(x0)
 
     def mirror_y(self, y0: float) -> None:
@@ -2032,10 +2045,6 @@ class Poly:
         """
         self.data[1::2] = 2 * y0 - self.data[1::2]
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Poly.mirror_y() instead."
-    )
     def mirrorY(self, y0: float) -> None:  # noqa: N802
         """Mirror polygon vertices with respect to a horizontal axis.
 
@@ -2051,6 +2060,12 @@ class Poly:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Poly.mirror_y() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.mirror_y(y0)
 
     def bounding_box(self) -> Box:
@@ -2542,10 +2557,6 @@ class Path:
         for i in range(self.Npts):
             self.xpts[i] = 2 * x0 - self.xpts[i]
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Path.mirror_x() instead."
-    )
     def mirrorX(self, x0: float) -> None:  # noqa: N802
         """Mirror path vertices with respect to a vertical axis.
 
@@ -2561,6 +2572,12 @@ class Path:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Path.mirror_x() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.mirror_x(x0)
 
     def mirror_y(self, y0: float) -> None:
@@ -2579,10 +2596,6 @@ class Path:
         for i in range(self.Npts):
             self.ypts[i] = 2 * y0 - self.ypts[i]
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Path.mirror_y() instead."
-    )
     def mirrorY(self, y0: float) -> None:  # noqa: N802
         """Mirror path vertices with respect to a horizontal axis.
 
@@ -2598,6 +2611,12 @@ class Path:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Path.mirror_y() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.mirror_y(y0)
 
     def bounding_box(self) -> Box:
@@ -2919,10 +2938,6 @@ class Text:
         self.x0 = 2 * xc - self.x0
         self.angle = 180 - self.angle
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Text.mirror_x() instead."
-    )
     def mirrorX(self, xc: float) -> None:  # noqa: N802
         """Mirror text with respect to a vertical axis.
 
@@ -2938,6 +2953,12 @@ class Text:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Text.mirror_x() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.mirror_x(xc)
 
     def mirror_y(self, yc: float) -> None:
@@ -2956,10 +2977,6 @@ class Text:
         self.y0 = 2 * yc - self.y0
         self.angle = -self.angle
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Text.mirror_y() instead."
-    )
     def mirrorY(self, yc: float) -> None:  # noqa: N802
         """Mirror text with respect to a horizontal axis.
 
@@ -2975,6 +2992,12 @@ class Text:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Text.mirror_y() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.mirror_y(yc)
 
     def bounding_box(self) -> Box:
@@ -3207,10 +3230,6 @@ class RefBase:
         self.angle = 180 - self.angle
         self.angle = self.angle % 360
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use RefBase.mirror_x() instead."
-    )
     def mirrorX(self, xc: float) -> None:  # noqa: N802
         """Mirror reference with respect to a vertical axis.
 
@@ -3226,6 +3245,12 @@ class RefBase:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use RefBase.mirror_x() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.mirror_x(xc)
 
     def mirror_y(self, yc: float) -> None:
@@ -3245,10 +3270,6 @@ class RefBase:
         self.mirror = not self.mirror
         self.angle = -self.angle
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use RefBase.mirror_y() instead."
-    )
     def mirrorY(self, yc: float) -> None:  # noqa: N802
         """Mirror reference with respect to a horizontal axis.
 
@@ -3264,6 +3285,12 @@ class RefBase:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use RefBase.mirror_y() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.mirror_y(yc)
 
     def centroid(self) -> tuple[float, float]:
@@ -3594,10 +3621,6 @@ class Circle:
         """
         self.x0 = 2 * xc - self.x0
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Circle.mirror_x() instead."
-    )
     def mirrorX(self, xc: float) -> None:  # noqa: N802
         """Mirror circle center with respect to a vertical axis.
 
@@ -3613,6 +3636,12 @@ class Circle:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Circle.mirror_x() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.mirror_x(xc)
 
     def mirror_y(self, yc: float) -> None:
@@ -3630,10 +3659,6 @@ class Circle:
         """
         self.y0 = 2 * yc - self.y0
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Circle.mirror_y() instead."
-    )
     def mirrorY(self, yc: float) -> None:  # noqa: N802
         """Mirror circle center with respect to a horizontal axis.
 
@@ -3649,6 +3674,12 @@ class Circle:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Circle.mirror_y() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.mirror_y(yc)
 
     def bounding_box(self) -> Box:
@@ -3856,10 +3887,6 @@ class Ellipse(Circle):
         Circle.mirror_x(self, xc)
         self.rot = 180 - self.rot
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Ellipse.mirror_x() instead."
-    )
     def mirrorX(self, xc: float) -> None:  # noqa: N802
         """Mirror ellipse with respect to a vertical axis.
 
@@ -3875,6 +3902,12 @@ class Ellipse(Circle):
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Ellipse.mirror_x() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.mirror_x(xc)
 
     def mirror_y(self, yc: float) -> None:
@@ -3893,10 +3926,6 @@ class Ellipse(Circle):
         Circle.mirror_y(self, yc)
         self.rot = -self.rot
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Ellipse.mirror_y() instead."
-    )
     def mirrorY(self, yc: float) -> None:  # noqa: N802
         """Mirror ellipse with respect to a horizontal axis.
 
@@ -3912,6 +3941,12 @@ class Ellipse(Circle):
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Ellipse.mirror_y() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.mirror_y(yc)
 
     def bounding_box(self) -> Box:

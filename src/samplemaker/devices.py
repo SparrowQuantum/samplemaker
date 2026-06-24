@@ -189,7 +189,6 @@ from collections.abc import Callable, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
 from typing import Any, Self, TypeAlias
-from warnings import deprecated
 
 import numpy as np
 
@@ -406,10 +405,6 @@ class DevicePort:
         self.x0 += self.dx() * amount
         self.y0 += self.dy() * amount
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use DevicePort.move_straight() instead."
-    )
     def S(self, amount: float) -> None:  # noqa: N802
         """Move the port straight by the given amount.
 
@@ -423,6 +418,12 @@ class DevicePort:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use DevicePort.move_straight() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.move_straight(amount)
 
     def bend_left(self, radius: float) -> None:
@@ -445,10 +446,6 @@ class DevicePort:
         self.y0 = radius * math.sin(phi + math.pi / 2) + yc
         self.set_angle(self.angle() + math.pi / 2)
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use DevicePort.bend_left() instead."
-    )
     def BL(self, radius: float) -> None:  # noqa: N802
         """Make a 90 degree left bend with the given radius.
 
@@ -464,6 +461,12 @@ class DevicePort:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use DevicePort.bend_left() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.bend_left(radius)
 
     def bend_right(self, radius: float) -> None:
@@ -486,10 +489,6 @@ class DevicePort:
         self.y0 = radius * math.sin(phi - math.pi / 2) + yc
         self.set_angle(self.angle() - math.pi / 2)
 
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use DevicePort.bend_right() instead."
-    )
     def BR(self, radius: float) -> None:  # noqa: N802
         """Make a 90 degree right bend with the given radius.
 
@@ -505,6 +504,12 @@ class DevicePort:
         None
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use DevicePort.bend_right() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.bend_right(radius)
 
     def reset(self) -> None:
@@ -1362,10 +1367,6 @@ class NetList:
         return all_lists[circuit_name]
 
     @classmethod
-    @deprecated(
-        "This method is deprecated and will be removed "
-        "in a future version. Use Netlist.import_circuit() instead."
-    )
     def ImportCircuit(  # noqa: N802
         cls, file_name: str, circuit_name: str = ""
     ) -> Self | dict[str, Self]:
@@ -1389,6 +1390,12 @@ class NetList:
             The NetList with the imported circuit.
 
         """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Netlist.import_circuit() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return cls.import_circuit(file_name, circuit_name)
 
 
@@ -1726,10 +1733,6 @@ def register_devices_in_module(module_name: str) -> None:
                 print(f"Loaded {oj._name}: {oj._description}")
 
 
-@deprecated(
-    "This function is deprecated and will be removed "
-    "in a future version. Use register_devices_in_module() instead."
-)
 def registerDevicesInModule(module_name: str) -> None:  # noqa: N802
     """Register the device names in a global variable.
 
@@ -1746,6 +1749,12 @@ def registerDevicesInModule(module_name: str) -> None:  # noqa: N802
     None
 
     """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use register_devices_in_module() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     register_devices_in_module(module_name)
 
 
@@ -1790,10 +1799,6 @@ def create_device_library(devname: str, params: dict, filename: str) -> None:
     gdsw.close_library()
 
 
-@deprecated(
-    "This function is deprecated and will be removed "
-    "in a future version. Use create_device_library() instead."
-)
 def CreateDeviceLibrary(devname: str, params: dict, filename: str) -> None:  # noqa: N802
     """Generate a GDS file with a re-usable GDS-format device.
 
@@ -1816,6 +1821,12 @@ def CreateDeviceLibrary(devname: str, params: dict, filename: str) -> None:  # n
     None
 
     """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use create_device_library() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     create_device_library(devname, params, filename)
 
 
@@ -1902,10 +1913,6 @@ def export_device_schematics(filename: str = "SampleMakerLibrary.lel") -> None:
             f.write("</Component>\n")
 
 
-@deprecated(
-    "This function is deprecated and will be removed "
-    "in a future version. Use export_device_schematics() instead."
-)
 def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel") -> None:  # noqa: N802
     """Generate a Layout Editor library file (LEL).
 
@@ -1925,4 +1932,10 @@ def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel") -> None:  #
     None
 
     """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use export_device_schematics() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     export_device_schematics(filename)

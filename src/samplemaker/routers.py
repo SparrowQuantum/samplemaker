@@ -1,9 +1,9 @@
 """Automatic port-to-port routing functions."""
 
 import math
+import warnings
 from copy import deepcopy
 from typing import Any
-from warnings import deprecated
 
 import numpy as np
 from numpy.typing import NDArray
@@ -273,10 +273,6 @@ def connect_waveguide_ports(
     return False, []
 
 
-@deprecated(
-    "This function is deprecated and will be removed "
-    "in a future version. Use connect_waveguide_ports() instead."
-)
 def WaveguideConnect(  # noqa: N802
     port1: DevicePort, port2: DevicePort, rad: float = 3
 ) -> tuple[bool, list[list[Any]]]:
@@ -308,6 +304,12 @@ def WaveguideConnect(  # noqa: N802
         A sequence that realizes the connection.
 
     """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use connect_waveguide_ports() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return connect_waveguide_ports(port1, port2, rad)
 
 
@@ -380,10 +382,6 @@ def calculate_elbow_path(
     return xpts, ypts
 
 
-@deprecated(
-    "This function is deprecated and will be removed "
-    "in a future version. Use calculate_elbow_path() instead."
-)
 def ElbowRouter(  # noqa: N802
     port1: DevicePort, port2: DevicePort, offset: float = 5
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
@@ -413,4 +411,10 @@ def ElbowRouter(  # noqa: N802
         1D array of Y coordinates of the connector path.
 
     """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use calculate_elbow_path() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return calculate_elbow_path(port1, port2, offset)
