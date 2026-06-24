@@ -53,8 +53,10 @@ with `samplemaker`.
 """
 
 import math
+import warnings
 from collections.abc import Callable, MutableMapping, Sequence
 from copy import deepcopy
+from inspect import signature
 from typing import Any, TypeAlias
 
 from samplemaker.devices import _DeviceList
@@ -322,7 +324,28 @@ class Sequencer:
 
         """
         g = GeomGroup()
-        self.dic["INIT"][1]([], self.state, self.options)
+        init_fun = self.dic["INIT"][1]
+        init_fun_sig = signature(init_fun)
+        nargs = len(init_fun_sig.parameters)
+        if nargs == 3:
+            init_fun([], self.state, self.options)
+        elif nargs == 2:
+            # Legacy init function signature, only state and options are passed
+            warnings.warn(
+                "The supplied INIT command function signature is deprecated. "
+                "Use the new signature with three parameters: args, state, and "
+                "options.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            init_fun(self.state, self.options)  # type: ignore[arg-type]
+        else:
+            msg = (
+                f"The INIT command function must have either 2 or 3 parameters, "
+                f"but it has {nargs} parameters."
+            )
+            raise ValueError(msg)
+
         for instr in self.seq:
             if not len(instr):
                 continue

@@ -348,8 +348,6 @@ class GeomGroup:
     def mirror_y(self, y0: float) -> Self:
         """Mirror the geometry around y-axis.
 
-        DEPRECATED: Use GeomGroup.mirror_y() instead.
-
         Parameters
         ----------
         y0 : float
@@ -367,6 +365,8 @@ class GeomGroup:
 
     def mirrorY(self, y0: float) -> Self:  # noqa: N802
         """Mirror the geometry around y-axis.
+
+        DEPRECATED: Use GeomGroup.mirror_y() instead.
 
         Parameters
         ----------

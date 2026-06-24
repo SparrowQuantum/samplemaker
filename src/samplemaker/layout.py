@@ -811,7 +811,7 @@ class DeviceTable:
     ) -> TAB_POS_TYPE:
         """Create coordinates for a regular table array.
 
-        Returns a tuple that can be passed to `DeviceTable.set_table_positions`.
+        Returns a nested list that can be passed to `DeviceTable.set_table_positions`.
 
         Parameters
         ----------
@@ -856,7 +856,7 @@ class DeviceTable:
     ) -> TAB_POS_TYPE:
         """Create coordinates for a regular table array.
 
-        Returns a tuple that can be passed to `DeviceTable.set_table_positions`.
+        Returns a nested list that can be passed to `DeviceTable.set_table_positions`.
 
         Parameters
         ----------

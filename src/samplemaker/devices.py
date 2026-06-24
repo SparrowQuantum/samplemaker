@@ -227,7 +227,7 @@ def _empty_connector_function(port1: "DevicePort", port2: "DevicePort") -> GeomG
 
     Raises
     ------
-    IncompatiblePortError
+    NotImplementedError
         Always raised to indicate that the ports are incompatible.
 
     """

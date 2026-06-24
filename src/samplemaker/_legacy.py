@@ -1,4 +1,4 @@
-"""Common helper functions used for backwards compatability.
+"""Common helper functions used for backwards compatibility.
 
 The main purpose of these functions is to assist in replacing uppercase function/method
 keyword arguments with lowercase ones, while still allowing the uppercase ones to be

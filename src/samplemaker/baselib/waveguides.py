@@ -536,7 +536,7 @@ def create_base_waveguide_commands() -> smseq.COMMANDS_DICT_TYPE:
 def BaseWaveguideCommands() -> smseq.COMMANDS_DICT_TYPE:  # noqa: N802
     """Create a dictionary with the command list and corresponding functions.
 
-    DEPRECATED: Use init_waveguide_commands() instead.
+    DEPRECATED: Use create_base_waveguide_commands() instead.
 
     Returns
     -------
@@ -546,7 +546,7 @@ def BaseWaveguideCommands() -> smseq.COMMANDS_DICT_TYPE:  # noqa: N802
     """
     warnings.warn(
         "This function is deprecated and will be removed "
-        "in a future version. Use init_waveguide_commands() instead.",
+        "in a future version. Use create_base_waveguide_commands() instead.",
         DeprecationWarning,
         stacklevel=2,
     )

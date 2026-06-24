@@ -254,7 +254,7 @@ class Crystal:
             Number of parameters to be controlled for each lattice site, by default 1.
         kwargs : dict
             Additional keyword arguments. Supports 'N' and 'Nparams' for backward
-            compatability.
+            compatibility.
 
         Returns
         -------
@@ -262,12 +262,12 @@ class Crystal:
             A crystal object with the pre-compiled lattice sites.
 
         """
-        n = _legacy.get_kwarg("n_sites", n, "N", kwargs)
+        n = _legacy.get_kwarg("n", n, "N", kwargs)
         nparams = _legacy.get_optional_kwarg("nparams", nparams, 1, "Nparams", kwargs)
         _legacy.ensure_empty_kwargs("Crystal.triangular_hexagonal", kwargs)
         _legacy.check_missing_args("Crystal.triangular_hexagonal", n=n, filled=filled)
 
-        n = _legacy.ensure_arg_type("n_sites", n)
+        n = _legacy.ensure_arg_type("n", n)
         filled = _legacy.ensure_arg_type("filled", filled)
 
         if n == 0:
