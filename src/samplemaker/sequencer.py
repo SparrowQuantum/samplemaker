@@ -325,7 +325,7 @@ class Sequencer:
         g = GeomGroup()
         init_fun = self.dic["INIT"][1]
         try:
-            init_fun([], self.state, self.options)
+            g += init_fun([], self.state, self.options)
         except TypeError as e:
             errmsg = str(e)
             if "positional argument" not in errmsg or "were given" not in errmsg:
@@ -333,6 +333,7 @@ class Sequencer:
 
             try:
                 # Legacy init function signature, only state and options are passed
+                # and the function returns None.
                 init_fun(self.state, self.options)  # type: ignore[arg-type]
                 warnings.warn(
                     "The supplied INIT command function signature is deprecated. "
