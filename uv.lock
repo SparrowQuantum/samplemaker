@@ -698,7 +698,7 @@ wheels = [
 
 [[package]]
 name = "samplemaker-sparrow"
-version = "5.4.8"
+version = "5.4.9"
 source = { editable = "." }
 dependencies = [
     { name = "asteval" },
