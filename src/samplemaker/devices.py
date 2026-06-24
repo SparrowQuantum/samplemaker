@@ -1387,7 +1387,7 @@ class NetList:
         """
         warnings.warn(
             "This method is deprecated and will be removed "
-            "in a future version. Use Netlist.import_circuit() instead.",
+            "in a future version. Use NetList.import_circuit() instead.",
             DeprecationWarning,
             stacklevel=2,
         )
