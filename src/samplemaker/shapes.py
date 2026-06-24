@@ -1601,7 +1601,13 @@ class Dot:
         self.mirror_y(y0)
 
 
+_BW_COMPAT_FLOAT_CACHE: dict[str, type[float]] = {}
+
+
 def _bw_compat_float_factory(method_name: str) -> type[float]:
+    if method_name in _BW_COMPAT_FLOAT_CACHE:
+        return _BW_COMPAT_FLOAT_CACHE[method_name]
+
     class _BWCompatFloat(float):
         """Backward compatibility class for properties that used to be methods."""
 
@@ -1619,6 +1625,7 @@ def _bw_compat_float_factory(method_name: str) -> type[float]:
             )
             return float(self)
 
+    _BW_COMPAT_FLOAT_CACHE[method_name] = _BWCompatFloat
     return _BWCompatFloat
 
 
