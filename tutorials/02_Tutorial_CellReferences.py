@@ -22,7 +22,7 @@ base += sm.make_circle(4, 5, 1, to_poly=True)
 # we can place base in a GDS CELL and refer to it in our main cell.
 
 # Create a new GDS cell called "BCELL"
-themask.addCell("BCELL", base)
+themask.add_cell("BCELL", base)
 
 # Now create a single reference to it
 g = sm.make_sref(20, 15, "BCELL", base, mag=1.0, angle=0, mirror=False)
@@ -39,7 +39,7 @@ b2 = sm.make_rounded_rect(0, 0, 7, 3, 1)
 b2 += sm.make_sref(10, 0, "BCELL", base)
 
 # Now let's add this to the layout and call it B_TWO
-themask.addCell("B_TWO", b2)
+themask.add_cell("B_TWO", b2)
 
 # Referring to B_TWO in the main cell will include both B_TWO and a reference to BASE
 # There is no limit in concatenating references.
@@ -56,15 +56,15 @@ geomFlatten = g.flatten()
 # You can pass a list of layer to flatten to only select some of the layers during the
 # flattening process. You need flattening to perform boolean operations with SREF/AREF,
 # otherwise those entities will be ignored.
-themask.addCell("FLATCELL", geomFlatten)
+themask.add_cell("FLATCELL", geomFlatten)
 
 # Instantiate it into the main cell
 g += sm.make_sref(150, 0, "FLATCELL", geomFlatten)
 
 # Let's add all to main cell
-themask.addToMainCell(g)
+themask.add_to_main_cell(g)
 
 # Export to GDS
-themask.exportGDS()
+themask.export_gds()
 
 # Finished!

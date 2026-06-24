@@ -17,7 +17,7 @@ from samplemaker.baselib.waveguides import BaseWaveguidePort, BaseWaveguideSeque
 from samplemaker.devices import Device
 
 # And the device inspection tool
-from samplemaker.viewers import DeviceInspect
+from samplemaker.viewers import inspect_device
 
 # We have imported the BaseWaveguidePort, which can be used to build ports interfacing
 # the device to the outside (e.g. to other devices in a circuit).
@@ -74,11 +74,11 @@ class DirectionalCoupler(Device):
         ss = BaseWaveguideSequencer(seq)
         dc = ss.run()
         dc2 = dc.copy()
-        dc2.mirrorX(ltot / 2)
+        dc2.mirror_x(ltot / 2)
         dc += dc2
         dc.translate(-ltot / 2, off + p["gap"] / 2 + p["width"] / 2)
         dc3 = dc.copy()
-        dc3.mirrorY(0)
+        dc3.mirror_y(0)
         dc += dc3
 
         # Ok, now we have to tell the device that there are 4 ports and we should
@@ -105,7 +105,7 @@ sdc = DirectionalCoupler.build()
 g = sdc.run()
 
 # We can inspect the device
-DeviceInspect(sdc)
+inspect_device(sdc)
 
 # We will now check if ports are working as expected.
 
@@ -116,9 +116,9 @@ conn_fun = sdc._ports["p1"].connector_function
 g += conn_fun(sdc._ports["p1"], sdc._ports["p2"])  # connect two ports
 
 # Let's add all to main cell
-themask.addToMainCell(g)
+themask.add_to_main_cell(g)
 
 # Export to GDS
-themask.exportGDS()
+themask.export_gds()
 
 # Finished!

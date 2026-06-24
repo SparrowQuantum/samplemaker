@@ -90,9 +90,13 @@ This is done via the `DeviceTableAnnotations` class.
 
 import math
 import pickle  # for caching
-from collections.abc import Sequence
+import warnings
+from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
+from typing import Any, TypeAlias
+
+import numpy as np
 
 from samplemaker import (
     LayoutPool,
@@ -100,6 +104,7 @@ from samplemaker import (
     _DeviceCountPool,
     _DeviceLocalParamPool,
     _DevicePool,
+    _legacy,
 )
 from samplemaker.devices import Device, DevicePort, IncompatiblePortError
 from samplemaker.gdsreader import GDSReader
@@ -107,7 +112,8 @@ from samplemaker.gdswriter import GDSWriter
 from samplemaker.makers import make_aref, make_circle, make_path, make_text
 from samplemaker.shapes import Box, GeomGroup, SRef
 
-TAB_POS_TYPE = tuple[tuple[tuple[float, float], ...], ...]
+TAB_POS_TYPE: TypeAlias = list[list[tuple[float, float]]]
+TAB_POS_INPUT_TYPE: TypeAlias = Sequence[Sequence[Sequence[float]]]
 
 
 class Marker:
@@ -327,8 +333,8 @@ class DeviceTableAnnotations:
         cols: int,
         x0: float,
         y0: float,
-        rowdict: dict,
-        coldict: dict,
+        rowdict: Mapping[str, Sequence[Any] | np.ndarray],
+        coldict: Mapping[str, Sequence[Any] | np.ndarray],
     ) -> GeomGroup:
         """Render the text for a given element in a table.
 
@@ -349,9 +355,9 @@ class DeviceTableAnnotations:
             X-Position of the item on the table.
         y0 : float
             Y-Position of the item on the table.
-        rowdict : dict[str, Sequence]
+        rowdict : Mapping[str, Sequence[Any]]
             The dictionary associating the variables and values that change along rows.
-        coldict : dict[str, Sequence]
+        coldict : Mapping[str, Sequence[Any]]
             The dictionary associating the variables and values that change along
             columns.
 
@@ -420,8 +426,8 @@ class DeviceTable:
         dev: Device,
         nrow: int,
         ncol: int,
-        rowvars: dict[str, Sequence],
-        colvars: dict[str, Sequence],
+        rowvars: Mapping[str, Sequence[Any] | np.ndarray],
+        colvars: Mapping[str, Sequence[Any] | np.ndarray],
     ) -> None:
         """Initialize the DeviceTable class.
 
@@ -455,30 +461,33 @@ class DeviceTable:
         self.device_rotation = 0
         self.annotations = None
         self.use_references = True
-        self.pos_xy = tuple([tuple([(0, 0) for _ in range(ncol)]) for _ in range(nrow)])
+        self.pos_xy = [[(0, 0) for _ in range(ncol)] for _ in range(nrow)]
         self._external_ports = {}
         self._geometries = []
         self._portmap = []
         self._backup_dev = deepcopy(dev)  # Keep it to reset the whole thing
         self._getgeom_ran = False
 
-    def set_table_positions(self, positions: TAB_POS_TYPE) -> None:
+    def set_table_positions(self, positions: TAB_POS_INPUT_TYPE) -> None:
         """Define the position of each element in the table.
 
-        Uses a 3-dimensional tuple of the kind pos[i][j][k] where i,j control the row
+        Uses a 3-dimensional Sequence of the kind pos[i][j][k] where i,j control the row
         and column element and k=0,1 are the x and y coordinate.
 
         Parameters
         ----------
-        positions : TAB_POS_TYPE
-            The tuple describing the position of each element in the table.
+        positions : TAB_POS_INPUT_TYPE
+            The sequence describing the position of each element in the table.
 
         Returns
         -------
         None
 
         """
-        self.pos_xy = positions
+        self.pos_xy = [
+            [(positions[i][j][0], positions[i][j][1]) for j in range(self.ncol)]
+            for i in range(self.nrow)
+        ]
         self._geometries = []
         self._portmap = []
 
@@ -497,17 +506,13 @@ class DeviceTable:
         None
 
         """
-        newpos = tuple(
+        newpos = [
             [
-                tuple(
-                    [
-                        (dx + self.pos_xy[i][j][0], dy + self.pos_xy[i][j][1])
-                        for j in range(self.ncol)
-                    ]
-                )
-                for i in range(self.nrow)
+                (dx + self.pos_xy[i][j][0], dy + self.pos_xy[i][j][1])
+                for j in range(self.ncol)
             ]
-        )
+            for i in range(self.nrow)
+        ]
         self.set_table_positions(newpos)
 
     def set_linked_ports(
@@ -601,7 +606,7 @@ class DeviceTable:
         """
         return deepcopy(self._external_ports)
 
-    def __build_geomarray(self) -> None:
+    def _build_geomarray(self) -> None:
         dev = self.dev
         self._portmap = [[{} for _ in range(self.ncol)] for _ in range(self.nrow)]
         self._geometries = [
@@ -627,7 +632,7 @@ class DeviceTable:
     def __place_portmap(self) -> None:
         # Adjusts the portmap according to the current positions
         if self._geometries == []:
-            self.__build_geomarray()
+            self._build_geomarray()
 
         for i in range(self.ncol):
             for j in range(self.nrow):
@@ -659,40 +664,42 @@ class DeviceTable:
 
         """
         if self._geometries == []:
-            self.__build_geomarray()
+            self._build_geomarray()
 
         # Get all BB (NOTE: this is slow for large devices with lots of features)
         bboxes = [
             [self._geometries[j][i].bounding_box() for i in range(self.ncol)]
             for j in range(self.nrow)
         ]
-        self.pos_xy = [[[0, 0] for i in range(self.ncol)] for j in range(self.nrow)]
+        pos_xy = [[[0.0, 0.0] for _ in range(self.ncol)] for _ in range(self.nrow)]
         # Place them according to the numkey point
-        x_extrR = [-1e23 for i in range(self.ncol)]
-        x_extrL = [1e23 for i in range(self.ncol)]
-        y_extrT = [-1e23 for i in range(self.nrow)]
-        y_extrB = [1e23 for i in range(self.nrow)]
+        x_extr_r = [-1e23] * self.ncol
+        x_extr_l = [1e23] * self.ncol
+        y_extr_t = [-1e23] * self.nrow
+        y_extr_b = [1e23] * self.nrow
         for i in range(self.ncol):
             for j in range(self.nrow):
                 (bx, by) = bboxes[j][i].get_numkey_point(numkey)
-                self.pos_xy[j][i][0] = -bx
-                self.pos_xy[j][i][1] = -by
+                pos_xy[j][i][0] = -bx
+                pos_xy[j][i][1] = -by
                 bboxes[j][i].llx -= bx
                 bboxes[j][i].lly -= by
-                x_extrR[i] = max(x_extrR[i], bboxes[j][i].urx())
-                y_extrT[j] = max(y_extrT[j], bboxes[j][i].ury())
-                x_extrL[i] = min(x_extrL[i], bboxes[j][i].llx)
-                y_extrB[j] = min(y_extrB[j], bboxes[j][i].lly)
+                x_extr_r[i] = max(x_extr_r[i], bboxes[j][i].urx)
+                y_extr_t[j] = max(y_extr_t[j], bboxes[j][i].ury)
+                x_extr_l[i] = min(x_extr_l[i], bboxes[j][i].llx)
+                y_extr_b[j] = min(y_extr_b[j], bboxes[j][i].lly)
 
-        sx = [(x_extrR[i - 1] - x_extrL[i] + min_dist_x) for i in range(1, self.ncol)]
-        sy = [(y_extrT[j - 1] - y_extrB[j] + min_dist_y) for j in range(1, self.nrow)]
+        sx = [(x_extr_r[i - 1] - x_extr_l[i] + min_dist_x) for i in range(1, self.ncol)]
+        sy = [(y_extr_t[j - 1] - y_extr_b[j] + min_dist_y) for j in range(1, self.nrow)]
 
         for i in range(self.ncol):
             for j in range(self.nrow):
                 if i != 0:
-                    self.pos_xy[j][i][0] += sum(sx[0:i])
+                    pos_xy[j][i][0] += sum(sx[0:i])
                 if j != 0:
-                    self.pos_xy[j][i][1] += sum(sy[0:j])
+                    pos_xy[j][i][1] += sum(sy[0:j])
+
+        self.set_table_positions(pos_xy)
 
     def get_geometries(self) -> GeomGroup:
         """Build the table and returns all the geometries.
@@ -714,7 +721,7 @@ class DeviceTable:
             self.dev = deepcopy(self._backup_dev)
 
         if not self._geometries:
-            self.__build_geomarray()
+            self._build_geomarray()
 
         self.__place_portmap()
         g = GeomGroup()
@@ -776,9 +783,9 @@ class DeviceTable:
                                 )
                                 raise IncompatiblePortError(msg)
 
-                            if rlalign and p1.dy() != 0 and p2.yx() != 0:
+                            if rlalign and p1.dy() != 0 and p2.dy() != 0:
                                 xdiff = p2.x0 - p1.x0
-                                geom.translate(0, -xdiff)
+                                geom.translate(-xdiff, 0)
                                 for pp in portmap[j][i].values():
                                     pp.x0 -= xdiff
                             g += p1.connector_function(p1, p2)
@@ -792,7 +799,7 @@ class DeviceTable:
         return g
 
     @staticmethod
-    def Regular(
+    def create_regular_grid(
         rows: int,
         cols: int,
         ax: float,
@@ -804,7 +811,7 @@ class DeviceTable:
     ) -> TAB_POS_TYPE:
         """Create coordinates for a regular table array.
 
-        Returns a tuple that can be passed to `DeviceTable.set_table_positions`.
+        Returns a nested list that can be passed to `DeviceTable.set_table_positions`.
 
         Parameters
         ----------
@@ -828,17 +835,61 @@ class DeviceTable:
         Returns
         -------
         TAB_POS_TYPE
-            3-dimensional tuple of positions.
+            3-dimensional list of positions.
 
         """
-        return tuple(
-            [
-                tuple(
-                    [(x0 + i * ax + j * bx, y0 + i * ay + j * by) for i in range(cols)]
-                )
-                for j in range(rows)
-            ]
+        return [
+            [(x0 + i * ax + j * bx, y0 + i * ay + j * by) for i in range(cols)]
+            for j in range(rows)
+        ]
+
+    @staticmethod
+    def Regular(  # noqa: N802
+        rows: int,
+        cols: int,
+        ax: float,
+        ay: float,
+        bx: float,
+        by: float,
+        x0: float = 0,
+        y0: float = 0,
+    ) -> TAB_POS_TYPE:
+        """Create coordinates for a regular table array.
+
+        Returns a nested list that can be passed to `DeviceTable.set_table_positions`.
+
+        Parameters
+        ----------
+        rows : int
+            Number of rows.
+        cols : int
+            Number of columns.
+        ax : float
+            x-step along rows.
+        ay : float
+            y-step along rows.
+        bx : float
+            x-step along columns.
+        by : float
+            y-step along columns.
+        x0 : float, optional
+            x-coordinate of the origin, by default 0.
+        y0 : float, optional
+            y-coordinate of the origin, by default 0.
+
+        Returns
+        -------
+        TAB_POS_TYPE
+            3-dimensional list of positions.
+
+        """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use DeviceTable.create_regular_grid() instead.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        return DeviceTable.create_regular_grid(rows, cols, ax, ay, bx, by, x0, y0)
 
 
 class Mask:
@@ -901,7 +952,7 @@ class Mask:
         """
         self.cache = cache
         if cache:
-            self.__import_cache()
+            self._import_cache()
 
     @staticmethod
     def __add_basic_elements() -> None:
@@ -911,7 +962,7 @@ class Mask:
             LayoutPool["_CIRCLE"] = c
             _BoundingBoxPool["_CIRCLE"] = Box(-1, -1, 2, 2)
 
-    def addToMainCell(self, geom_group: GeomGroup) -> None:
+    def add_to_main_cell(self, geom_group: GeomGroup) -> None:
         """Add a geometry to the main cell.
 
         Parameters
@@ -929,7 +980,30 @@ class Mask:
         else:
             LayoutPool[self.mainsymbol] += geom_group
 
-    def addCell(self, cellname: str, geom_group: GeomGroup) -> None:
+    def addToMainCell(self, geom_group: GeomGroup) -> None:  # noqa: N802
+        """Add a geometry to the main cell.
+
+        DEPRECATED: Use Mask.add_to_main_cell() instead.
+
+        Parameters
+        ----------
+        geom_group : GeomGroup
+            The geometry to be added.
+
+        Returns
+        -------
+        None
+
+        """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.add_to_main_cell() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.add_to_main_cell(geom_group)
+
+    def add_cell(self, cellname: str, geom_group: GeomGroup) -> None:
         """Add a new cell to the GDS structure and assigns a geometry to it.
 
         Parameters
@@ -946,7 +1020,32 @@ class Mask:
         """
         LayoutPool[cellname] = geom_group
 
-    def getCell(self, cellname: str) -> GeomGroup:
+    def addCell(self, cellname: str, geom_group: GeomGroup) -> None:  # noqa: N802
+        """Add a new cell to the GDS structure and assigns a geometry to it.
+
+        DEPRECATED: Use Mask.add_cell() instead.
+
+        Parameters
+        ----------
+        cellname : str
+            The name of the cell.
+        geom_group : GeomGroup
+            The geometry to be added.
+
+        Returns
+        -------
+        None
+
+        """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.add_cell() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.add_cell(cellname, geom_group)
+
+    def get_cell(self, cellname: str) -> GeomGroup:
         """Get a reference to the GeomGroup corresponding to the cellname.
 
         Note: if you modify the cell geometry, it will also be modified in the mask.
@@ -968,7 +1067,33 @@ class Mask:
 
         return LayoutPool[cellname]
 
-    def __export_cache(self) -> None:
+    def getCell(self, cellname: str) -> GeomGroup:  # noqa: N802
+        """Get a reference to the GeomGroup corresponding to the cellname.
+
+        Note: if you modify the cell geometry, it will also be modified in the mask.
+
+        DEPRECATED: Use Mask.get_cell() instead.
+
+        Parameters
+        ----------
+        cellname : str
+            The name of the cell.
+
+        Returns
+        -------
+        GeomGroup
+            Reference to the geometry group.
+
+        """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.get_cell() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_cell(cellname)
+
+    def _export_cache(self) -> None:
         print("Storing objects in cache file...")
         # Note that we do not need the full geometry, as we will just reload
         # it from the GDS file. So we keep the references only.
@@ -989,7 +1114,7 @@ class Mask:
             pickle.dump(data, cachefile)
         print("Done.")
 
-    def __import_cache(self) -> None:
+    def _import_cache(self) -> None:
         try:
             with _Path(self.name + ".cache").open("rb") as cachefile:
                 print("Loading cache data...")
@@ -1031,7 +1156,7 @@ class Mask:
             _DeviceLocalParamPool.pop(hsh, None)
             _DevicePool.pop(hsh, None)
 
-    def exportGDS(self) -> None:
+    def export_gds(self) -> None:
         """Finalize the mask, perform cache operations, if any, and write to GDS.
 
         Returns
@@ -1056,9 +1181,27 @@ class Mask:
             gdsw.write_pool(LayoutPool)
         gdsw.close_library()
         if self.cache:
-            self.__export_cache()
+            self._export_cache()
 
-    def importGDS(self, filename: str) -> None:
+    def exportGDS(self) -> None:  # noqa: N802
+        """Finalize the mask, perform cache operations, if any, and write to GDS.
+
+        DEPRECATED: Use Mask.export_gds() instead.
+
+        Returns
+        -------
+        None
+
+        """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.export_gds() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.export_gds()
+
+    def import_gds(self, filename: str) -> None:
         """Import the full mask from GDS file.
 
         Parameters
@@ -1080,7 +1223,7 @@ class Mask:
         gdsr.quick_read(filename)
         for cname in gdsr.celldata:
             gg = gdsr.get_cell(cname)
-            self.addCell(cname, gg)
+            self.add_cell(cname, gg)
             reflist.update(gg.get_sref_list())
         for cname in gdsr.celldata:
             if cname not in reflist:
@@ -1100,7 +1243,30 @@ class Mask:
                 if isinstance(e, SRef):
                     e.group = LayoutPool[e.cellname]
 
-    def addMarkers(self, markerset: "MarkerSet") -> None:
+    def importGDS(self, filename: str) -> None:  # noqa: N802
+        """Import the full mask from GDS file.
+
+        DEPRECATED: Use Mask.import_gds() instead.
+
+        Parameters
+        ----------
+        filename : str
+            name of the GDS file to read from.
+
+        Returns
+        -------
+        None
+
+        """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.import_gds() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.import_gds(filename)
+
+    def add_markers(self, markerset: "MarkerSet") -> None:
         """Add a marker set to the mask.
 
         Parameters
@@ -1119,7 +1285,30 @@ class Mask:
         else:
             LayoutPool[self.mainsymbol] += g
 
-    def addWriteField(
+    def addMarkers(self, markerset: "MarkerSet") -> None:  # noqa: N802
+        """Add a marker set to the mask.
+
+        DEPRECATED: Use Mask.add_markers() instead.
+
+        Parameters
+        ----------
+        markerset : MarkerSet
+            The MarkerSet class to be added.
+
+        Returns
+        -------
+        None
+
+        """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.add_markers() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.add_markers(markerset)
+
+    def add_writefield(
         self, wf_size: float, x0: float, y0: float, passes: int = 1, shift: float = 0
     ) -> None:
         """Add a square writefield centered in x0,y0.
@@ -1144,17 +1333,12 @@ class Mask:
         """
         self.writefields += [(wf_size, x0, y0, passes, shift)]
 
-    def addWriteFieldGrid(
-        self,
-        wf_size: float,
-        x0: float,
-        y0: float,
-        Nx: int,
-        Ny: int,
-        passes: int = 1,
-        shift: float = 0,
+    def addWriteField(  # noqa: N802
+        self, wf_size: float, x0: float, y0: float, passes: int = 1, shift: float = 0
     ) -> None:
-        """Create a grid Nx x Ny of writefields with given size and position.
+        """Add a square writefield centered in x0,y0.
+
+        DEPRECATED: Use Mask.add_writefield() instead.
 
         Parameters
         ----------
@@ -1164,10 +1348,6 @@ class Mask:
             X-coordinate of the writefield center in um.
         y0 : float
             Y-coordinate of the writefield center in um.
-        Nx : int
-            Number of write fields in x direction.
-        Ny : int
-            Number of write fields in y direction.
         passes : int, optional
             Number of write-field passes, not shown in the mask, by default 1.
         shift : float, optional
@@ -1178,9 +1358,63 @@ class Mask:
         None
 
         """
-        for i in range(Nx):
-            for j in range(Ny):
-                self.addWriteField(
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.add_writefield() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.add_writefield(wf_size, x0, y0, passes, shift)
+
+    def add_writefield_grid(
+        self,
+        wf_size: float,
+        x0: float,
+        y0: float,
+        nx: int | _legacy.MissingType = _legacy.MISSING,
+        ny: int | _legacy.MissingType = _legacy.MISSING,
+        passes: int = 1,
+        shift: float = 0,
+        **kwargs: int,
+    ) -> None:
+        """Create a grid nx x ny of writefields with given size and position.
+
+        Parameters
+        ----------
+        wf_size : float
+            Size in um of the writefield.
+        x0 : float
+            X-coordinate of the writefield center in um.
+        y0 : float
+            Y-coordinate of the writefield center in um.
+        nx : int
+            Number of write fields in x direction.
+        ny : int
+            Number of write fields in y direction.
+        passes : int, optional
+            Number of write-field passes, not shown in the mask, by default 1.
+        shift : float, optional
+            Shift of each multi-pass writefield, by default 0.
+        kwargs : int
+            Additional keyword arguments. Supports 'Nx' and 'Ny' for backward
+            compatibility.
+
+        Returns
+        -------
+        None
+
+        """
+        nx = _legacy.get_kwarg("nx", nx, "Nx", kwargs)
+        ny = _legacy.get_kwarg("ny", ny, "Ny", kwargs)
+        _legacy.ensure_empty_kwargs("Mask.add_writefield_grid", kwargs)
+        _legacy.check_missing_args("Mask.add_writefield_grid", nx=nx, ny=ny)
+
+        nx = _legacy.ensure_arg_type("nx", nx)
+        ny = _legacy.ensure_arg_type("ny", ny)
+
+        for i in range(nx):
+            for j in range(ny):
+                self.add_writefield(
                     wf_size, i * wf_size + x0, j * wf_size + y0, passes, shift
                 )
 
@@ -1199,9 +1433,59 @@ class Mask:
                 )
                 wfpath.translate(x, y)
                 wfs += wfpath
-            self.addToMainCell(wfs)
+            self.add_to_main_cell(wfs)
 
-    def addDeviceTable(
+    def addWriteFieldGrid(  # noqa: N802
+        self,
+        wf_size: float,
+        x0: float,
+        y0: float,
+        nx: int | _legacy.MissingType = _legacy.MISSING,
+        ny: int | _legacy.MissingType = _legacy.MISSING,
+        passes: int = 1,
+        shift: float = 0,
+        **kwargs: int,
+    ) -> None:
+        """Create a grid nx x ny of writefields with given size and position.
+
+        DEPRECATED: Use Mask.add_writefield_grid() instead.
+
+        Parameters
+        ----------
+        wf_size : float
+            Size in um of the writefield.
+        x0 : float
+            X-coordinate of the writefield center in um.
+        y0 : float
+            Y-coordinate of the writefield center in um.
+        nx : int
+            Number of write fields in x direction.
+        ny : int
+            Number of write fields in y direction.
+        passes : int, optional
+            Number of write-field passes, not shown in the mask, by default 1.
+        shift : float, optional
+            Shift of each multi-pass writefield, by default 0.
+        kwargs : int
+            Additional keyword arguments. Supports 'Nx' and 'Ny' for backward
+            compatibility.
+
+        Returns
+        -------
+        None
+
+        """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.add_writefield_grid() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.add_writefield_grid(
+            wf_size, x0, y0, nx=nx, ny=ny, passes=passes, shift=shift, **kwargs
+        )
+
+    def add_device_table(
         self, device_table: DeviceTable, x0: float, y0: float, cell: str = ""
     ) -> None:
         """Add a `DeviceTable` to the layout.
@@ -1224,8 +1508,39 @@ class Mask:
         """
         geoms = device_table.get_geometries()
         bb = geoms.bounding_box()
-        geoms.translate(-bb.cx() + x0, -bb.cy() + y0)
+        geoms.translate(-bb.cx + x0, -bb.cy + y0)
         if not cell:
-            self.addToMainCell(geoms)
+            self.add_to_main_cell(geoms)
         else:
-            self.addCell(cell, geoms)
+            self.add_cell(cell, geoms)
+
+    def addDeviceTable(  # noqa: N802
+        self, device_table: DeviceTable, x0: float, y0: float, cell: str = ""
+    ) -> None:
+        """Add a `DeviceTable` to the layout.
+
+        DEPRECATED: Use Mask.add_device_table() instead.
+
+        Parameters
+        ----------
+        device_table : DeviceTable
+            A DeviceTable object to be placed in the layout.
+        x0 : float
+            Controls the x position of the table center.
+        y0 : float
+            Controls the y position of the table center.
+        cell : str, optional
+            Adds the table to a named cell, by default "" (main cell).
+
+        Returns
+        -------
+        None
+
+        """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use Mask.add_device_table() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.add_device_table(device_table, x0, y0, cell)

@@ -44,10 +44,10 @@ class GDSWriter:
             self.yc[i] = math.sin(i * 2 * math.pi / circleres)
 
     def __write_string(self, text: str, tag: int) -> None:
-        L = len(text)
-        self.__write_data(struct.pack(">2H", L + L % 2 + 4, tag))
+        text_len = len(text)
+        self.__write_data(struct.pack(">2H", text_len + text_len % 2 + 4, tag))
         self.__write_data(text.encode())
-        if L % 2 == 1:
+        if text_len % 2 == 1:
             self.__write_data(struct.pack("b", 0))
 
     def __write_real8(self, value: float) -> None:
@@ -124,8 +124,8 @@ class GDSWriter:
         self.__write_data(
             struct.pack(">2i", math.floor(text.x0 * 1000), math.floor(text.y0 * 1000))
         )
-        L = len(text.text)
-        self.__write_data(struct.pack(">2H", L + 4, 0x1906))
+        text_len = len(text.text)
+        self.__write_data(struct.pack(">2H", text_len + 4, 0x1906))
         self.__write_data(text.text.encode())
         self.__write_data(struct.pack(">2H", 4, 0x1100))
 

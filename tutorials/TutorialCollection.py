@@ -7,7 +7,7 @@ Tutorial device collection
 # Check the end of this file, we run a command to make samplemaker aware of our devices
 
 import samplemaker.makers as sm  # used for drawing
-from samplemaker.devices import Device, registerDevicesInModule
+from samplemaker.devices import Device, register_devices_in_module
 
 
 # class definition
@@ -48,7 +48,7 @@ class FreeFreeMembrane(Device):
         tet = sm.make_rect(0, p["tetOff"], p["R"] * 2, p["tetW"])
         # Mirror to get the second one
         tet2 = tet.copy()
-        tet2.mirrorY(0)
+        tet2.mirror_y(0)
         mem += tet + tet2
         # Support ring
         ring = sm.make_circle(0, 0, p["R"], to_poly=True, vertices=64)
@@ -58,4 +58,4 @@ class FreeFreeMembrane(Device):
 
 
 # Important: register all devices in this module
-registerDevicesInModule(__name__)
+register_devices_in_module(__name__)

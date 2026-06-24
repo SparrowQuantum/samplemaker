@@ -1,6 +1,7 @@
 """Automatic port-to-port routing functions."""
 
 import math
+import warnings
 from copy import deepcopy
 from typing import Any
 
@@ -11,7 +12,7 @@ from samplemaker.devices import DevicePort
 
 
 # The following are routines for the connector
-def __connectable_facing(
+def _connectable_facing(
     port1: DevicePort, port2: DevicePort, rad: float = 3
 ) -> tuple[bool, list[list[Any]]]:
     """Calculate if two ports are directly connectable and facing each other.
@@ -84,7 +85,7 @@ def __connectable_facing(
     return False, []
 
 
-def __connectable_bend(
+def _connectable_bend(
     port1: DevicePort, port2: DevicePort, rad: float = 3
 ) -> tuple[bool, list[list[Any]]]:
     """Calculate if two ports can be connected with a single bend.
@@ -128,18 +129,18 @@ def __connectable_bend(
         # ystp = (s-rad)*port2.dy()
         # s2 = math.sqrt(xstp*xstp+ystp*ystp)
         p1 = deepcopy(port1)
-        p1.S(s1)
+        p1.move_straight(s1)
         if det > 0:
-            p1.BL(rad)
+            p1.bend_left(rad)
         else:
-            p1.BR(rad)
-        res = __connectable_facing(p1, port2, rad)
+            p1.bend_right(rad)
+        res = _connectable_facing(p1, port2, rad)
         seq = [["S", s1], ["B", det * 90, rad]] + res[1]
         return True, seq
     return False, []
 
 
-def __connect_step(
+def _connect_step(
     port1: DevicePort, port2: DevicePort, rad: float = 3
 ) -> tuple[bool, list[list[Any]]]:
     """Perform a single connection step.
@@ -190,22 +191,22 @@ def __connect_step(
 
     if s_len > 0:
         # print("Guessing I should move S by ", s_len)
-        port1.S(s_len)
+        port1.move_straight(s_len)
         seq = [["S", s_len]]
     # Now see if we get closer by going left or right
     p1 = deepcopy(port1)
     p1.fix()
-    p1.BL(rad)
+    p1.bend_left(rad)
     dl = p1.dist(port2)
-    res = __connectable_bend(p1, port2, rad)
+    res = _connectable_bend(p1, port2, rad)
     if res[0]:
         seq += [["B", 90, rad]] + res[1]
         return True, seq
 
     p1.reset()
-    p1.BR(rad)
+    p1.bend_right(rad)
     dr = p1.dist(port2)
-    res = __connectable_bend(p1, port2, rad)
+    res = _connectable_bend(p1, port2, rad)
     if res[0]:
         seq += [["B", -90, rad]] + res[1]
         return True, seq
@@ -214,15 +215,15 @@ def __connect_step(
     # print("R distance is ", dr)
     # Should I go left or right?
     if dl < dr:
-        port1.BL(rad)
+        port1.bend_left(rad)
         port1.fix()
         return False, [*seq, ["B", 90, rad]]
-    port1.BR(rad)
+    port1.bend_right(rad)
     port1.fix()
     return False, [*seq, ["B", -90, rad]]
 
 
-def WaveguideConnect(
+def connect_waveguide_ports(
     port1: DevicePort, port2: DevicePort, rad: float = 3
 ) -> tuple[bool, list[list[Any]]]:
     """Calculate a sequence of commands to connect two ports.
@@ -247,23 +248,23 @@ def WaveguideConnect(
     -------
     bool
         True if connection succeeded, False otherwise.
-    list
+    list[list[Any]]
         A sequence that realizes the connection.
 
     """
     # Trivial cases first
-    res = __connectable_facing(port1, port2, rad)
+    res = _connectable_facing(port1, port2, rad)
     if res[0]:
         # print("connectable facing")
         return True, res[1]
-    res = __connectable_bend(port1, port2, rad)
+    res = _connectable_bend(port1, port2, rad)
     if res[0]:
         # print("connectable")
         return True, res[1]
     p1 = deepcopy(port1)
     seq = []
     for _ in range(4):
-        res = __connect_step(p1, port2, rad)
+        res = _connect_step(p1, port2, rad)
         seq += res[1]
         if res[0]:
             return True, seq
@@ -271,9 +272,49 @@ def WaveguideConnect(
     return False, []
 
 
-def ElbowRouter(
+def WaveguideConnect(  # noqa: N802
+    port1: DevicePort, port2: DevicePort, rad: float = 3
+) -> tuple[bool, list[list[Any]]]:
+    """Calculate a sequence of commands to connect two ports.
+
+    Given a start port and an end port, the function attempts to connect the ports using
+    a sequence of straight lines (sequencer command S), 90 degrees bends (sequencer
+    command B) and cosine bends (sequencer command C). The bending radius is also given.
+    If the ports are too close to be connected via Manhattan-style connectors the
+    function returns False. The sequence can be used in combination with any
+    `samplemaker.sequencer.Sequencer` class that implements the commands S, C, and B.
+
+    DEPRECATED: Use connect_waveguide_ports() instead.
+
+    Parameters
+    ----------
+    port1 : DevicePort
+        Start port for the connection.
+    port2 : DevicePort
+        End port for the connection.
+    rad : float, optional
+        The maximum bend radius in um, by default 3.
+
+    Returns
+    -------
+    bool
+        True if connection succeeded, False otherwise.
+    list[list[Any]]
+        A sequence that realizes the connection.
+
+    """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use connect_waveguide_ports() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return connect_waveguide_ports(port1, port2, rad)
+
+
+def calculate_elbow_path(
     port1: DevicePort, port2: DevicePort, offset: float = 5
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[list[float], list[float]]:
     """Calculate the connector path between two ports using an elbow style connection.
 
     Typically used for electrical interconnects. Does not check collisions.
@@ -291,10 +332,10 @@ def ElbowRouter(
 
     Returns
     -------
-    xpts : np.ndarray
-        1D array of X coordinates of the connector path.
-    ypts : np.ndarray
-        1D array of Y coordinates of the connector path.
+    xpts : list[float]
+        1D list of X coordinates of the connector path.
+    ypts : list[float]
+        1D list of Y coordinates of the connector path.
 
     """
     x0 = port1.x0
@@ -306,8 +347,8 @@ def ElbowRouter(
     x1 = p2dot.x - x0
     y1 = p2dot.y - y0
     if abs(y1) < 0.005:
-        xpts = [0, x1]
-        ypts = [0, y1]
+        xpts = np.array([0, x1])
+        ypts = np.array([0, y1])
     else:
         aout = port2.angle() - r0 % (2 * math.pi)
         # offset
@@ -329,15 +370,50 @@ def ElbowRouter(
         xpts = np.append(xpts, [x1])
         ypts = np.append([0], ypts)
         ypts = np.append(ypts, [y1])
-        xpts = xpts.tolist()
-        ypts = ypts.tolist()
 
     cost = math.cos(r0)
     sint = math.sin(r0)
-    for i in range(len(xpts)):
-        x = xpts[i]
-        y = ypts[i]
-        xpts[i] = cost * x - sint * y + x0
-        ypts[i] = sint * x + cost * y + y0
+    x = xpts.copy()
+    y = ypts.copy()
+    xpts = cost * x - sint * y + x0
+    ypts = sint * x + cost * y + y0
 
-    return xpts, ypts
+    return xpts.tolist(), ypts.tolist()
+
+
+def ElbowRouter(  # noqa: N802
+    port1: DevicePort, port2: DevicePort, offset: float = 5
+) -> tuple[list[float], list[float]]:
+    """Calculate the connector path between two ports using an elbow style connection.
+
+    Typically used for electrical interconnects. Does not check collisions.
+    The offset parameter controls how far should the connector go straight out
+
+    of the ports before attempting a connection (using cubic Bezier).
+
+    DEPRECATED: Use calculate_elbow_path() instead.
+
+    Parameters
+    ----------
+    port1 : DevicePort
+        Start port for the connection.
+    port2 : DevicePort
+        End port for the connection.
+    offset : float, optional
+        How far should the connector stick away from ports, by default 5.
+
+    Returns
+    -------
+    xpts : list[float]
+        1D list of X coordinates of the connector path.
+    ypts : list[float]
+        1D list of Y coordinates of the connector path.
+
+    """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use calculate_elbow_path() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return calculate_elbow_path(port1, port2, offset)

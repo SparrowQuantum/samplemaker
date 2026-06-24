@@ -4,7 +4,7 @@
 
 import samplemaker.layout as smlay  # used for layout
 import samplemaker.makers as sm  # used for drawing
-from samplemaker.viewers import GeomView  # Used to inspect drawing before viewing
+from samplemaker.viewers import view_geometry  # Used to inspect drawing before viewing
 
 # Create a simple mask layout
 themask = smlay.Mask("00_Tutorial_BasicDrawing")
@@ -42,15 +42,15 @@ re0 += re1  # re0 contains both, you can still change re1!
 re0 += re1.copy().translate(20, 0).scale(40, 0, 1.2, 2.2).set_layer(6)
 
 # mirror both in the Y direction around the x=0 axis
-re0.mirrorY(0)
+re0.mirror_y(0)
 
-# We can inspect the geometry using GeomView
-GeomView(re0)
+# We can inspect the geometry using view_geometry()
+view_geometry(re0)
 
 # To add the rectangles to the final layout use addToMainCell()
-themask.addToMainCell(re0)
+themask.add_to_main_cell(re0)
 
 # Export to GDS
-themask.exportGDS()
+themask.export_gds()
 
 # Finished!

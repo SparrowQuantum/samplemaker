@@ -99,31 +99,31 @@ class TestDevicePort:
 
     def test_move_commands(self) -> None:
         port = smdev.DevicePort(0.0, 0.0, True, True)
-        port.BL(5.0)
+        port.bend_left(5.0)
         assert port.x0 == pytest.approx(5.0)
         assert port.y0 == pytest.approx(5.0)
         assert port.angle_to_text() == "N"
 
-        port.BL(3.0)
+        port.bend_left(3.0)
         assert port.x0 == pytest.approx(2.0)
         assert port.y0 == pytest.approx(8.0)
         assert port.angle_to_text() == "W"
 
-        port.S(6.0)
+        port.move_straight(6.0)
         assert port.x0 == pytest.approx(-4.0)
         assert port.y0 == pytest.approx(8.0)
         assert port.angle_to_text() == "W"
 
-        port.BR(2.0)
+        port.bend_right(2.0)
         assert port.x0 == pytest.approx(-6.0)
         assert port.y0 == pytest.approx(10.0)
         assert port.angle_to_text() == "N"
 
     def test_fix_updates_reset_anchor(self) -> None:
         port = smdev.DevicePort(0.0, 0.0, True, True)
-        port.S(5.0)
+        port.move_straight(5.0)
         port.fix()
-        port.S(2.0)
+        port.move_straight(2.0)
         assert port.x0 == pytest.approx(7.0)
         assert port.y0 == pytest.approx(0.0)
 
@@ -206,7 +206,7 @@ class TestDevice:
         g = dummy_device.run()
         bb = g.bounding_box()
         assert bb.llx == pytest.approx(10.0)
-        assert bb.cy() == pytest.approx(20.0)
+        assert bb.cy == pytest.approx(20.0)
 
     def test_addparameter_rejects_colon(self, dummy_device: smdev.Device) -> None:
         with pytest.raises(ValueError, match="containing ':'"):
@@ -351,7 +351,7 @@ class TestNetList:
             ".END",
         ]
         circuit_file.write_text("\n".join(lines))
-        all_circuits = smdev.NetList.ImportCircuit(str(circuit_file))
+        all_circuits = smdev.NetList.import_circuit(str(circuit_file))
         assert isinstance(all_circuits, dict)
         assert set(all_circuits.keys()) == {"CHILD", "TOP"}
         top = all_circuits["TOP"]
@@ -366,7 +366,7 @@ class TestNetList:
             ".END",
         ]
         circuit_file.write_text("\n".join(lines))
-        netlist = smdev.NetList.ImportCircuit(str(circuit_file), "MAIN")
+        netlist = smdev.NetList.import_circuit(str(circuit_file), "MAIN")
 
         assert isinstance(netlist, smdev.NetList)
         assert netlist.name == "MAIN"
@@ -383,7 +383,7 @@ class TestNetList:
             ".END",
         ]
         circuit_file.write_text("\n".join(lines))
-        netlist = smdev.NetList.ImportCircuit(str(circuit_file), "MAIN")
+        netlist = smdev.NetList.import_circuit(str(circuit_file), "MAIN")
         assert isinstance(netlist, smdev.NetList)
         assert netlist.aligned_ports == ["wire1", "wire2"]
         assert netlist.paths["wire1"] == [0.0, 0.0, 0, 5.0, 5.0, 90, 10.0, 5.0, 180]
@@ -639,7 +639,7 @@ class TestDeviceLibraryExports:
 
         monkeypatch.setattr(smdev, "GDSWriter", _writer_factory)
 
-        smdev.CreateDeviceLibrary(
+        smdev.create_device_library(
             "TESTLIB_DUMMY_CONNECTOR", {"length": 7.0}, str(output_file)
         )
 
@@ -667,7 +667,7 @@ class TestDeviceLibraryExports:
         _ = dummy_device_list
         output_file = tmp_path / "SampleMakerLibrary.lel"
 
-        smdev.ExportDeviceSchematics(str(output_file))
+        smdev.export_device_schematics(str(output_file))
         content = output_file.read_text()
 
         assert "<Component DummyDevice>" in content
@@ -686,6 +686,6 @@ class TestDeviceRegistration:
         dummy_device_list: dict[str, type[smdev.Device]],
     ) -> None:
         _ = dummy_device_list
-        smdev.registerDevicesInModule(__name__)
+        smdev.register_devices_in_module(__name__)
         assert "TESTLIB_DUMMY" in smdev._DeviceList
         assert "TESTLIB_DUMMY_CONNECTOR" in smdev._DeviceList

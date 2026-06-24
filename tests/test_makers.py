@@ -330,8 +330,8 @@ def test_make_ellipse_to_poly() -> None:
     ellipse_geom = sm.make_ellipse(
         x0=0.0,
         y0=0.0,
-        rX=4.0,
-        rY=2.0,
+        rx=4.0,
+        ry=2.0,
         rot=45.0,
         layer=7,
         to_poly=True,
@@ -346,7 +346,7 @@ def test_make_ellipse_to_poly() -> None:
 
 
 def test_make_ring() -> None:
-    ring_geom = sm.make_ring(1.0, -1.0, rX=6.0, rY=4.0, rot=10.0, w=0.8, layer=8)
+    ring_geom = sm.make_ring(1.0, -1.0, rx=6.0, ry=4.0, rot=10.0, w=0.8, layer=8)
     assert isinstance(ring_geom, sp.GeomGroup)
     assert len(ring_geom.group) == 1
     ring = ring_geom.group[0]
@@ -364,8 +364,8 @@ def test_make_ring_to_poly() -> None:
     ring_geom = sm.make_ring(
         x0=0.0,
         y0=0.0,
-        rX=5.0,
-        rY=3.0,
+        rx=5.0,
+        ry=3.0,
         rot=0.0,
         w=1.0,
         layer=9,
@@ -401,8 +401,8 @@ def test_make_arc_to_poly() -> None:
     arc_geom = sm.make_arc(
         x0=0.0,
         y0=0.0,
-        rX=6.0,
-        rY=4.0,
+        rx=6.0,
+        ry=4.0,
         rot=0.0,
         w=1.0,
         a1=0.0,
@@ -422,8 +422,8 @@ def test_make_arc_to_poly_split() -> None:
     arc_geom = sm.make_arc(
         x0=0.0,
         y0=0.0,
-        rX=6.0,
-        rY=4.0,
+        rx=6.0,
+        ry=4.0,
         rot=0.0,
         w=1.0,
         a1=0.0,
@@ -494,8 +494,8 @@ def test_make_rounded_rect_noncenter_numkey() -> None:
         layer=16,
     )
     bb = rounded_rect_geom.bounding_box()
-    assert bb.urx() == pytest.approx(2.0)
-    assert bb.ury() == pytest.approx(3.0)
+    assert bb.urx == pytest.approx(2.0)
+    assert bb.ury == pytest.approx(3.0)
     assert bb.width == pytest.approx(10.0)
     assert bb.height == pytest.approx(6.0)
 

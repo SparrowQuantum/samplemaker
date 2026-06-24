@@ -32,11 +32,13 @@ import math
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from copy import deepcopy
-from typing import Self, TypeAlias
+from typing import Any, Self, TypeAlias
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 import samplemaker.makers as sm
+from samplemaker import _legacy
 from samplemaker.layout import LayoutPool
 from samplemaker.shapes import GeomGroup, Poly
 
@@ -55,7 +57,7 @@ class Crystal:
         self,
         xpts: Iterable[float] | None = None,
         ypts: Iterable[float] | None = None,
-        params: Iterable[float] | None = None,
+        params: Iterable[Iterable[float]] | None = None,
     ) -> None:
         """Initialize a Crystal template.
 
@@ -65,7 +67,7 @@ class Crystal:
             List of x-coordinates (normalized) of the lattice sites, by default [].
         ypts : Iterable[float], optional
             List of y-coordinates (normalized) of the lattice sites, by default [].
-        params : Iterable[float], optional
+        params : Iterable[Iterable[float]], optional
             2D list of parameter values of the lattice sites. Should be of the form
             params[pindex,site_index], by default [].
 
@@ -78,12 +80,12 @@ class Crystal:
         self.ypts = np.array(ypts, dtype=np.float64)
         self.params = np.array(params, dtype=np.float64)
 
-    def remove_at_index(self, index: list[int]) -> None:
+    def remove_at_index(self, index: Sequence[int]) -> None:
         """Remove lattice sites from a list of indices.
 
         Parameters
         ----------
-        index : list[int]
+        index : Sequence[int]
             indexes to be removed from the list used to initialize the crystal.
 
         Returns
@@ -129,12 +131,10 @@ class Crystal:
         """
         if len(index) > 0:
             if relative:
-                self.xpts[index] = (
-                    self.xpts[index] + (2.0 * (self.xpts[index] > orig_x) - 1) * shift_x
-                )
-                self.ypts[index] = (
-                    self.ypts[index] + (2.0 * (self.ypts[index] > orig_y) - 1) * shift_y
-                )
+                x_offset = (2.0 * (self.xpts[index] > orig_x) - 1) * shift_x
+                self.xpts[index] = self.xpts[index] + x_offset
+                y_offset = (2.0 * (self.ypts[index] > orig_y) - 1) * shift_y
+                self.ypts[index] = self.ypts[index] + y_offset
             else:
                 self.xpts[index] = self.xpts[index] + shift_x
                 self.ypts[index] = self.ypts[index] + shift_y
@@ -158,16 +158,14 @@ class Crystal:
         """
         self.params[pindex, index] = pvalues
 
-    def coord_to_index(
-        self, xc: float | np.ndarray, yc: float | np.ndarray
-    ) -> list[int]:
+    def coord_to_index(self, xc: float | ArrayLike, yc: float | ArrayLike) -> list[int]:
         """Convert a coordinate to an index (if matches).
 
         Parameters
         ----------
-        xc : float | np.ndarray
+        xc : float | ArrayLike
             x-coordinate(s) in normalized units.
-        yc : float | np.ndarray
+        yc : float | ArrayLike
             y-coordinate(s) in normalized units.
 
         Returns
@@ -176,9 +174,8 @@ class Crystal:
             A list of coordinate indices.
 
         """
-        if not isinstance(xc, np.ndarray) or not isinstance(yc, np.ndarray):
-            xc = np.array(xc)
-            yc = np.array(yc)
+        xc = np.asarray(xc)
+        yc = np.asarray(yc)
         sel = []
         for i in range(xc.size):
             sx = abs(self.xpts - xc[i]) < 1e-6
@@ -235,20 +232,29 @@ class Crystal:
         return deepcopy(self)
 
     @classmethod
-    def triangular_hexagonal(cls, N: int, filled: bool, Nparams: int = 1) -> Self:
+    def triangular_hexagonal(
+        cls,
+        n: int | _legacy.MissingType = _legacy.MISSING,
+        filled: bool | _legacy.MissingType = _legacy.MISSING,
+        nparams: int = 1,
+        **kwargs: Any,  # noqa: ANN401
+    ) -> Self:
         """Create a triangular photonic crystal in the shape of a hexagon.
 
         Often useful for point-defect cavities.
 
         Parameters
         ----------
-        N : int
+        n : int
             Number of lattice sites extending in the radial direction (0 means one hole
             in the center).
         filled : bool
-            If True, creates a filled hexagonal crystal, otherwise a ring of radius N.
-        Nparams : int, optional
+            If True, creates a filled hexagonal crystal, otherwise a ring of radius n.
+        nparams : int, optional
             Number of parameters to be controlled for each lattice site, by default 1.
+        kwargs : dict
+            Additional keyword arguments. Supports 'N' and 'Nparams' for backward
+            compatibility.
 
         Returns
         -------
@@ -256,44 +262,61 @@ class Crystal:
             A crystal object with the pre-compiled lattice sites.
 
         """
-        if N == 0:
-            return cls(np.array([0]), np.array([0]), np.ones((Nparams, 1)))
+        n = _legacy.get_kwarg("n", n, "N", kwargs)
+        nparams = _legacy.get_optional_kwarg("nparams", nparams, 1, "Nparams", kwargs)
+        _legacy.ensure_empty_kwargs("Crystal.triangular_hexagonal", kwargs)
+        _legacy.check_missing_args("Crystal.triangular_hexagonal", n=n, filled=filled)
+
+        n = _legacy.ensure_arg_type("n", n)
+        filled = _legacy.ensure_arg_type("filled", filled)
+
+        if n == 0:
+            return cls(np.array([0]), np.array([0]), np.ones((nparams, 1)))
         xpts = np.array([])
         ypts = np.array([])
 
         if filled:
-            for i in range(N):
+            for i in range(n):
                 tmpc = cls.triangular_hexagonal(i, False)
                 xpts = np.append(xpts, tmpc.xpts)
                 ypts = np.append(ypts, tmpc.ypts)
         else:
             th = np.array(list(range(0, 361, 60)))
-            cx = N * np.cos(np.radians(th))
-            cy = N * np.sin(np.radians(th))
+            cx = n * np.cos(np.radians(th))
+            cy = n * np.sin(np.radians(th))
             for i in range(6):
-                xint = np.linspace(cx[i], cx[i + 1], N + 1)
+                xint = np.linspace(cx[i], cx[i + 1], n + 1)
                 m = (cy[i + 1] - cy[i]) / (cx[i + 1] - cx[i])
                 yint = m * (xint[0:-1:] - cx[i]) + cy[i]
                 xpts = np.append(xpts, xint[0:-1:])
                 ypts = np.append(ypts, yint)
 
-        params = np.ones((Nparams, xpts.size))
+        params = np.ones((nparams, xpts.size))
         return cls(xpts, ypts, params)
 
     @classmethod
-    def triangular_box(cls, Nx: int, Ny: int, Nparams: int = 1) -> Self:
+    def triangular_box(
+        cls,
+        nx: int | _legacy.MissingType = _legacy.MISSING,
+        ny: int | _legacy.MissingType = _legacy.MISSING,
+        nparams: int = 1,
+        **kwargs: int,
+    ) -> Self:
         """Create a triangular photonic crystal in the shape of a box.
 
         Parameters
         ----------
-        Nx : int
+        nx : int
             Number of holes in the x direction, the crystal will span from
-            -Nx to Nx (double size).
-        Ny : int
-            Number of holes in the y direction, note that we consider Ny=1 the
-            row where y=sqrt(3). The crystal will span from -Ny to Ny.
-        Nparams : int, optional
+            -nx to nx (double size).
+        ny : int
+            Number of holes in the y direction, note that we consider ny=1 the
+            row where y=sqrt(3). The crystal will span from -ny to ny.
+        nparams : int, optional
             Number of parameters to be controlled for each lattice site, by default 1.
+        kwargs : dict
+            Additional keyword arguments. Supports 'Nx', 'Ny' and 'Nparams' for backward
+            compatibility.
 
         Returns
         -------
@@ -301,28 +324,38 @@ class Crystal:
             A crystal object with the pre-compiled lattice sites.
 
         """
-        if Nx == 0 & Ny == 0:
-            return cls(np.array([0]), np.array([0]), np.ones((Nparams, 1)))
+        nx = _legacy.get_kwarg("nx", nx, "Nx", kwargs)
+        ny = _legacy.get_kwarg("ny", ny, "Ny", kwargs)
+        nparams = _legacy.get_optional_kwarg("nparams", nparams, 1, "Nparams", kwargs)
+        _legacy.ensure_empty_kwargs("Crystal.triangular_box", kwargs)
+        _legacy.check_missing_args("Crystal.triangular_box", nx=nx, ny=ny)
 
-        x1 = np.array(list(range(-Nx, Nx + 1)))
-        y1 = np.array([e * math.sqrt(3) for e in range(-Ny, Ny + 1)])
-        x2 = np.array([e + 0.5 for e in range(-Nx, Nx)])
-        y2 = np.array([math.sqrt(3) / 2 + math.sqrt(3) * e for e in range(-Ny, Ny)])
-        X1, Y1 = np.meshgrid(x1, y1)
-        X2, Y2 = np.meshgrid(x2, y2)
-        xpts = np.append(X1.reshape(-1), X2.reshape(-1))
-        ypts = np.append(Y1.reshape(-1), Y2.reshape(-1))
-        params = np.ones((Nparams, xpts.size))
+        nx = _legacy.ensure_arg_type("nx", nx)
+        ny = _legacy.ensure_arg_type("ny", ny)
+
+        if nx == 0 & ny == 0:
+            return cls(np.array([0]), np.array([0]), np.ones((nparams, 1)))
+
+        x1 = np.array(list(range(-nx, nx + 1)))
+        y1 = np.array([e * math.sqrt(3) for e in range(-ny, ny + 1)])
+        x2 = np.array([e + 0.5 for e in range(-nx, nx)])
+        y2 = np.array([math.sqrt(3) / 2 + math.sqrt(3) * e for e in range(-ny, ny)])
+        x1_mesh, y1_mesh = np.meshgrid(x1, y1)
+        x2_mesh, y2_mesh = np.meshgrid(x2, y2)
+        xpts = np.append(x1_mesh.reshape(-1), x2_mesh.reshape(-1))
+        ypts = np.append(y1_mesh.reshape(-1), y2_mesh.reshape(-1))
+        params = np.ones((nparams, xpts.size))
         return cls(xpts, ypts, params)
 
     @classmethod
     def triangular_heterophc(
         cls,
-        Nx: float,
-        Ny: int,
-        spacing: list[float],
-        periods: list[int],
-        Nparams: int = 1,
+        nx: float | _legacy.MissingType = _legacy.MISSING,
+        ny: int | _legacy.MissingType = _legacy.MISSING,
+        spacing: list[float] | _legacy.MissingType = _legacy.MISSING,
+        periods: list[int] | _legacy.MissingType = _legacy.MISSING,
+        nparams: int = 1,
+        **kwargs: Any,  # noqa: ANN401
     ) -> Self:
         """Create a triangular photonic crystal.
 
@@ -331,21 +364,24 @@ class Crystal:
 
         Parameters
         ----------
-        Nx : float
+        nx : float
             Number of holes in the x direction, the crystal will span from
-            -Nx to Nx (double size). Can be a fraction to end the crystal with a partial
+            -nx to nx (double size). Can be a fraction to end the crystal with a partial
             period.
-        Ny : int
-            Number of holes in the y direction, note that we consider Ny=1 the
-            row where y=sqrt(3). The crystal will span from -Ny to Ny.
+        ny : int
+            Number of holes in the y direction, note that we consider ny=1 the
+            row where y=sqrt(3). The crystal will span from -ny to ny.
         spacing : list[float]
             Array of lattice constants to be used for the various sections of the hetero
             phc.
         periods : list[int]
             How many times should each spacing be repeated (always end with 1 for the
             remaining).
-        Nparams : int, optional
+        nparams : int, optional
             Number of parameters to be controlled for each lattice site, by default 1.
+        kwargs : dict
+            Additional keyword arguments. Supports 'Nx', 'Ny' and 'Nparams' for backward
+            compatibility.
 
         Returns
         -------
@@ -353,13 +389,30 @@ class Crystal:
             A crystal object with the pre-compiled lattice sites.
 
         """
+        nx = _legacy.get_kwarg("nx", nx, "Nx", kwargs)
+        ny = _legacy.get_kwarg("ny", ny, "Ny", kwargs)
+        nparams = _legacy.get_optional_kwarg("nparams", nparams, 1, "Nparams", kwargs)
+        _legacy.ensure_empty_kwargs("Crystal.triangular_heterophc", kwargs)
+        _legacy.check_missing_args(
+            "Crystal.triangular_heterophc",
+            nx=nx,
+            ny=ny,
+            spacing=spacing,
+            periods=periods,
+        )
+
+        nx = _legacy.ensure_arg_type("nx", nx)
+        ny = _legacy.ensure_arg_type("ny", ny)
+        spacing = _legacy.ensure_arg_type("spacing", spacing)
+        periods = _legacy.ensure_arg_type("periods", periods)
+
         startx = 0
         x1 = []
         x2 = []
         a = spacing
         totalp = np.sum(periods)
-        Nxorig = Nx
-        Nx = math.ceil(Nx)
+        nx_original = nx
+        nx = math.ceil(nx)
 
         for i in range(len(a)):
             xchunk1 = startx + np.array(list(range(periods[i] + 1))) * a[i]
@@ -368,48 +421,110 @@ class Crystal:
             x1 = np.append(x1, xchunk1)
             x2 = np.append(x2, xchunk2)
 
-        x1 = np.append(x1, startx + np.array(list(range(int(Nx - totalp + 1)))))
-        x2 = np.append(x2, startx + (0.5 + np.array(list(range(int(Nx - totalp))))))
+        x1 = np.append(x1, startx + np.array(list(range(int(nx - totalp + 1)))))
+        x2 = np.append(x2, startx + (0.5 + np.array(list(range(int(nx - totalp))))))
         x1 = np.append(x1, -x1[::-1])
         x2 = np.append(x2, -x2[::-1])
         x1 = np.sort(np.unique(x1))
         x2 = np.sort(np.unique(x2))
-        y1 = np.array([e * math.sqrt(3) for e in range(-Ny, Ny + 1)])
-        y2 = np.array([math.sqrt(3) / 2 + math.sqrt(3) * e for e in range(-Ny, Ny)])
+        y1 = np.array([e * math.sqrt(3) for e in range(-ny, ny + 1)])
+        y2 = np.array([math.sqrt(3) / 2 + math.sqrt(3) * e for e in range(-ny, ny)])
         x1_mesh, y1_mesh = np.meshgrid(x1, y1)
         x2_mesh, y2_mesh = np.meshgrid(x2, y2)
         xpts = np.append(x1_mesh.reshape(-1), x2_mesh.reshape(-1))
         ypts = np.append(y1_mesh.reshape(-1), y2_mesh.reshape(-1))
-        params = np.ones((Nparams, xpts.size))
+        params = np.ones((nparams, xpts.size))
         heterophc = cls(xpts, ypts, params)
-        if Ny != 0:
-            heterophc.remove_crystal(cls.triangular_heterophc(Nx, 0, a, periods))
+        if ny != 0:
+            heterophc.remove_crystal(cls.triangular_heterophc(nx, 0, a, periods))
 
         # Get rid of extra final holes if fraction Nx
-        if Nxorig - Nx < 0:
+        if nx_original - nx < 0:
             maxx = np.max(heterophc.xpts)
-            minx = np.min(heterophc.ypts)
+            minx = np.min(heterophc.xpts)
             sx1 = heterophc.xpts > (maxx - 0.1)
             sx2 = heterophc.xpts < (minx + 0.1)
-            sel = np.where(sx1 | sx2)
-            heterophc.remove_at_index(sel)
+            sel = np.where(sx1 | sx2)[0]
+            heterophc.remove_at_index(sel.tolist())
 
         return heterophc
 
 
-def __circ_cellfun__(
+def make_phc_circle(
     x: float, y: float, params: Sequence[float] | str
 ) -> GeomGroup | int:
-    if params == "test":
-        return 1
+    """Create a circular unit cell for a photonic crystal.
+
+    Parameters
+    ----------
+    x : float
+        x-coordinate of the center of the circle.
+    y : float
+        y-coordinate of the center of the circle.
+    params : Sequence[float] | str
+        Parameters for the unit cell. If "test" is passed, the function returns the
+        number of parameters required to draw the unit cell. Otherwise, it should be a
+        sequence containing the radius of the circle.
+
+    Returns
+    -------
+    GeomGroup | int
+        A geometry containing the circular unit cell, or the number of parameters
+        required if "test" is passed as params.
+
+    Raises
+    ------
+    TypeError
+        If an invalid string parameter is passed to the function.
+
+    """
+    if isinstance(params, str):
+        if params == "test":
+            return 1
+        msg = (
+            f"Invalid string parameter '{params}' "
+            "passed to make_phc_circle. Expected 'test'."
+        )
+        raise TypeError(msg)
     return sm.make_circle(x, y, params[0], 0)
 
 
-def __circref_cellfun__(
+def make_phc_circle_ref(
     x: float, y: float, params: Sequence[float] | str
 ) -> GeomGroup | int:
-    if params == "test":
-        return 1
+    """Create a circular unit cell for a photonic crystal using a circle reference.
+
+    Parameters
+    ----------
+    x : float
+        x-coordinate of the center of the circle.
+    y : float
+        y-coordinate of the center of the circle.
+    params : Sequence[float] | str
+        Parameters for the unit cell. If "test" is passed, the function returns the
+        number of parameters required to draw the unit cell. Otherwise, it should be a
+        sequence containing the radius of the circle.
+
+    Returns
+    -------
+    GeomGroup | int
+        A geometry containing the circular unit cell, or the number of parameters
+        required if "test" is passed as params.
+
+    Raises
+    ------
+    TypeError
+        If an invalid string parameter is passed to the function.
+
+    """
+    if isinstance(params, str):
+        if params == "test":
+            return 1
+        msg = (
+            f"Invalid string parameter '{params}' "
+            "passed to make_phc_circle_ref. Expected 'test'."
+        )
+        raise TypeError(msg)
     return sm.make_sref(x, y, "_CIRCLE", LayoutPool["_CIRCLE"], mag=params[0])
 
 
@@ -419,8 +534,8 @@ def make_phc(
     cellparams: list[float],
     x0: float,
     y0: float,
-    cellfun: CELLFUN_TYPE = __circ_cellfun__,
-    name: str = "",  # noqa: ARG001
+    cellfun: CELLFUN_TYPE = make_phc_circle,
+    name: str = "",
 ) -> GeomGroup:
     """Create a photonic crystal geometry.
 
@@ -439,17 +554,37 @@ def make_phc(
     cellfun : Callable[[float, float, list[float] | str], GeomGroup], optional
         A function of the type fun(x,y,params) that returns the geometry of the unit
         cell. It should also return the number of parameters required to draw the unit
-        cell if "test" is passed as params, by default __circ_cellfun__.
+        cell if "test" is passed as params, by default make_phc_circle.
     name : str, optional
-        Name of the crystal, by default "".
+        DEPRECATED. Name of the crystal, by default "".
 
     Returns
     -------
     GeomGroup
         A geometry containing the full crystal.
 
+    Raises
+    ------
+    TypeError
+        If the cellfun function does not return an integer when called with "test" as
+        the params argument, or if it does not return a GeomGroup when called with
+        valid parameters.
+
     """
+    if name:
+        msg = (
+            "The 'name' parameter is deprecated and will be removed in future versions."
+        )
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+
     nargs = cellfun(0, 0, "test")
+    if not isinstance(nargs, int):
+        msg = (
+            "The cellfun function must return an integer when called with 'test' as "
+            "the params argument."
+        )
+        raise TypeError(msg)
+
     phc = GeomGroup()
     for i in range(len(crystal.xpts)):
         xpos = crystal.xpts[i] * scaling
@@ -457,7 +592,14 @@ def make_phc(
         params = [0.0] * nargs
         for j in range(nargs):
             params[j] = crystal.params[j, i] * cellparams[j]
-        phc += cellfun(xpos, ypos, params)
+        g = cellfun(xpos, ypos, params)
+        if not isinstance(g, GeomGroup):
+            msg = (
+                "The cellfun function must return a GeomGroup when called with "
+                "valid parameters."
+            )
+            raise TypeError(msg)
+        phc += g
 
     phc.translate(x0, y0)
     return phc
@@ -470,8 +612,8 @@ def make_phc_inpoly(
     cellparams: list[float],
     x0: float,
     y0: float,
-    cellfun: CELLFUN_TYPE = __circ_cellfun__,
-    name: str = "",  # noqa: ARG001
+    cellfun: CELLFUN_TYPE = make_phc_circle,
+    name: str = "",
 ) -> GeomGroup:
     """Create a photonic crystal geometry clipped inside a polygon area.
 
@@ -492,17 +634,37 @@ def make_phc_inpoly(
     cellfun : Callable[[float, float, list[float] | str], GeomGroup], optional
         A function of the type fun(x,y,params) that returns the geometry of the unit
         cell. It should also return the number of parameters required to draw the unit
-        cell if "test" is passed as params, by default __circ_cellfun__.
+        cell if "test" is passed as params, by default make_phc_circle.
     name : str, optional
-        Name of the crystal, by default "".
+        DEPRECATED. Name of the crystal, by default "".
 
     Returns
     -------
     GeomGroup
         A geometry containing the full crystal.
 
+    Raises
+    ------
+    TypeError
+        If the cellfun function does not return an integer when called with "test" as
+        the params argument, or if it does not return a GeomGroup when called with
+        valid parameters.
+
     """
+    if name:
+        msg = (
+            "The 'name' parameter is deprecated and will be removed in future versions."
+        )
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+
     nargs = cellfun(0, 0, "test")
+    if not isinstance(nargs, int):
+        msg = (
+            "The cellfun function must return an integer when called with 'test' as "
+            "the params argument."
+        )
+        raise TypeError(msg)
+
     phc = GeomGroup()
     for i in range(len(crystal.xpts)):
         xpos = crystal.xpts[i] * scaling
@@ -511,7 +673,14 @@ def make_phc_inpoly(
             params = [0.0] * nargs
             for j in range(nargs):
                 params[j] = crystal.params[j, i] * cellparams[j]
-            phc += cellfun(xpos, ypos, params)
+            g = cellfun(xpos, ypos, params)
+            if not isinstance(g, GeomGroup):
+                msg = (
+                    "The cellfun function must return a GeomGroup when called with "
+                    "valid parameters."
+                )
+                raise TypeError(msg)
+            phc += g
 
     phc.translate(x0, y0)
     return phc

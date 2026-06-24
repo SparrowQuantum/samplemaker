@@ -48,16 +48,41 @@ class FakeSequencer(smseq.Sequencer):
             },
         )
 
-    def _capture_init(self, state: dict, options: dict) -> None:
-        self.calls.append(("INIT", state.copy(), options.copy()))
+    def _capture_init(
+        self,
+        args: smseq.ARGS_TYPE,
+        state: smseq.STATE_TYPE,
+        options: smseq.OPTIONS_TYPE,
+    ) -> GeomGroup:
+        args_copy = list(args).copy()
+        state_copy = dict(state).copy()
+        options_copy = dict(options).copy()
+        self.calls.append(("INIT", args_copy, state_copy, options_copy))
+        return GeomGroup()
 
-    def _capture_state(self, args: list, state: dict, options: dict) -> GeomGroup:
-        self.calls.append(("STATE", args.copy(), state.copy(), options.copy()))
+    def _capture_state(
+        self,
+        args: smseq.ARGS_TYPE,
+        state: smseq.STATE_TYPE,
+        options: smseq.OPTIONS_TYPE,
+    ) -> GeomGroup:
+        args_copy = list(args).copy()
+        state_copy = dict(state).copy()
+        options_copy = dict(options).copy()
+        self.calls.append(("STATE", args_copy, state_copy, options_copy))
         state[args[0]] = args[1]
         return GeomGroup()
 
-    def _add_rect(self, args: list, state: dict, options: dict) -> GeomGroup:
-        self.calls.append(("ADD_RECT", args.copy(), state.copy(), options.copy()))
+    def _add_rect(
+        self,
+        args: smseq.ARGS_TYPE,
+        state: smseq.STATE_TYPE,
+        options: smseq.OPTIONS_TYPE,
+    ) -> GeomGroup:
+        args_copy = list(args).copy()
+        state_copy = dict(state).copy()
+        options_copy = dict(options).copy()
+        self.calls.append(("ADD_RECT", args_copy, state_copy, options_copy))
         return make_rect(state["x"], state["y"], args[0], args[1], numkey=5)
 
 
@@ -85,13 +110,14 @@ class TestDefaultCommandList:
     ) -> None:
         value = default_command_list["INIT"]
         num_args = 0
-        expected_params = {"state", "options"}
+        expected_params = {"args", "state", "options"}
         self._eval_signature(value, num_args, expected_params)
 
     def test_init_command_correctly_modifies_state(
         self, default_command_list: _DCMD, sequencer_test_state: dict
     ) -> None:
         _, fun = default_command_list["INIT"]
+        args = ["a", "b"]
         expected_state = {
             "x": 0,
             "y": 0,
@@ -103,10 +129,12 @@ class TestDefaultCommandList:
         }
 
         options = {"__no_init__": False}
-        res = fun(sequencer_test_state, options)
+        res = fun(args, sequencer_test_state, options)
+        assert args == ["a", "b"]  # Ensure args is not modified
         assert sequencer_test_state == expected_state
         assert options == {"__no_init__": False}  # Ensure options is not modified
-        assert res is None
+        assert isinstance(res, GeomGroup)
+        assert len(res.group) == 0
 
     def test_init_no_init_option_does_nothing(
         self, default_command_list: _DCMD, sequencer_test_state: dict
@@ -115,10 +143,13 @@ class TestDefaultCommandList:
         expected_state = sequencer_test_state.copy()
 
         options = {"__no_init__": True}
-        res = fun(sequencer_test_state, options)
+        args = ["a", "b"]
+        res = fun(args, sequencer_test_state, options)
+        assert args == ["a", "b"]  # Ensure args is not modified
         assert sequencer_test_state == expected_state
         assert options == {"__no_init__": True}  # Ensure options is not modified
-        assert res is None
+        assert isinstance(res, GeomGroup)
+        assert len(res.group) == 0
 
     def test_state_command_has_correct_signature(
         self, default_command_list: _DCMD
@@ -363,7 +394,7 @@ class TestSequencer:
             seq=seq,
             seq_options=seq_options,
             seq_state=seq_state,
-            seq_dictionary=seq_dict,
+            seq_dictionary=seq_dict,  # type: ignore[arg-type]
         )
 
         assert sequencer.seq == seq
@@ -463,8 +494,8 @@ class TestSequencer:
         assert isinstance(g, GeomGroup)
         assert len(g.group) == 1
         bb = g.bounding_box()
-        assert bb.cx() == pytest.approx(x0 + xc)
-        assert bb.cy() == pytest.approx(y0 + yc)
+        assert bb.cx == pytest.approx(x0 + xc)
+        assert bb.cy == pytest.approx(y0 + yc)
         assert sequencer.state["x"] == pytest.approx(x0 + xc)
         assert sequencer.state["y"] == pytest.approx(y0 + yc)
         stored = sequencer.state["STORED"]

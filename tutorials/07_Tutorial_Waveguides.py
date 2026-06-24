@@ -101,9 +101,9 @@ geomE += g4
 
 
 # Let's add all to main cell
-themask.addToMainCell(geomE)
+themask.add_to_main_cell(geomE)
 
 # Export to GDS
-themask.exportGDS()
+themask.export_gds()
 
 # Finished!

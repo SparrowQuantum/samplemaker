@@ -75,7 +75,7 @@ def text_obj() -> sp.Text:
 
 @pytest.fixture
 def geomgroup_obj(box_obj: sp.Box) -> sp.GeomGroup:
-    return box_obj.toRect()
+    return box_obj.to_rect()
 
 
 @dataclass(frozen=True)
@@ -173,18 +173,18 @@ def circle_obj() -> sp.Circle:
 
 @pytest.fixture
 def ellipse_obj() -> sp.Ellipse:
-    return sp.Ellipse(x0=1.0, y0=2.0, rX=3.0, rY=2.0, layer=4, rot=0.0)
+    return sp.Ellipse(x0=1.0, y0=2.0, rx=3.0, ry=2.0, layer=4, rot=0.0)
 
 
 @pytest.fixture
 def ring_obj() -> sp.Ring:
-    return sp.Ring(x0=1.0, y0=2.0, rX=3.0, rY=2.0, layer=4, rot=0.0, w=1.0)
+    return sp.Ring(x0=1.0, y0=2.0, rx=3.0, ry=2.0, layer=4, rot=0.0, w=1.0)
 
 
 @pytest.fixture
 def arc_obj() -> sp.Arc:
     return sp.Arc(
-        x0=1.0, y0=2.0, rX=3.0, rY=2.0, layer=4, rot=0.0, w=1.0, a1=0.0, a2=180.0
+        x0=1.0, y0=2.0, rx=3.0, ry=2.0, layer=4, rot=0.0, w=1.0, a1=0.0, a2=180.0
     )
 
 
@@ -198,10 +198,10 @@ def test_dot_transformations() -> None:
     d.rotate(0.0, 0.0, 90.0)
     assert (d.x, d.y) == pytest.approx((-1.0, 3.0))
 
-    d.mirrorX(0.0)
+    d.mirror_x(0.0)
     assert (d.x, d.y) == pytest.approx((1.0, 3.0))
 
-    d.mirrorY(0.0)
+    d.mirror_y(0.0)
     assert (d.x, d.y) == pytest.approx((1.0, -3.0))
 
     d.scale(0, 0, 2.0, 2.0)
@@ -215,30 +215,30 @@ class TestBox:
         expected_urx = box_obj.llx + box_obj.width
         expected_ury = box_obj.lly + box_obj.height
 
-        assert box_obj.cx() == pytest.approx(expected_cx)
-        assert box_obj.cy() == pytest.approx(expected_cy)
-        assert box_obj.urx() == pytest.approx(expected_urx)
-        assert box_obj.ury() == pytest.approx(expected_ury)
+        assert box_obj.cx == pytest.approx(expected_cx)
+        assert box_obj.cy == pytest.approx(expected_cy)
+        assert box_obj.urx == pytest.approx(expected_urx)
+        assert box_obj.ury == pytest.approx(expected_ury)
 
         other = sp.Box(-1.0, 0.0, 1.0, 1.0)
         box_obj.combine(other)
 
         expected_llx = min(box_obj.llx, other.llx)
         expected_lly = min(box_obj.lly, other.lly)
-        expected_urx = max(box_obj.urx(), other.urx())
-        expected_ury = max(box_obj.ury(), other.ury())
+        expected_urx = max(box_obj.urx, other.urx)
+        expected_ury = max(box_obj.ury, other.ury)
         expected_width = expected_urx - expected_llx
         expected_height = expected_ury - expected_lly
 
         assert box_obj.llx == pytest.approx(expected_llx)
         assert box_obj.lly == pytest.approx(expected_lly)
-        assert box_obj.urx() == pytest.approx(expected_urx)
-        assert box_obj.ury() == pytest.approx(expected_ury)
+        assert box_obj.urx == pytest.approx(expected_urx)
+        assert box_obj.ury == pytest.approx(expected_ury)
         assert box_obj.width == pytest.approx(expected_width)
         assert box_obj.height == pytest.approx(expected_height)
 
     def test_to_poly(self, box_obj: sp.Box) -> None:
-        poly = box_obj.toPoly()
+        poly = box_obj.to_poly()
         assert isinstance(poly, sp.Poly)
         # poly.data should be of the format [x0, y0, x1, y1, x2, y2, ..., x0, y0]
         assert isinstance(poly.data, np.ndarray)
@@ -248,7 +248,7 @@ class TestBox:
         xpts, ypts = reshaped_data[:, 0], reshaped_data[:, 1]
 
         llx, lly = box_obj.llx, box_obj.lly
-        urx, ury = box_obj.urx(), box_obj.ury()
+        urx, ury = box_obj.urx, box_obj.ury
         expected_xpts = [llx, urx, urx, llx, llx]
         expected_ypts = [lly, lly, ury, ury, lly]
 
@@ -257,14 +257,14 @@ class TestBox:
         assert poly.layer == 0
 
     def test_to_rect(self, box_obj: sp.Box) -> None:
-        g = box_obj.toRect()
+        g = box_obj.to_rect()
         assert isinstance(g, sp.GeomGroup)
         assert len(g.group) == 1
         assert isinstance(g.group[0], sp.Poly)
 
     def test_numkey_points(self, box_obj: sp.Box) -> None:
         llx, lly = box_obj.llx, box_obj.lly
-        urx, ury = box_obj.urx(), box_obj.ury()
+        urx, ury = box_obj.urx, box_obj.ury
         cx = (llx + urx) / 2
         cy = (lly + ury) / 2
         expected_points = {
@@ -323,8 +323,8 @@ class TestPoly:
         assert isinstance(bb, sp.Box)
         assert bb.llx == pytest.approx(expected_llx)
         assert bb.lly == pytest.approx(expected_lly)
-        assert bb.urx() == pytest.approx(expected_urx)
-        assert bb.ury() == pytest.approx(expected_ury)
+        assert bb.urx == pytest.approx(expected_urx)
+        assert bb.ury == pytest.approx(expected_ury)
         assert bb.width == pytest.approx(expected_width)
         assert bb.height == pytest.approx(expected_height)
 
@@ -379,7 +379,7 @@ class TestPoly:
         assert poly_obj.perimeter() == pytest.approx(24.0)
 
     def test_mirror_x(self, poly_obj: sp.Poly) -> None:
-        poly_obj.mirrorX(1.5)
+        poly_obj.mirror_x(1.5)
         bb = poly_obj.bounding_box()
         assert bb.width == pytest.approx(3.0)
         assert bb.height == pytest.approx(2.0)
@@ -388,7 +388,7 @@ class TestPoly:
         assert poly_obj.perimeter() == pytest.approx(10.0)
 
     def test_mirror_y(self, poly_obj: sp.Poly) -> None:
-        poly_obj.mirrorY(1.0)
+        poly_obj.mirror_y(1.0)
         bb = poly_obj.bounding_box()
         assert bb.width == pytest.approx(3.0)
         assert bb.height == pytest.approx(2.0)
@@ -485,8 +485,8 @@ class TestPath:
         assert isinstance(bb, sp.Box)
         assert bb.llx == pytest.approx(expected_llx)
         assert bb.lly == pytest.approx(expected_lly)
-        assert bb.urx() == pytest.approx(expected_urx)
-        assert bb.ury() == pytest.approx(expected_ury)
+        assert bb.urx == pytest.approx(expected_urx)
+        assert bb.ury == pytest.approx(expected_ury)
         assert bb.width == pytest.approx(expected_width)
         assert bb.height == pytest.approx(expected_height)
 
@@ -526,7 +526,7 @@ class TestPath:
 
     def test_mirror_x(self, path_obj: sp.Path, poly_pts: tuple[_TF, _TF]) -> None:
         xpts, ypts = poly_pts
-        path_obj.mirrorX(1.5)
+        path_obj.mirror_x(1.5)
         expected_xpts = [2 * 1.5 - x for x in xpts]
         expected_ypts = list(ypts)
         assert path_obj.xpts == pytest.approx(expected_xpts)
@@ -534,7 +534,7 @@ class TestPath:
 
     def test_mirror_y(self, path_obj: sp.Path, poly_pts: tuple[_TF, _TF]) -> None:
         xpts, ypts = poly_pts
-        path_obj.mirrorY(1.0)
+        path_obj.mirror_y(1.0)
         expected_xpts = list(xpts)
         expected_ypts = [2 * 1.0 - y for y in ypts]
         assert path_obj.xpts == pytest.approx(expected_xpts)
@@ -678,13 +678,13 @@ class TestText:
         assert text_obj.width == pytest.approx(2.0)
 
     def test_mirror_x(self, text_obj: sp.Text) -> None:
-        text_obj.mirrorX(1.0)
+        text_obj.mirror_x(1.0)
         assert text_obj.x0 == pytest.approx(1.0)
         assert text_obj.y0 == pytest.approx(2.0)
         assert text_obj.angle == pytest.approx(180.0)
 
     def test_mirror_y(self, text_obj: sp.Text) -> None:
-        text_obj.mirrorY(1.0)
+        text_obj.mirror_y(1.0)
         assert text_obj.x0 == pytest.approx(1.0)
         assert text_obj.y0 == pytest.approx(0.0)
         assert text_obj.angle == pytest.approx(0.0)
@@ -694,8 +694,8 @@ class TestText:
         assert isinstance(bb, sp.Box)
         # Since text isn't a geometric shape, we define its bounding box to be a single
         # point at the text origin (x0, y0).
-        assert bb.cx() == pytest.approx(text_obj.x0)
-        assert bb.cy() == pytest.approx(text_obj.y0)
+        assert bb.cx == pytest.approx(text_obj.x0)
+        assert bb.cy == pytest.approx(text_obj.y0)
         assert bb.width == 0
         assert bb.height == 0
 
@@ -780,7 +780,7 @@ class TestSRef:
     def test_mirror_x(
         self, sref_obj: sp.SRef, sref_kwargs: SRefKwargs, xc: float
     ) -> None:
-        sref_obj.mirrorX(xc)
+        sref_obj.mirror_x(xc)
         expected_x0 = 2 * xc - sref_kwargs.x0
         expected_y0 = sref_kwargs.y0
         expected_angle = (180.0 - sref_kwargs.angle) % 360
@@ -790,16 +790,16 @@ class TestSRef:
 
     def test_mirror_x_toggles_mirror_flag(self, sref_obj: sp.SRef) -> None:
         assert sref_obj.mirror is False
-        sref_obj.mirrorX(0.0)
+        sref_obj.mirror_x(0.0)
         assert sref_obj.mirror is True
-        sref_obj.mirrorX(0.0)
+        sref_obj.mirror_x(0.0)
         assert sref_obj.mirror is False
 
     @pytest.mark.parametrize("yc", [0.0, 1.0, 2.0])
     def test_mirror_y(
         self, sref_obj: sp.SRef, sref_kwargs: SRefKwargs, yc: float
     ) -> None:
-        sref_obj.mirrorY(yc)
+        sref_obj.mirror_y(yc)
         expected_x0 = sref_kwargs.x0
         expected_y0 = 2 * yc - sref_kwargs.y0
         expected_angle = (-sref_kwargs.angle) % 360
@@ -809,9 +809,9 @@ class TestSRef:
 
     def test_mirror_y_toggles_mirror_flag(self, sref_obj: sp.SRef) -> None:
         assert sref_obj.mirror is False
-        sref_obj.mirrorY(0.0)
+        sref_obj.mirror_y(0.0)
         assert sref_obj.mirror is True
-        sref_obj.mirrorY(0.0)
+        sref_obj.mirror_y(0.0)
         assert sref_obj.mirror is False
 
     @pytest.mark.parametrize(("xoff", "yoff"), [(1.0, 2.0), (-1.0, -2.0), (0.5, -0.5)])
@@ -831,13 +831,13 @@ class TestSRef:
         bb = sref_obj.bounding_box()
         assert isinstance(bb, sp.Box)
         ref_bb = geomgroup_obj.bounding_box()
-        expected_cx = sref_obj.x0 + ref_bb.cx()
-        expected_cy = sref_obj.y0 + ref_bb.cy()
+        expected_cx = sref_obj.x0 + ref_bb.cx
+        expected_cy = sref_obj.y0 + ref_bb.cy
         expected_width = ref_bb.width * sref_obj.mag
         expected_height = ref_bb.height * sref_obj.mag
 
-        assert bb.cx() == pytest.approx(expected_cx)
-        assert bb.cy() == pytest.approx(expected_cy)
+        assert bb.cx == pytest.approx(expected_cx)
+        assert bb.cy == pytest.approx(expected_cy)
         assert bb.width == pytest.approx(expected_width)
         assert bb.height == pytest.approx(expected_height)
 
@@ -863,8 +863,8 @@ class TestSRef:
         sref_bb = sref_obj.bounding_box()
         placed_bb = placed.bounding_box()
 
-        assert sref_bb.cx() == pytest.approx(placed_bb.cx())
-        assert sref_bb.cy() == pytest.approx(placed_bb.cy())
+        assert sref_bb.cx == pytest.approx(placed_bb.cx)
+        assert sref_bb.cy == pytest.approx(placed_bb.cy)
         assert sref_bb.width == pytest.approx(placed_bb.width)
         assert sref_bb.height == pytest.approx(placed_bb.height)
 
@@ -887,8 +887,8 @@ class TestSRef:
         bb = sref.bounding_box()
         assert bb.width == pytest.approx(pool_box.width * sref.mag)
         assert bb.height == pytest.approx(pool_box.height * sref.mag)
-        assert bb.cx() == pytest.approx(sref.x0 + pool_box.cx() * sref.mag)
-        assert bb.cy() == pytest.approx(sref.y0 + pool_box.cy() * sref.mag)
+        assert bb.cx == pytest.approx(sref.x0 + pool_box.cx * sref.mag)
+        assert bb.cy == pytest.approx(sref.y0 + pool_box.cy * sref.mag)
 
     @pytest.mark.xfail(
         strict=True,
@@ -906,8 +906,8 @@ class TestSRef:
         sref_bb = sref_obj.bounding_box()
         placed_bb = placed.bounding_box()
 
-        assert sref_bb.cx() == pytest.approx(placed_bb.cx())
-        assert sref_bb.cy() == pytest.approx(placed_bb.cy())
+        assert sref_bb.cx == pytest.approx(placed_bb.cx)
+        assert sref_bb.cy == pytest.approx(placed_bb.cy)
         assert sref_bb.width == pytest.approx(placed_bb.width)
         assert sref_bb.height == pytest.approx(placed_bb.height)
 
@@ -970,32 +970,32 @@ class TestAref:
     def test_mirror_x(
         self, aref_obj: sp.ARef, aref_kwargs: ARefKwargs, xc: float
     ) -> None:
-        aref_obj.mirrorX(xc)
+        aref_obj.mirror_x(xc)
         assert aref_obj.x0 == pytest.approx(2 * xc - aref_kwargs.x0)
         assert aref_obj.y0 == pytest.approx(aref_kwargs.y0)
         assert aref_obj.angle == pytest.approx((180.0 - aref_kwargs.angle) % 360)
 
     def test_mirror_x_toggles_mirror_flag(self, aref_obj: sp.ARef) -> None:
         assert aref_obj.mirror is False
-        aref_obj.mirrorX(0.0)
+        aref_obj.mirror_x(0.0)
         assert aref_obj.mirror is True
-        aref_obj.mirrorX(0.0)
+        aref_obj.mirror_x(0.0)
         assert aref_obj.mirror is False
 
     @pytest.mark.parametrize("yc", [0.0, 1.0, 2.0])
     def test_mirror_y(
         self, aref_obj: sp.ARef, aref_kwargs: ARefKwargs, yc: float
     ) -> None:
-        aref_obj.mirrorY(yc)
+        aref_obj.mirror_y(yc)
         assert aref_obj.x0 == pytest.approx(aref_kwargs.x0)
         assert aref_obj.y0 == pytest.approx(2 * yc - aref_kwargs.y0)
         assert aref_obj.angle == pytest.approx((-aref_kwargs.angle) % 360)
 
     def test_mirror_y_toggles_mirror_flag(self, aref_obj: sp.ARef) -> None:
         assert aref_obj.mirror is False
-        aref_obj.mirrorY(0.0)
+        aref_obj.mirror_y(0.0)
         assert aref_obj.mirror is True
-        aref_obj.mirrorY(0.0)
+        aref_obj.mirror_y(0.0)
         assert aref_obj.mirror is False
 
     def test_centroid(self, aref_obj: sp.ARef, aref_kwargs: ARefKwargs) -> None:
@@ -1014,13 +1014,13 @@ class TestAref:
         lly = aref_kwargs.y0 + ref_bb.lly
         urx = (
             aref_kwargs.x0
-            + ref_bb.urx()
+            + ref_bb.urx
             + (aref_kwargs.ncols - 1) * aref_kwargs.ax
             + (aref_kwargs.nrows - 1) * aref_kwargs.bx
         )
         ury = (
             aref_kwargs.y0
-            + ref_bb.ury()
+            + ref_bb.ury
             + (aref_kwargs.ncols - 1) * aref_kwargs.ay
             + (aref_kwargs.nrows - 1) * aref_kwargs.by
         )
@@ -1028,8 +1028,8 @@ class TestAref:
         assert isinstance(bb, sp.Box)
         assert bb.llx == pytest.approx(llx)
         assert bb.lly == pytest.approx(lly)
-        assert bb.urx() == pytest.approx(urx)
-        assert bb.ury() == pytest.approx(ury)
+        assert bb.urx == pytest.approx(urx)
+        assert bb.ury == pytest.approx(ury)
 
     @pytest.mark.parametrize(
         ("mag", "angle", "mirror"),
@@ -1053,8 +1053,8 @@ class TestAref:
         aref_bb = aref_obj.bounding_box()
         placed_bb = placed.bounding_box()
 
-        assert aref_bb.cx() == pytest.approx(placed_bb.cx())
-        assert aref_bb.cy() == pytest.approx(placed_bb.cy())
+        assert aref_bb.cx == pytest.approx(placed_bb.cx)
+        assert aref_bb.cy == pytest.approx(placed_bb.cy)
         assert aref_bb.width == pytest.approx(placed_bb.width)
         assert aref_bb.height == pytest.approx(placed_bb.height)
 
@@ -1083,8 +1083,8 @@ class TestAref:
         aref_bb = aref_obj.bounding_box()
         placed_bb = placed.bounding_box()
 
-        assert aref_bb.cx() == pytest.approx(placed_bb.cx())
-        assert aref_bb.cy() == pytest.approx(placed_bb.cy())
+        assert aref_bb.cx == pytest.approx(placed_bb.cx)
+        assert aref_bb.cy == pytest.approx(placed_bb.cy)
         assert aref_bb.width == pytest.approx(placed_bb.width)
         assert aref_bb.height == pytest.approx(placed_bb.height)
 
@@ -1122,13 +1122,13 @@ class TestCircle:
         assert circle_obj.r == pytest.approx(6.0)
 
     def test_mirror_x(self, circle_obj: sp.Circle) -> None:
-        circle_obj.mirrorX(0.0)
+        circle_obj.mirror_x(0.0)
 
         assert circle_obj.x0 == pytest.approx(-1.0)
         assert circle_obj.y0 == pytest.approx(2.0)
 
     def test_mirror_y(self, circle_obj: sp.Circle) -> None:
-        circle_obj.mirrorY(0.0)
+        circle_obj.mirror_y(0.0)
 
         assert circle_obj.x0 == pytest.approx(1.0)
         assert circle_obj.y0 == pytest.approx(-2.0)
@@ -1152,7 +1152,7 @@ class TestCircle:
         assert circle_obj.perimeter() == pytest.approx(2.0 * np.pi * 3.0)
 
     def test_to_polygon(self, circle_obj: sp.Circle) -> None:
-        g = circle_obj.to_polygon(Npts=12)
+        g = circle_obj.to_polygon(npts=12)
 
         assert isinstance(g, sp.GeomGroup)
         assert len(g.group) == 1
@@ -1196,7 +1196,7 @@ class TestEllipse:
 
     def test_mirror_x(self, ellipse_obj: sp.Ellipse) -> None:
         ellipse_obj.rot = 30.0
-        ellipse_obj.mirrorX(0.0)
+        ellipse_obj.mirror_x(0.0)
 
         assert ellipse_obj.x0 == pytest.approx(-1.0)
         assert ellipse_obj.y0 == pytest.approx(2.0)
@@ -1204,7 +1204,7 @@ class TestEllipse:
 
     def test_mirror_y(self, ellipse_obj: sp.Ellipse) -> None:
         ellipse_obj.rot = 30.0
-        ellipse_obj.mirrorY(0.0)
+        ellipse_obj.mirror_y(0.0)
 
         assert ellipse_obj.x0 == pytest.approx(1.0)
         assert ellipse_obj.y0 == pytest.approx(-2.0)
@@ -1230,7 +1230,7 @@ class TestEllipse:
         assert ellipse_obj.perimeter() == pytest.approx(expected)
 
     def test_to_polygon(self, ellipse_obj: sp.Ellipse) -> None:
-        g = ellipse_obj.to_polygon(Npts=16)
+        g = ellipse_obj.to_polygon(npts=16)
 
         assert isinstance(g, sp.GeomGroup)
         assert len(g.group) == 1
@@ -1278,7 +1278,7 @@ class TestRing:
         assert ring_obj.perimeter() == pytest.approx(poly.perimeter())
 
     def test_to_polygon(self, ring_obj: sp.Ring) -> None:
-        g = ring_obj.to_polygon(Npts=12)
+        g = ring_obj.to_polygon(npts=12)
 
         assert isinstance(g, sp.GeomGroup)
         assert len(g.group) == 1
@@ -1322,7 +1322,7 @@ class TestArc:
         assert arc_obj.centroid() == pytest.approx(poly.centroid())
 
     def test_to_polygon(self, arc_obj: sp.Arc) -> None:
-        g = arc_obj.to_polygon(Npts=16, autosplit=False)
+        g = arc_obj.to_polygon(npts=16, autosplit=False)
 
         assert isinstance(g, sp.GeomGroup)
         assert len(g.group) == 1
@@ -1334,7 +1334,7 @@ class TestArc:
 
     def test_to_polygon_autosplit(self, arc_obj: sp.Arc) -> None:
         n_segments = 8
-        g = arc_obj.to_polygon(Npts=n_segments, autosplit=True)
+        g = arc_obj.to_polygon(npts=n_segments, autosplit=True)
 
         assert isinstance(g, sp.GeomGroup)
         assert len(g.group) == n_segments
@@ -1469,11 +1469,11 @@ class TestGeomGroup:
         assert circle_obj.y0 == pytest.approx(4.0)
         assert circle_obj.r == pytest.approx(6.0)
 
-        g.mirrorX(0.0)
+        g.mirror_x(0.0)
         assert circle_obj.x0 == pytest.approx(2.0)
         assert circle_obj.y0 == pytest.approx(4.0)
 
-        g.mirrorY(0.0)
+        g.mirror_y(0.0)
         assert circle_obj.x0 == pytest.approx(2.0)
         assert circle_obj.y0 == pytest.approx(-4.0)
 
@@ -1536,8 +1536,8 @@ class TestGeomGroup:
 
         assert bb.llx == pytest.approx(min(cbb.llx, ebb.llx))
         assert bb.lly == pytest.approx(min(cbb.lly, ebb.lly))
-        assert bb.urx() == pytest.approx(max(cbb.urx(), ebb.urx()))
-        assert bb.ury() == pytest.approx(max(cbb.ury(), ebb.ury()))
+        assert bb.urx == pytest.approx(max(cbb.urx, ebb.urx))
+        assert bb.ury == pytest.approx(max(cbb.ury, ebb.ury))
 
     def test_to_boxes_and_set_layer(
         self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
@@ -1630,7 +1630,7 @@ class TestGeomGroup:
         g.add(ring_obj)
         g.add(arc_obj)
 
-        g.all_to_poly(Npts_circ=10, Npts_arc=12, split_arc=False)
+        g.all_to_poly(npts_circle=10, npts_arc=12, split_arc=False)
 
         assert len(g.group) == 4
         assert all(isinstance(geom, sp.Poly) for geom in g.group)
@@ -1651,14 +1651,14 @@ class TestGeomGroup:
         g.add(ref)
         g.add(circle_obj)
 
-        g.all_to_poly(Npts_circ=8)
+        g.all_to_poly(npts_circle=8)
 
         assert any(isinstance(geom, sp.SRef) for geom in g.group)
         assert any(isinstance(geom, sp.Poly) for geom in g.group)
 
     def test_poly_to_circle_converts_round_poly_and_keeps_non_round(self) -> None:
-        circular_poly = sp.Circle(0.0, 0.0, 2.0, layer=5).to_polygon(Npts=64).group[0]
-        box_poly = sp.Box(0.0, 0.0, 2.0, 2.0).toPoly()
+        circular_poly = sp.Circle(0.0, 0.0, 2.0, layer=5).to_polygon(npts=64).group[0]
+        box_poly = sp.Box(0.0, 0.0, 2.0, 2.0).to_poly()
         box_poly.layer = 5
 
         g = sp.GeomGroup()
@@ -1674,7 +1674,7 @@ class TestGeomGroup:
         self, geomgroup_obj: sp.GeomGroup
     ) -> None:
         ref_group = sp.GeomGroup()
-        ref_group.add(sp.Circle(0.0, 0.0, 2.0, layer=7).to_polygon(Npts=64).group[0])
+        ref_group.add(sp.Circle(0.0, 0.0, 2.0, layer=7).to_polygon(npts=64).group[0])
         ref = sp.SRef(
             x0=1.0,
             y0=2.0,
@@ -1741,11 +1741,11 @@ class TestGeomGroup:
 
     def test_find_matching_patterns_returns_expected_centers(self) -> None:
         layer = 7
-        pattern = sp.Box(0.0, 0.0, 1.0, 1.0).toRect()
+        pattern = sp.Box(0.0, 0.0, 1.0, 1.0).to_rect()
         pattern.set_layer(layer)
 
-        poly1 = sp.Box(0.0, 0.0, 1.0, 1.0).toRect()
-        poly2 = sp.Box(3.0, 4.0, 1.0, 1.0).toRect()
+        poly1 = sp.Box(0.0, 0.0, 1.0, 1.0).to_rect()
+        poly2 = sp.Box(3.0, 4.0, 1.0, 1.0).to_rect()
         poly1.set_layer(layer)
         poly2.set_layer(layer)
         g = poly1 + poly2
@@ -1758,13 +1758,13 @@ class TestGeomGroup:
 
     def test_find_matching_patterns_raises_for_disjoint_pattern(self) -> None:
         layer = 8
-        g1 = sp.Box(0.0, 0.0, 1.0, 1.0).toRect()
-        g2 = sp.Box(3.0, 0.0, 1.0, 1.0).toRect()
+        g1 = sp.Box(0.0, 0.0, 1.0, 1.0).to_rect()
+        g2 = sp.Box(3.0, 0.0, 1.0, 1.0).to_rect()
         g1.set_layer(layer)
         g2.set_layer(layer)
         pattern = g1 + g2
 
-        g = sp.Box(0.0, 0.0, 1.0, 1.0).toRect()
+        g = sp.Box(0.0, 0.0, 1.0, 1.0).to_rect()
         g.set_layer(layer)
 
         with pytest.raises(
@@ -1779,7 +1779,7 @@ class TestGeomGroup:
     )
     def test_in_polygons_returns_true_for_point_in_polygon(self) -> None:
         layer = 9
-        g = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
+        g = sp.Box(0.0, 0.0, 2.0, 2.0).to_rect()
         g.set_layer(layer)
 
         assert g.in_polygons(1.0, 1.0) is True
@@ -1801,8 +1801,8 @@ class TestGeomGroup:
 
     def test_boolean_union_merges_overlapping_polygons(self) -> None:
         layer = 6
-        g1 = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
-        g2 = sp.Box(1.0, 0.0, 2.0, 2.0).toRect()
+        g1 = sp.Box(0.0, 0.0, 2.0, 2.0).to_rect()
+        g2 = sp.Box(1.0, 0.0, 2.0, 2.0).to_rect()
         g1.set_layer(layer)
         g2.set_layer(layer)
 
@@ -1821,12 +1821,12 @@ class TestGeomGroup:
     def test_boolean_difference_subtracts_polygon_set(self) -> None:
         layer_a = 1
         layer_b = 2
-        ga = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
-        gb = sp.Box(1.0, 0.0, 2.0, 2.0).toRect()
+        ga = sp.Box(0.0, 0.0, 2.0, 2.0).to_rect()
+        gb = sp.Box(1.0, 0.0, 2.0, 2.0).to_rect()
         ga.set_layer(layer_a)
         gb.set_layer(layer_b)
 
-        ga.boolean_difference(gb, layerA=layer_a, layerB=layer_b)
+        ga.boolean_difference(gb, layer_a=layer_a, layer_b=layer_b)
         out = ga.select_layer(layer_a)
 
         assert out.get_area() == pytest.approx(2.0)
@@ -1841,12 +1841,12 @@ class TestGeomGroup:
     def test_boolean_xor_computes_exclusive_or(self) -> None:
         layer_a = 1
         layer_b = 2
-        ga = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
-        gb = sp.Box(1.0, 0.0, 2.0, 2.0).toRect()
+        ga = sp.Box(0.0, 0.0, 2.0, 2.0).to_rect()
+        gb = sp.Box(1.0, 0.0, 2.0, 2.0).to_rect()
         ga.set_layer(layer_a)
         gb.set_layer(layer_b)
 
-        ga.boolean_xor(gb, layerA=layer_a, layerB=layer_b)
+        ga.boolean_xor(gb, layer_a=layer_a, layer_b=layer_b)
         out = ga.select_layer(layer_a)
 
         assert out.get_area() == pytest.approx(4.0)
@@ -1860,12 +1860,12 @@ class TestGeomGroup:
     def test_boolean_intersection_keeps_overlap_only(self) -> None:
         layer_a = 4
         layer_b = 5
-        ga = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
-        gb = sp.Box(1.0, 0.0, 2.0, 2.0).toRect()
+        ga = sp.Box(0.0, 0.0, 2.0, 2.0).to_rect()
+        gb = sp.Box(1.0, 0.0, 2.0, 2.0).to_rect()
         ga.set_layer(layer_a)
         gb.set_layer(layer_b)
 
-        ga.boolean_intersection(gb, layerA=layer_a, layerB=layer_b)
+        ga.boolean_intersection(gb, layer_a=layer_a, layer_b=layer_b)
         out = ga.select_layer(layer_a)
 
         assert out.get_area() == pytest.approx(2.0)
@@ -1880,7 +1880,7 @@ class TestGeomGroup:
     @pytest.mark.parametrize("offset", [-0.5, 0.5])
     def test_poly_resize_changes_polygon_extent(self, offset: float) -> None:
         layer = 2
-        g = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
+        g = sp.Box(0.0, 0.0, 2.0, 2.0).to_rect()
         g.set_layer(layer)
 
         bb_before = g.bounding_box()
@@ -1896,8 +1896,8 @@ class TestGeomGroup:
     ) -> None:
         target_layer = 4
         other_layer = 7
-        g_target = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
-        g_other = sp.Box(10.0, 10.0, 2.0, 2.0).toRect()
+        g_target = sp.Box(0.0, 0.0, 2.0, 2.0).to_rect()
+        g_other = sp.Box(10.0, 10.0, 2.0, 2.0).to_rect()
         g_target.set_layer(target_layer)
         g_other.set_layer(other_layer)
 
@@ -1919,7 +1919,7 @@ class TestGeomGroup:
 
     def test_poly_outlining_creates_nonzero_outline_polygon(self) -> None:
         layer = 8
-        g = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
+        g = sp.Box(0.0, 0.0, 2.0, 2.0).to_rect()
         g.set_layer(layer)
 
         g.poly_outlining(offset=0.5, layer=layer)
@@ -1931,8 +1931,8 @@ class TestGeomGroup:
         res_bb = res_poly.bounding_box()
         assert res_bb.width == pytest.approx(3.0)
         assert res_bb.height == pytest.approx(3.0)
-        assert res_bb.cx() == pytest.approx(1.0)
-        assert res_bb.cy() == pytest.approx(1.0)
+        assert res_bb.cx == pytest.approx(1.0)
+        assert res_bb.cy == pytest.approx(1.0)
         assert res_poly.point_inside(-0.1, -0.1)
         assert res_poly.point_inside(2.1, 2.1)
         assert not res_poly.point_inside(0.1, 0.1)
@@ -1950,7 +1950,7 @@ class TestGeomGroup:
 
     def test_invert_empty_layer_returns_unchanged(self) -> None:
         layer = 3
-        g = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
+        g = sp.Box(0.0, 0.0, 2.0, 2.0).to_rect()
         g.set_layer(layer)
 
         before_area = g.get_area()
@@ -1961,7 +1961,7 @@ class TestGeomGroup:
 
     def test_invert_on_single_box_in_layer_results_in_empty_layer(self) -> None:
         layer = 5
-        g = sp.Box(0.0, 0.0, 2.0, 2.0).toRect()
+        g = sp.Box(0.0, 0.0, 2.0, 2.0).to_rect()
         g.set_layer(layer)
 
         g.invert(layer)
@@ -1973,7 +1973,7 @@ class TestGeomGroup:
     ) -> None:
         layer = 4
         circle_obj.layer = layer
-        g = circle_obj.to_polygon(Npts=16)
+        g = circle_obj.to_polygon(npts=16)
 
         bb_before = g.bounding_box()
         bb_before_area = bb_before.width * bb_before.height
@@ -1986,7 +1986,7 @@ class TestGeomGroup:
 
     def test_trapezoids_preserves_layer_area(self) -> None:
         layer = 5
-        g = sp.Box(0.0, 0.0, 3.0, 2.0).toRect()
+        g = sp.Box(0.0, 0.0, 3.0, 2.0).to_rect()
         g.set_layer(layer)
 
         before_area = g.get_area()

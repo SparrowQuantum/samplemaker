@@ -15,7 +15,7 @@ import samplemaker.makers as sm  # used for drawing
 from samplemaker.devices import Device
 
 # And the device inspection tool
-from samplemaker.viewers import DeviceInspect
+from samplemaker.viewers import inspect_device
 
 # Create a simple mask layout
 themask = smlay.Mask("05_Tutorial_Devices")
@@ -68,7 +68,7 @@ class FreeFreeMembrane(Device):
         tet = sm.make_rect(0, p["tetOff"], p["R"] * 2, p["tetW"])
         # Mirror to get the second one
         tet2 = tet.copy()
-        tet2.mirrorY(0)
+        tet2.mirror_y(0)
         mem += tet + tet2
         # Support ring
         ring = sm.make_circle(0, 0, p["R"], to_poly=True, vertices=64)
@@ -83,10 +83,10 @@ class FreeFreeMembrane(Device):
 # You can call the build method in Device to instantiate your class object
 ffm_dev = FreeFreeMembrane.build()
 
-# Before instantiating the device, we can use the DeviceInspect() command to open a
+# Before instantiating the device, we can use the inspect_device() command to open a
 # graphical interface to test the parameters. It is a good idea to move the sliders of
 # all the parameters and check if the intended result is obtained.
-DeviceInspect(ffm_dev)
+inspect_device(ffm_dev)
 
 # Now let's see how to create a geometry and add it to the main cell.
 # Now we can change parameters
@@ -99,9 +99,9 @@ g += ffm_dev.run()
 # instantiate them in tables.
 
 # Let's add all to main cell.
-themask.addToMainCell(g)
+themask.add_to_main_cell(g)
 
 # Export to GDS.
-themask.exportGDS()
+themask.export_gds()
 
 # Finished!

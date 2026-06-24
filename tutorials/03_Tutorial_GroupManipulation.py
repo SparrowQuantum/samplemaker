@@ -31,7 +31,7 @@ gsel2 = base.deselect_layers([1])
 
 # It might be interesting to calculate the bounding box:
 bb = base.bounding_box()
-rbox = bb.toRect()  # rbox contains 1 rectangle size of the bounding box
+rbox = bb.to_rect()  # rbox contains 1 rectangle size of the bounding box
 
 # Path/text polygon conversion:
 # You can decide to create all paths/polygons and circular elements with to_poly=False
@@ -68,9 +68,9 @@ out1.translate(40, 0)
 g += out1
 
 # Let's add all to main cell
-themask.addToMainCell(g)
+themask.add_to_main_cell(g)
 
 # Export to GDS
-themask.exportGDS()
+themask.export_gds()
 
 # Finished!

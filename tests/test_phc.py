@@ -1,5 +1,7 @@
 """Unit tests for phc module."""
 
+from collections.abc import Sequence
+
 import numpy as np
 import pytest
 
@@ -122,23 +124,23 @@ def test_crystal_copy_is_deep(crystal_three_sites: Crystal) -> None:
     assert crystal_three_sites.params[0, 0] == pytest.approx(1.0)
 
 
-def test_triangular_hexagonal_N0() -> None:
-    c = Crystal.triangular_hexagonal(N=0, filled=False, Nparams=2)
+def test_triangular_hexagonal_n0() -> None:
+    c = Crystal.triangular_hexagonal(n=0, filled=False, nparams=2)
     assert list(c.xpts) == pytest.approx([0.0])
     assert list(c.ypts) == pytest.approx([0.0])
     assert c.params.shape == (2, 1)
     assert list(c.params[:, 0]) == pytest.approx([1.0, 1.0])
 
 
-@pytest.mark.parametrize("N", [1, 2, 4])
-def test_triangular_hexagonal_ring_size(N: int) -> None:
-    c = Crystal.triangular_hexagonal(N=N, filled=False)
-    assert c.xpts.size == 6 * N
-    assert c.ypts.size == 6 * N
+@pytest.mark.parametrize("n", [1, 2, 4])
+def test_triangular_hexagonal_ring_size(n: int) -> None:
+    c = Crystal.triangular_hexagonal(n=n, filled=False)
+    assert c.xpts.size == 6 * n
+    assert c.ypts.size == 6 * n
 
 
-def test_triangular_hexagonal_ring_N1_exact_coordinates() -> None:
-    c = Crystal.triangular_hexagonal(N=1, filled=False)
+def test_triangular_hexagonal_ring_n1_exact_coordinates() -> None:
+    c = Crystal.triangular_hexagonal(n=1, filled=False)
     expected = {
         (1.0, 0.0),
         (0.5, np.sqrt(3) / 2),
@@ -154,16 +156,16 @@ def test_triangular_hexagonal_ring_N1_exact_coordinates() -> None:
     assert _site_set(c.xpts, c.ypts) == expected_site_set
 
 
-@pytest.mark.parametrize("N", [1, 2, 3])
-def test_triangular_hexagonal_filled_size(N: int) -> None:
-    c = Crystal.triangular_hexagonal(N=N, filled=True)
-    expected_points = 1 + 3 * N * (N - 1)
+@pytest.mark.parametrize("n", [1, 2, 3])
+def test_triangular_hexagonal_filled_size(n: int) -> None:
+    c = Crystal.triangular_hexagonal(n=n, filled=True)
+    expected_points = 1 + 3 * n * (n - 1)
     assert c.xpts.size == expected_points
     assert c.ypts.size == expected_points
 
 
-def test_triangular_hexagonal_filled_N2_exact_coordinates() -> None:
-    c = Crystal.triangular_hexagonal(N=2, filled=True)
+def test_triangular_hexagonal_filled_n2_exact_coordinates() -> None:
+    c = Crystal.triangular_hexagonal(n=2, filled=True)
     expected = {
         (0.0, 0.0),
         (1.0, 0.0),
@@ -180,7 +182,7 @@ def test_triangular_hexagonal_filled_N2_exact_coordinates() -> None:
 
 
 def test_triangular_box_basic_shape() -> None:
-    c = Crystal.triangular_box(Nx=1, Ny=1, Nparams=2)
+    c = Crystal.triangular_box(nx=1, ny=1, nparams=2)
     assert c.xpts.size == 13
     assert c.ypts.size == 13
     assert c.params.shape == (2, 13)
@@ -188,8 +190,8 @@ def test_triangular_box_basic_shape() -> None:
     assert np.min(c.ypts) == pytest.approx(-np.sqrt(3))
 
 
-def test_triangular_box_N1_N1_exact_coordinates() -> None:
-    c = Crystal.triangular_box(Nx=1, Ny=1, Nparams=1)
+def test_triangular_box_n1_n1_exact_coordinates() -> None:
+    c = Crystal.triangular_box(nx=1, ny=1, nparams=1)
     s3 = np.sqrt(3)
     expected_x1 = [-1.0, 0.0, 1.0]
     expected_y1 = [-s3, 0.0, s3]
@@ -214,16 +216,16 @@ def test_triangular_box_N1_N1_exact_coordinates() -> None:
     reason="Known bug in triangular_box: uses bitwise '&' in zero-dimension check.",
     strict=True,
 )
-def test_triangular_box_Nx0_Ny1_is_not_single_origin_site() -> None:
-    c = Crystal.triangular_box(Nx=0, Ny=1, Nparams=1)
+def test_triangular_box_nx0_ny1_is_not_single_origin_site() -> None:
+    c = Crystal.triangular_box(nx=0, ny=1, nparams=1)
     assert c.xpts.size > 1
     assert not (c.xpts.size == 1 and c.ypts.size == 1)
 
 
-def test_triangular_heterophc_is_symmetric_for_integer_Nx() -> None:
+def test_triangular_heterophc_is_symmetric_for_integer_nx() -> None:
     c = Crystal.triangular_heterophc(
-        Nx=3,
-        Ny=1,
+        nx=3,
+        ny=1,
         spacing=[0.9, 1.0],
         periods=[1, 1],
     )
@@ -231,13 +233,13 @@ def test_triangular_heterophc_is_symmetric_for_integer_Nx() -> None:
     assert c.params.shape[1] == c.xpts.size
 
 
-def test_triangular_heterophc_Ny0_exact_coordinates() -> None:
+def test_triangular_heterophc_ny0_exact_coordinates() -> None:
     c = Crystal.triangular_heterophc(
-        Nx=4,
-        Ny=0,
+        nx=4,
+        ny=0,
         spacing=[0.8, 1.1],
         periods=[1, 2],
-        Nparams=1,
+        nparams=1,
     )
     expected_x = np.array([-4.0, -3.0, -1.9, -0.8, 0.0, 0.8, 1.9, 3.0, 4.0])
     expected_y = np.zeros_like(expected_x)
@@ -246,11 +248,11 @@ def test_triangular_heterophc_Ny0_exact_coordinates() -> None:
 
 def test_triangular_heterophc_uniform_spacing_row_structure() -> None:
     c = Crystal.triangular_heterophc(
-        Nx=2,
-        Ny=1,
+        nx=2,
+        ny=1,
         spacing=[1.0],
         periods=[1],
-        Nparams=1,
+        nparams=1,
     )
 
     s3 = np.sqrt(3)
@@ -271,17 +273,10 @@ def test_triangular_heterophc_uniform_spacing_row_structure() -> None:
     assert _site_set(c.xpts, c.ypts) == expected_site_set
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Known bug in triangular_heterophc fractional trimming: min bound is taken "
-        "from ypts instead of xpts."
-    ),
-    strict=True,
-)
-def test_triangular_heterophc_fractional_Nx_remains_x_symmetric() -> None:
+def test_triangular_heterophc_fractional_nx_remains_x_symmetric() -> None:
     c = Crystal.triangular_heterophc(
-        Nx=2.5,
-        Ny=1,
+        nx=2.5,
+        ny=1,
         spacing=[1.0],
         periods=[1],
     )
@@ -297,14 +292,14 @@ def test_make_phc_uses_scaled_coordinates_and_translates() -> None:
     calls: list[tuple[float, float, list[float]]] = []
 
     def custom_cellfun(
-        x: float, y: float, params: list[float] | str
+        x: float, y: float, params: Sequence[float] | str
     ) -> GeomGroup | int:
         if params == "test":
             return 1
         if isinstance(params, str):
             msg = "Unexpected params value in custom_cellfun."
             raise ValueError(msg)
-        calls.append((x, y, params))
+        calls.append((x, y, list(params)))
         return sm.make_circle(x, y, params[0], layer=7)
 
     g = make_phc(

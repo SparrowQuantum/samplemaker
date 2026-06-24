@@ -14,7 +14,7 @@ import numpy as np
 
 import samplemaker.makers as sm
 from samplemaker.baselib.waveguides import BaseWaveguidePort, BaseWaveguideSequencer
-from samplemaker.devices import Device, registerDevicesInModule
+from samplemaker.devices import Device, register_devices_in_module
 from samplemaker.shapes import GeomGroup
 
 
@@ -184,11 +184,11 @@ class DirectionalCoupler(Device):
         ss = BaseWaveguideSequencer(seq)
         dc = ss.run()
         dc2 = dc.copy()
-        dc2.mirrorX(ltot / 2)
+        dc2.mirror_x(ltot / 2)
         dc += dc2
         dc.translate(-ltot / 2, off + p["gap"] / 2 + p["width"] / 2)
         dc3 = dc.copy()
-        dc3.mirrorY(0)
+        dc3.mirror_y(0)
         dc += dc3
 
         # Add ports
@@ -330,8 +330,8 @@ class FocusingGratingCoupler(Device):
             g += sm.make_arc(
                 x0=x0,
                 y0=0,
-                rX=a,
-                rY=b,
+                rx=a,
+                ry=b,
                 rot=0,
                 w=w,
                 a1=-div_angle - 5,
@@ -364,4 +364,4 @@ class FocusingGratingCoupler(Device):
 
 
 # Register all devices here in this module
-registerDevicesInModule(__name__)
+register_devices_in_module(__name__)

@@ -185,10 +185,10 @@ import inspect
 import math
 import sys
 import warnings
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
-from typing import Any, Self
+from typing import Any, NoReturn, Self, TypeAlias
 
 import numpy as np
 
@@ -203,9 +203,34 @@ from samplemaker.gdswriter import GDSWriter
 from samplemaker.makers import make_sref, make_text
 from samplemaker.shapes import GeomGroup, Poly
 
+ConnectorFunctionType: TypeAlias = Callable[["DevicePort", "DevicePort"], GeomGroup]
+
 
 class IncompatiblePortError(RuntimeError):
     """Exception raised when trying to link incompatible ports."""
+
+
+def _empty_connector_function(port1: "DevicePort", port2: "DevicePort") -> NoReturn:
+    """Default connector function that raises an error.
+
+    Parameters
+    ----------
+    port1 : DevicePort
+        The first port.
+    port2 : DevicePort
+        The second port.
+
+    Raises
+    ------
+    NotImplementedError
+        Always raised to indicate that the ports are incompatible.
+
+    """
+    msg = (
+        f"Cannot connect ports {port1.name} and {port2.name} "
+        "as no connector function is defined."
+    )
+    raise NotImplementedError(msg)
 
 
 class DevicePort:
@@ -240,7 +265,7 @@ class DevicePort:
         self._geometry = GeomGroup()
         # any other port shared with this port in the same device:
         self._parentports = {}
-        self.connector_function = None
+        self.connector_function: ConnectorFunctionType = _empty_connector_function
 
     def set_name(self, name: str) -> None:
         """Set the name of the device port.
@@ -359,7 +384,7 @@ class DevicePort:
         self.y0 = sint * xc + cost * yc + y0
         self.set_angle(self.angle() + math.radians(angle))
 
-    def S(self, amount: float) -> None:
+    def move_straight(self, amount: float) -> None:
         """Move the port straight by the given amount.
 
         Parameters
@@ -375,7 +400,28 @@ class DevicePort:
         self.x0 += self.dx() * amount
         self.y0 += self.dy() * amount
 
-    def BL(self, radius: float) -> None:
+    def S(self, amount: float) -> None:  # noqa: N802
+        """Move the port straight by the given amount.
+
+        Parameters
+        ----------
+        amount : float
+            The distance to move the port.
+
+        Returns
+        -------
+        None
+
+        """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use DevicePort.move_straight() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.move_straight(amount)
+
+    def bend_left(self, radius: float) -> None:
         """Make a 90 degree left bend with the given radius.
 
         Parameters
@@ -395,7 +441,30 @@ class DevicePort:
         self.y0 = radius * math.sin(phi + math.pi / 2) + yc
         self.set_angle(self.angle() + math.pi / 2)
 
-    def BR(self, radius: float) -> None:
+    def BL(self, radius: float) -> None:  # noqa: N802
+        """Make a 90 degree left bend with the given radius.
+
+        DEPRECATED: Use DevicePort.bend_left() instead.
+
+        Parameters
+        ----------
+        radius : float
+            The radius of the bend.
+
+        Returns
+        -------
+        None
+
+        """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use DevicePort.bend_left() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.bend_left(radius)
+
+    def bend_right(self, radius: float) -> None:
         """Make a 90 degree right bend with the given radius.
 
         Parameters
@@ -414,6 +483,29 @@ class DevicePort:
         self.x0 = radius * math.cos(phi - math.pi / 2) + xc
         self.y0 = radius * math.sin(phi - math.pi / 2) + yc
         self.set_angle(self.angle() - math.pi / 2)
+
+    def BR(self, radius: float) -> None:  # noqa: N802
+        """Make a 90 degree right bend with the given radius.
+
+        DEPRECATED: Use DevicePort.bend_right() instead.
+
+        Parameters
+        ----------
+        radius : float
+            The radius of the bend.
+
+        Returns
+        -------
+        None
+
+        """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use DevicePort.bend_right() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.bend_right(radius)
 
     def reset(self) -> None:
         """Reset the port position and orientation to a fixed position.
@@ -1158,7 +1250,7 @@ class NetList:
         self.paths[port_name] = coords
 
     @classmethod
-    def ImportCircuit(
+    def import_circuit(
         cls, file_name: str, circuit_name: str = ""
     ) -> Self | dict[str, Self]:
         """Generate a NetList object from a circuit file.
@@ -1268,6 +1360,38 @@ class NetList:
         if circuit_name == "":
             return all_lists
         return all_lists[circuit_name]
+
+    @classmethod
+    def ImportCircuit(  # noqa: N802
+        cls, file_name: str, circuit_name: str = ""
+    ) -> Self | dict[str, Self]:
+        """Generate a NetList object from a circuit file.
+
+        The input is a text file with circuit description similar to the
+        SPICE netlist format (yet with some important differences).
+        Check the tutorials for examples.
+
+        Parameters
+        ----------
+        file_name : str
+            The circuit filename.
+        circuit_name : str, optional
+            The subcircuit to load inside the circuit file, by default "", which reads
+            the entire circuit structure.
+
+        Returns
+        -------
+        NetList | dict[str, NetList]
+            The NetList with the imported circuit.
+
+        """
+        warnings.warn(
+            "This method is deprecated and will be removed "
+            "in a future version. Use NetList.import_circuit() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return cls.import_circuit(file_name, circuit_name)
 
 
 class Circuit(Device):
@@ -1571,7 +1695,7 @@ class Circuit(Device):
 _DeviceList: dict[str, type[Device]] = {"X": Circuit}
 
 
-def registerDevicesInModule(module_name: str) -> None:
+def register_devices_in_module(module_name: str) -> None:
     """Register the device names in a global variable.
 
     To be called at the end of a python module containing device classes that inherit
@@ -1604,7 +1728,32 @@ def registerDevicesInModule(module_name: str) -> None:
                 print(f"Loaded {oj._name}: {oj._description}")
 
 
-def CreateDeviceLibrary(devname: str, params: dict, filename: str) -> None:
+def registerDevicesInModule(module_name: str) -> None:  # noqa: N802
+    """Register the device names in a global variable.
+
+    To be called at the end of a python module containing device classes that inherit
+    the `Device` class.
+
+    Parameters
+    ----------
+    module_name : str
+        The python module name, if used in the same file, just use `__name__`.
+
+    Returns
+    -------
+    None
+
+    """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use register_devices_in_module() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    register_devices_in_module(module_name)
+
+
+def create_device_library(devname: str, params: dict, filename: str) -> None:
     """Generate a GDS file with a re-usable GDS-format device.
 
     Also exports ports as text element in GDS.
@@ -1645,7 +1794,38 @@ def CreateDeviceLibrary(devname: str, params: dict, filename: str) -> None:
     gdsw.close_library()
 
 
-def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel") -> None:
+def CreateDeviceLibrary(devname: str, params: dict, filename: str) -> None:  # noqa: N802
+    """Generate a GDS file with a re-usable GDS-format device.
+
+    Also exports ports as text element in GDS.
+    Flattens everything.
+
+    DEPRECATED: Use create_device_library() instead.
+
+    Parameters
+    ----------
+    devname : str
+        The registered name of the device.
+    params : dict
+        The parameters to be used when saving. Modifies the default.
+    filename: str
+        The output library filename
+
+    Returns
+    -------
+    None
+
+    """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use create_device_library() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    create_device_library(devname, params, filename)
+
+
+def export_device_schematics(filename: str = "SampleMakerLibrary.lel") -> None:
     """Generate a Layout Editor library file (LEL).
 
     This file contains the Devices currently loaded on the Device List. The library file
@@ -1728,51 +1908,29 @@ def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel") -> None:
             f.write("</Component>\n")
 
 
-# The function below is work in progress
+def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel") -> None:  # noqa: N802
+    """Generate a Layout Editor library file (LEL).
 
-# def createDeviceDocumentation(filename: str = "Devices.xml"):
-#     f = open(filename,'w')
+    This file contains the Devices currently loaded on the Device List. The library file
+    can be used in combination with Layout Editor Schematic to produce spice netlists
+    for circuit design.
 
-#     header= """<?xml version="1.0" encoding="UTF-8"?>
-#     <samplemaker_devices>"""
-#     footer = """</samplemaker_devices>"""
-#     f.write(header)
+    DEPRECATED: Use export_device_schematics() instead.
 
-#     for devobj in _DeviceList.values():
-#         f.write("<device>\n")
-#         oj = devobj()
-#         oj.initialize();
-#         oj.parameters();
-#         oj.ports();
-#         f.write("<name>" + oj._name + "</name>\n")
-#         f.write("<description>" + oj._description + "</description>\n")
-#         f.write("<parameters>\n")
-#         for p,val in oj._p.items():
-#             f.write("<param>\n")
-#             f.write("<pname>"+p+"</pname>\n")
-#             valstring = " ".join(map(str,[val]))
-#             valstring = valstring.replace("<","-").replace(">","-")
-#             f.write("<def_value>"+valstring+"</def_value>\n")
-#             f.write("<pdescr>"+oj._pdescr[p]+"</pdescr>\n")
-#             f.write("</param>\n")
-#         f.write("</parameters>\n")
-#         f.write("<ports>\n")
-#         if(oj._name != "X" and oj._name != "TABLE"):
-#             g = oj.geom()
-#             oj.ports()
-#             for pname, port in oj._ports.items():
-#                 f.write("<port>\n")
-#                 f.write("<portname>"+ pname + "</portname>\n")
-#                 f.write("<facing>"+ port.angle_to_text() + "</facing>\n")
-#                 f.write("<x0>"+ str(port.x0) + "</x0>\n")
-#                 f.write("<y0>"+ str(port.y0) + "</y0>\n")
-#                 f.write("</port>\n")
+    Parameters
+    ----------
+    filename : str, optional
+        The library filename with .lel extension, by default "SampleMakerLibrary.lel".
 
-#         f.write("</ports>\n")
+    Returns
+    -------
+    None
 
-#         f.write("</device>\n")
-
-
-#     f.write(footer)
-
-#     f.close()
+    """
+    warnings.warn(
+        "This function is deprecated and will be removed "
+        "in a future version. Use export_device_schematics() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    export_device_schematics(filename)
