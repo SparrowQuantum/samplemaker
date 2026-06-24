@@ -22,7 +22,7 @@ Required argument example
 To replace a required argument (in this case Npts -> npts), do the following:
 
     def my_func(npts: int | MissingType = MISSING, **kwargs: int) -> None:
-        npts = parse_required_legacy_kwarg("npts", npts, "Npts", kwargs)
+        npts = get_kwarg("npts", npts, "Npts", kwargs)
         ensure_empty_kwargs("my_func", kwargs)
         check_missing_args("my_func", npts=npts)
 
@@ -41,7 +41,7 @@ all of the required arguments:
         other_arg: str | MissingType = MISSING,
         **kwargs: int,
     ) -> None:
-        npts = parse_required_legacy_kwarg("npts", npts, "Npts", kwargs)
+        npts = get_kwarg("npts", npts, "Npts", kwargs)
         ensure_empty_kwargs("my_func", kwargs)
         check_missing_args("my_func", npts=npts, other_arg=other_arg)
 

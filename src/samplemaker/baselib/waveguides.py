@@ -596,7 +596,7 @@ def connect_base_waveguide_ports(port1: DevicePort, port2: DevicePort) -> GeomGr
 
     """
     radius = BaseWaveguideConnectorOptions["bending_radius"]
-    if not isinstance(radius, float):
+    if not isinstance(radius, (int, float)):
         msg = "BaseWaveguideConnectorOptions['bending_radius'] must be a float"
         raise TypeError(msg)
 

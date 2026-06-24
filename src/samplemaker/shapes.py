@@ -804,7 +804,7 @@ class GeomGroup:
             Whether to split arcs into multiple segments when converting to polygons,
             by default False.
         kwargs: dict
-            Additional keyword arguments. Supports `Npts_circle` and `Npts_arc` for
+            Additional keyword arguments. Supports `Npts_circ` and `Npts_arc` for
             backward compatibility.
 
         Returns
