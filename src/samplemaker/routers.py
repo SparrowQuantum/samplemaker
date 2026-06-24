@@ -6,7 +6,6 @@ from copy import deepcopy
 from typing import Any
 
 import numpy as np
-from numpy.typing import NDArray
 
 import samplemaker.makers as sm
 from samplemaker.devices import DevicePort
