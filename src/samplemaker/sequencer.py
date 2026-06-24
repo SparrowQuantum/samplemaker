@@ -327,6 +327,10 @@ class Sequencer:
         try:
             init_fun([], self.state, self.options)
         except TypeError as e:
+            errmsg = str(e)
+            if "positional argument" not in errmsg or "were given" not in errmsg:
+                raise e
+
             try:
                 # Legacy init function signature, only state and options are passed
                 init_fun(self.state, self.options)  # type: ignore[arg-type]
@@ -337,7 +341,11 @@ class Sequencer:
                     DeprecationWarning,
                     stacklevel=2,
                 )
-            except TypeError:
+            except TypeError as ee:
+                errmsg = str(ee)
+                if "positional argument" not in errmsg or "were given" not in errmsg:
+                    raise ee
+
                 msg = (
                     "The supplied INIT command function signature is invalid. "
                     "It should accept three parameters: args, state, and options."
