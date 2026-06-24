@@ -188,7 +188,7 @@ import warnings
 from collections.abc import Callable, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
-from typing import Any, Self, TypeAlias
+from typing import Any, NoReturn, Self, TypeAlias
 
 import numpy as np
 
@@ -210,7 +210,7 @@ class IncompatiblePortError(RuntimeError):
     """Exception raised when trying to link incompatible ports."""
 
 
-def _empty_connector_function(port1: "DevicePort", port2: "DevicePort") -> GeomGroup:
+def _empty_connector_function(port1: "DevicePort", port2: "DevicePort") -> NoReturn:
     """Default connector function that raises an error.
 
     Parameters
@@ -219,11 +219,6 @@ def _empty_connector_function(port1: "DevicePort", port2: "DevicePort") -> GeomG
         The first port.
     port2 : DevicePort
         The second port.
-
-    Returns
-    -------
-    GeomGroup
-        An empty geometry group.
 
     Raises
     ------
