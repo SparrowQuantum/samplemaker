@@ -241,7 +241,7 @@ class MarkerSet(Marker):
                 0,
                 self.ydist,
             )
-        return g
+        return g.translate(self.x0, self.y0)
 
 
 class DeviceTableAnnotations:
