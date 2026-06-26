@@ -1762,28 +1762,28 @@ class TestGeomGroup:
         ):
             g.find_matching_patterns(pattern, layer)
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="in_polygons erronously checks for SRefs "
-        "in the geometry group instead of Poly objects.",
+    @pytest.mark.parametrize(
+        ("point", "expected"),
+        [((1.0, 1.0), True), ((1.999, 1.999), True), ((2.0, 2.0), False)],
     )
-    def test_in_polygons_returns_true_for_point_in_polygon(self) -> None:
+    def test_in_polygons(self, point: tuple[float, float], expected: bool) -> None:
         layer = 9
         g = sp.Box(0.0, 0.0, 2.0, 2.0).to_rect()
         g.set_layer(layer)
 
-        assert g.in_polygons(1.0, 1.0) is True
+        assert g.in_polygons(point[0], point[1]) is expected
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="in_polygons erronously checks for SRefs "
-        "in the geometry group instead of Poly objects.",
+    @pytest.mark.parametrize(
+        "point",
+        [((2.0, 4.0), False), ((-1.0, -1.0), False)],
     )
-    def test_in_polygons_sref_raises_attribute_error(self, sref_obj: sp.SRef) -> None:
+    def test_in_polygons_srefs_always_false(
+        self, point: tuple[float, float], sref_obj: sp.SRef
+    ) -> None:
         g = sp.GeomGroup()
         g.add(sref_obj)
 
-        assert g.in_polygons(0.0, 0.0) is False
+        assert g.in_polygons(point[0], point[1]) is False
 
     def test_in_polygons_returns_false_for_empty_group(self) -> None:
         g = sp.GeomGroup()

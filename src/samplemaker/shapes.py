@@ -892,8 +892,8 @@ class GeomGroup:
             True if coordinate is inside the polygon.
 
         """
-        for i in range(len(self.group)):
-            if isinstance(self.group[i], SRef) and self.group[i].point_inside(x, y):
+        for geom in self.group:
+            if isinstance(geom, Poly) and geom.point_inside(x, y):
                 return True
         return False
 
