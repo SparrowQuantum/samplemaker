@@ -212,14 +212,12 @@ def test_triangular_box_n1_n1_exact_coordinates() -> None:
     assert _site_set(c.xpts, c.ypts) == expected_site_set
 
 
-@pytest.mark.xfail(
-    reason="Known bug in triangular_box: uses bitwise '&' in zero-dimension check.",
-    strict=True,
-)
-def test_triangular_box_nx0_ny1_is_not_single_origin_site() -> None:
+def test_triangular_box_nx0_ny1_exact_coordinates() -> None:
     c = Crystal.triangular_box(nx=0, ny=1, nparams=1)
-    assert c.xpts.size > 1
-    assert not (c.xpts.size == 1 and c.ypts.size == 1)
+    assert c.ypts.size == 3
+    assert c.params.shape == (1, 3)
+    assert c.xpts == pytest.approx([0.0, 0.0, 0.0])
+    assert c.ypts == pytest.approx([-np.sqrt(3), 0.0, np.sqrt(3)])
 
 
 def test_triangular_heterophc_is_symmetric_for_integer_nx() -> None:
