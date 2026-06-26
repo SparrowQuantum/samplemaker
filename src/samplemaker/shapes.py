@@ -3364,9 +3364,12 @@ class SRef(RefBase):
             bb = self.group.bounding_box()
         p = bb.to_poly()
         p.scale(0, 0, self.mag, self.mag)
-        p.rotate_translate(self.x0, self.y0, self.angle)
         if self.mirror:
-            p.mirror_y(self.y0)
+            p.mirror_y(0)
+        if self.angle != 0:
+            p.rotate_translate(self.x0, self.y0, self.angle)
+        else:
+            p.translate(self.x0, self.y0)
         return p.bounding_box()
 
     def place_group(self, flat_group: GeomGroup) -> GeomGroup:

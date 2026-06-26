@@ -890,12 +890,7 @@ class TestSRef:
         assert bb.cx == pytest.approx(sref.x0 + pool_box.cx * sref.mag)
         assert bb.cy == pytest.approx(sref.y0 + pool_box.cy * sref.mag)
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Known mismatch: SRef.bounding_box does not match placed "
-        "mirrored/rotated geometry.",
-    )
-    def test_bounding_box_mismatch_for_mirrored_rotated_sref_is_documented(
+    def test_bounding_box_matches_placed_group_for_mirrored_rotated_sref(
         self, sref_obj: sp.SRef, geomgroup_obj: sp.GeomGroup
     ) -> None:
         sref_obj.mag = 2.0
@@ -1067,12 +1062,7 @@ class TestAref:
         placed = aref_obj.place_group(geomgroup_obj.flatten())
         assert len(placed.group) == aref_kwargs.ncols * aref_kwargs.nrows
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Known mismatch: ARef.bounding_box does not match placed "
-        "mirrored/rotated array geometry.",
-    )
-    def test_bounding_box_mismatch_for_mirrored_rotated_array_is_documented(
+    def test_bounding_box_matches_placed_group_for_mirrored_rotated_array(
         self, aref_obj: sp.ARef, geomgroup_obj: sp.GeomGroup
     ) -> None:
         aref_obj.mag = 2.0
