@@ -110,7 +110,6 @@ class TestMarkerSet:
         assert markerset.xdist == 1000
         assert markerset.ydist == 1000
 
-    @pytest.mark.xfail(reason="Invalid mset silently ignored", strict=True)
     def test_markerset_init_raises_on_invalid_mset(self) -> None:
         name = "TestMarkerSet"
         dev = CrossMark.build()
