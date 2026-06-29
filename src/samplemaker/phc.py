@@ -586,20 +586,18 @@ def make_phc(
         raise TypeError(msg)
 
     phc = GeomGroup()
-    for i in range(len(crystal.xpts)):
-        xpos = crystal.xpts[i] * scaling
-        ypos = crystal.ypts[i] * scaling
-        params = [0.0] * nargs
-        for j in range(nargs):
-            params[j] = crystal.params[j, i] * cellparams[j]
-        g = cellfun(xpos, ypos, params)
+    xpts_scaled = np.asarray(crystal.xpts) * scaling
+    ypts_scaled = np.asarray(crystal.ypts) * scaling
+    params = np.asarray(crystal.params) * np.asarray(cellparams)[:, np.newaxis]
+    for i, (x, y) in enumerate(zip(xpts_scaled, ypts_scaled, strict=True)):
+        g = cellfun(x, y, params[:, i].tolist())
         if not isinstance(g, GeomGroup):
             msg = (
                 "The cellfun function must return a GeomGroup when called with "
                 "valid parameters."
             )
             raise TypeError(msg)
-        phc += g
+        phc.group.extend(g.group)
 
     phc.translate(x0, y0)
     return phc
@@ -666,21 +664,20 @@ def make_phc_inpoly(
         raise TypeError(msg)
 
     phc = GeomGroup()
-    for i in range(len(crystal.xpts)):
-        xpos = crystal.xpts[i] * scaling
-        ypos = crystal.ypts[i] * scaling
-        if poly.point_inside(xpos, ypos):
-            params = [0.0] * nargs
-            for j in range(nargs):
-                params[j] = crystal.params[j, i] * cellparams[j]
-            g = cellfun(xpos, ypos, params)
-            if not isinstance(g, GeomGroup):
-                msg = (
-                    "The cellfun function must return a GeomGroup when called with "
-                    "valid parameters."
-                )
-                raise TypeError(msg)
-            phc += g
+    xpts_scaled = np.asarray(crystal.xpts) * scaling
+    ypts_scaled = np.asarray(crystal.ypts) * scaling
+    params = np.asarray(crystal.params) * np.asarray(cellparams)[:, np.newaxis]
+    for i, (x, y) in enumerate(zip(xpts_scaled, ypts_scaled, strict=True)):
+        if not poly.point_inside(x, y):
+            continue
+        g = cellfun(x, y, params[:, i].tolist())
+        if not isinstance(g, GeomGroup):
+            msg = (
+                "The cellfun function must return a GeomGroup when called with "
+                "valid parameters."
+            )
+            raise TypeError(msg)
+        phc.group.extend(g.group)
 
     phc.translate(x0, y0)
     return phc
