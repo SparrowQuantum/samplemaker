@@ -300,9 +300,11 @@ def test_make_phc_circle_creates_expected_circle() -> None:
     assert circle.r == pytest.approx(3.0)
 
 
-def test_make_phc_circle_ref_creates_expected_circle() -> None:
+def test_make_phc_circle_ref_creates_expected_circle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     reference_circle = make_phc_circle(x=0.0, y=0.0, params=[1.0])
-    LayoutPool["_CIRCLE"] = reference_circle
+    monkeypatch.setitem(LayoutPool, "_CIRCLE", reference_circle)
 
     circle_geom = make_phc_circle_ref(x=1.0, y=2.0, params=[3.0])
 
