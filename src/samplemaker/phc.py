@@ -42,9 +42,7 @@ from samplemaker import _legacy
 from samplemaker.layout import LayoutPool
 from samplemaker.shapes import GeomGroup, Poly
 
-CELLFUN_TYPE: TypeAlias = Callable[
-    [float, float, Sequence[float] | str], GeomGroup | int
-]
+CELLFUN_TYPE: TypeAlias = Callable[[float, float, Sequence[float]], GeomGroup]
 
 
 class Crystal:
@@ -450,9 +448,7 @@ class Crystal:
         return heterophc
 
 
-def make_phc_circle(
-    x: float, y: float, params: Sequence[float] | str
-) -> GeomGroup | int:
+def make_phc_circle(x: float, y: float, params: Sequence[float]) -> GeomGroup:
     """Create a circular unit cell for a photonic crystal.
 
     Parameters
@@ -461,16 +457,14 @@ def make_phc_circle(
         x-coordinate of the center of the circle.
     y : float
         y-coordinate of the center of the circle.
-    params : Sequence[float] | str
-        Parameters for the unit cell. If "test" is passed, the function returns the
-        number of parameters required to draw the unit cell. Otherwise, it should be a
-        sequence containing the radius of the circle.
+    params : Sequence[float]
+        Parameters for the unit cell. It should be a sequence containing the radius of
+        the circle.
 
     Returns
     -------
-    GeomGroup | int
-        A geometry containing the circular unit cell, or the number of parameters
-        required if "test" is passed as params.
+    GeomGroup
+        A geometry containing the circular unit cell.
 
     Raises
     ------
@@ -478,20 +472,10 @@ def make_phc_circle(
         If an invalid string parameter is passed to the function.
 
     """
-    if isinstance(params, str):
-        if params == "test":
-            return 1
-        msg = (
-            f"Invalid string parameter '{params}' "
-            "passed to make_phc_circle. Expected 'test'."
-        )
-        raise TypeError(msg)
     return sm.make_circle(x, y, params[0], 0)
 
 
-def make_phc_circle_ref(
-    x: float, y: float, params: Sequence[float] | str
-) -> GeomGroup | int:
+def make_phc_circle_ref(x: float, y: float, params: Sequence[float]) -> GeomGroup:
     """Create a circular unit cell for a photonic crystal using a circle reference.
 
     Parameters
@@ -500,16 +484,14 @@ def make_phc_circle_ref(
         x-coordinate of the center of the circle.
     y : float
         y-coordinate of the center of the circle.
-    params : Sequence[float] | str
-        Parameters for the unit cell. If "test" is passed, the function returns the
-        number of parameters required to draw the unit cell. Otherwise, it should be a
-        sequence containing the radius of the circle.
+    params : Sequence[float]
+        Parameters for the unit cell. It should be a sequence containing the radius of
+        the circle.
 
     Returns
     -------
-    GeomGroup | int
-        A geometry containing the circular unit cell, or the number of parameters
-        required if "test" is passed as params.
+    GeomGroup
+        A geometry containing the circular unit cell.
 
     Raises
     ------
@@ -517,14 +499,6 @@ def make_phc_circle_ref(
         If an invalid string parameter is passed to the function.
 
     """
-    if isinstance(params, str):
-        if params == "test":
-            return 1
-        msg = (
-            f"Invalid string parameter '{params}' "
-            "passed to make_phc_circle_ref. Expected 'test'."
-        )
-        raise TypeError(msg)
     return sm.make_sref(x, y, "_CIRCLE", LayoutPool["_CIRCLE"], mag=params[0])
 
 
@@ -576,14 +550,6 @@ def make_phc(
             "The 'name' parameter is deprecated and will be removed in future versions."
         )
         warnings.warn(msg, DeprecationWarning, stacklevel=2)
-
-    nargs = cellfun(0, 0, "test")
-    if not isinstance(nargs, int):
-        msg = (
-            "The cellfun function must return an integer when called with 'test' as "
-            "the params argument."
-        )
-        raise TypeError(msg)
 
     phc = GeomGroup()
     xpts_scaled = np.asarray(crystal.xpts) * scaling
@@ -654,14 +620,6 @@ def make_phc_inpoly(
             "The 'name' parameter is deprecated and will be removed in future versions."
         )
         warnings.warn(msg, DeprecationWarning, stacklevel=2)
-
-    nargs = cellfun(0, 0, "test")
-    if not isinstance(nargs, int):
-        msg = (
-            "The cellfun function must return an integer when called with 'test' as "
-            "the params argument."
-        )
-        raise TypeError(msg)
 
     phc = GeomGroup()
     xpts_scaled = np.asarray(crystal.xpts) * scaling

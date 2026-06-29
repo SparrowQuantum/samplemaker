@@ -289,14 +289,7 @@ def test_make_phc_uses_scaled_coordinates_and_translates() -> None:
     )
     calls: list[tuple[float, float, list[float]]] = []
 
-    def custom_cellfun(
-        x: float, y: float, params: Sequence[float] | str
-    ) -> GeomGroup | int:
-        if params == "test":
-            return 1
-        if isinstance(params, str):
-            msg = "Unexpected params value in custom_cellfun."
-            raise ValueError(msg)
+    def custom_cellfun(x: float, y: float, params: Sequence[float]) -> GeomGroup:
         calls.append((x, y, list(params)))
         return sm.make_circle(x, y, params[0], layer=7)
 
@@ -340,14 +333,7 @@ def test_make_phc_inpoly_filters_sites() -> None:
         layer=1,
     )
 
-    def custom_cellfun(
-        x: float, y: float, params: list[float] | str
-    ) -> GeomGroup | int:
-        if params == "test":
-            return 1
-        if isinstance(params, str):
-            msg = "Unexpected params value in custom_cellfun."
-            raise ValueError(msg)
+    def custom_cellfun(x: float, y: float, params: Sequence[float]) -> GeomGroup:
         return sm.make_circle(x, y, params[0], layer=3)
 
     g = make_phc_inpoly(
