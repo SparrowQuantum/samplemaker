@@ -890,12 +890,7 @@ class TestSRef:
         assert bb.cx == pytest.approx(sref.x0 + pool_box.cx * sref.mag)
         assert bb.cy == pytest.approx(sref.y0 + pool_box.cy * sref.mag)
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Known mismatch: SRef.bounding_box does not match placed "
-        "mirrored/rotated geometry.",
-    )
-    def test_bounding_box_mismatch_for_mirrored_rotated_sref_is_documented(
+    def test_bounding_box_matches_placed_group_for_mirrored_rotated_sref(
         self, sref_obj: sp.SRef, geomgroup_obj: sp.GeomGroup
     ) -> None:
         sref_obj.mag = 2.0
@@ -1067,12 +1062,7 @@ class TestAref:
         placed = aref_obj.place_group(geomgroup_obj.flatten())
         assert len(placed.group) == aref_kwargs.ncols * aref_kwargs.nrows
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Known mismatch: ARef.bounding_box does not match placed "
-        "mirrored/rotated array geometry.",
-    )
-    def test_bounding_box_mismatch_for_mirrored_rotated_array_is_documented(
+    def test_bounding_box_matches_placed_group_for_mirrored_rotated_array(
         self, aref_obj: sp.ARef, geomgroup_obj: sp.GeomGroup
     ) -> None:
         aref_obj.mag = 2.0
@@ -1772,28 +1762,28 @@ class TestGeomGroup:
         ):
             g.find_matching_patterns(pattern, layer)
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="in_polygons erronously checks for SRefs "
-        "in the geometry group instead of Poly objects.",
+    @pytest.mark.parametrize(
+        ("point", "expected"),
+        [((1.0, 1.0), True), ((1.999, 1.999), True), ((2.0, 2.0), False)],
     )
-    def test_in_polygons_returns_true_for_point_in_polygon(self) -> None:
+    def test_in_polygons(self, point: tuple[float, float], expected: bool) -> None:
         layer = 9
         g = sp.Box(0.0, 0.0, 2.0, 2.0).to_rect()
         g.set_layer(layer)
 
-        assert g.in_polygons(1.0, 1.0) is True
+        assert g.in_polygons(point[0], point[1]) is expected
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="in_polygons erronously checks for SRefs "
-        "in the geometry group instead of Poly objects.",
+    @pytest.mark.parametrize(
+        "point",
+        [(2.0, 4.0), (-1.0, -1.0)],
     )
-    def test_in_polygons_sref_raises_attribute_error(self, sref_obj: sp.SRef) -> None:
+    def test_in_polygons_srefs_always_false(
+        self, point: tuple[float, float], sref_obj: sp.SRef
+    ) -> None:
         g = sp.GeomGroup()
         g.add(sref_obj)
 
-        assert g.in_polygons(0.0, 0.0) is False
+        assert g.in_polygons(point[0], point[1]) is False
 
     def test_in_polygons_returns_false_for_empty_group(self) -> None:
         g = sp.GeomGroup()

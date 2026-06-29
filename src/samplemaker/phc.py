@@ -333,7 +333,7 @@ class Crystal:
         nx = _legacy.ensure_arg_type("nx", nx)
         ny = _legacy.ensure_arg_type("ny", ny)
 
-        if nx == 0 & ny == 0:
+        if nx == 0 and ny == 0:
             return cls(np.array([0]), np.array([0]), np.ones((nparams, 1)))
 
         x1 = np.array(list(range(-nx, nx + 1)))

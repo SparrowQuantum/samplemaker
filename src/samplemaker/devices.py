@@ -825,10 +825,20 @@ class Device:
         -------
         None
 
+        Raises
+        ------
+        ValueError
+            If the port is not defined by the device.
+
         """
         lports = self._localp["_ports_"]
-        if portname in lports:
-            self._localp["_ports_"].pop(portname)
+        if portname not in lports:
+            msg = (
+                f"Could not find port named {portname} in {self._name} as it was "
+                f"not defined by device."
+            )
+            raise ValueError(msg)
+        self._localp["_ports_"].pop(portname)
 
     def set_param(self, param_name: str, value: Any) -> None:  # noqa: ANN401
         """Change a paramter. To be called after build().

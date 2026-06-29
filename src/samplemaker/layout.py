@@ -189,7 +189,15 @@ class MarkerSet(Marker):
         ydist : float, optional
             Y-distance between two markers, by default 1000.
 
+        Raises
+        ------
+        ValueError
+            Raised if mset is not 1, 2 or 4.
+
         """
+        if mset not in (1, 2, 4):
+            msg = f"Invalid mset value. Expected 1, 2 or 4. Got {mset} instead."
+            raise ValueError(msg)
         super().__init__(name, dev, x0, y0)
         self.mset = mset
         self.xdist = xdist
@@ -233,7 +241,7 @@ class MarkerSet(Marker):
                 0,
                 self.ydist,
             )
-        return g
+        return g.translate(self.x0, self.y0)
 
 
 class DeviceTableAnnotations:

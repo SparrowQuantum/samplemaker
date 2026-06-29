@@ -250,12 +250,8 @@ class TestDevice:
         dummy_device.remove_localport("test")
         assert "test" not in dummy_device._localp["_ports_"]
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="remove_localport should raise for missing port but currently does not",
-    )
     def test_remove_localport_unknown_raises(self, dummy_device: smdev.Device) -> None:
-        with pytest.raises(ValueError, match="Could not find local port"):
+        with pytest.raises(ValueError, match="Could not find port"):
             dummy_device.remove_localport("missing")
 
     def test_get_port_raises_for_missing_port(self, dummy_device: smdev.Device) -> None:

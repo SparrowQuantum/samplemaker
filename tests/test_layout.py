@@ -110,16 +110,12 @@ class TestMarkerSet:
         assert markerset.xdist == 1000
         assert markerset.ydist == 1000
 
-    @pytest.mark.xfail(reason="Invalid mset silently ignored", strict=True)
     def test_markerset_init_raises_on_invalid_mset(self) -> None:
         name = "TestMarkerSet"
         dev = CrossMark.build()
         with pytest.raises(ValueError, match="Invalid mset value"):
             smlay.MarkerSet(name, dev, mset=0)
 
-    @pytest.mark.xfail(
-        reason="Geometry is not translated correctly for mset==1", strict=True
-    )
     def test_markerset_get_geom_mset1(self) -> None:
         name = "TestMarkerSet"
         dev = CrossMark.build()
