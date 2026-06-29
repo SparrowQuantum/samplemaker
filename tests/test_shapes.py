@@ -1775,7 +1775,7 @@ class TestGeomGroup:
 
     @pytest.mark.parametrize(
         "point",
-        [((2.0, 4.0), False), ((-1.0, -1.0), False)],
+        [(2.0, 4.0), (-1.0, -1.0)],
     )
     def test_in_polygons_srefs_always_false(
         self, point: tuple[float, float], sref_obj: sp.SRef
