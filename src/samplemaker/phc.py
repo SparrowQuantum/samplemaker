@@ -530,10 +530,9 @@ def make_phc(
         Position x-coordinate in um.
     y0 : float
         Position y-coordinate in um.
-    cellfun : Callable[[float, float, list[float] | str], GeomGroup], optional
-        A function of the type fun(x,y,params) that returns the geometry of the unit
-        cell. It should also return the number of parameters required to draw the unit
-        cell if "test" is passed as params, by default make_phc_circle.
+    cellfun : Callable[[float, float, Sequence[float]], GeomGroup], optional
+        A function of the type fun(x,y,params) that returns the geometry of a single
+        site in the crystal.
     name : str, optional
         DEPRECATED. Name of the crystal, by default "".
 
@@ -613,10 +612,9 @@ def make_phc_inpoly(
         Position x-coordinate in um.
     y0 : float
         Position y-coordinate in um.
-    cellfun : Callable[[float, float, list[float] | str], GeomGroup], optional
-        A function of the type fun(x,y,params) that returns the geometry of the unit
-        cell. It should also return the number of parameters required to draw the unit
-        cell if "test" is passed as params, by default make_phc_circle.
+    cellfun : Callable[[float, float, Sequence[float]], GeomGroup], optional
+        A function of the type fun(x,y,params) that returns the geometry of a single
+        site in the crystal.
     name : str, optional
         DEPRECATED. Name of the crystal, by default "".
 
