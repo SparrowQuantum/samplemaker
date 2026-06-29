@@ -466,11 +466,6 @@ def make_phc_circle(x: float, y: float, params: Sequence[float]) -> GeomGroup:
     GeomGroup
         A geometry containing the circular unit cell.
 
-    Raises
-    ------
-    TypeError
-        If an invalid string parameter is passed to the function.
-
     """
     return sm.make_circle(x, y, params[0], 0)
 
@@ -493,13 +488,23 @@ def make_phc_circle_ref(x: float, y: float, params: Sequence[float]) -> GeomGrou
     GeomGroup
         A geometry containing the circular unit cell.
 
-    Raises
-    ------
-    TypeError
-        If an invalid string parameter is passed to the function.
-
     """
     return sm.make_sref(x, y, "_CIRCLE", LayoutPool["_CIRCLE"], mag=params[0])
+
+
+def _validate_crystal(crystal: Crystal) -> None:
+    if len(crystal.xpts) != len(crystal.ypts):
+        msg = "The number of x-coordinates must match the number of y-coordinates."
+        raise ValueError(msg)
+    if len(crystal.xpts) == 0:
+        # We allow empty crystals
+        return
+    if crystal.params.ndim != 2:
+        msg = "The params array must be 2-dimensional."
+        raise ValueError(msg)
+    if crystal.params.shape[1] != len(crystal.xpts):
+        msg = "The number of parameter sets must match the number of lattice sites."
+        raise ValueError(msg)
 
 
 def make_phc(
@@ -540,9 +545,11 @@ def make_phc(
     Raises
     ------
     TypeError
-        If the cellfun function does not return an integer when called with "test" as
-        the params argument, or if it does not return a GeomGroup when called with
+        If the cellfun function does not return a GeomGroup when called with
         valid parameters.
+    ValueError
+        If the passed crystal has inconsistent dimensions or parameters or if the number
+        of cell parameters does not match the number of parameter sets in the crystal.
 
     """
     if name:
@@ -550,8 +557,19 @@ def make_phc(
             "The 'name' parameter is deprecated and will be removed in future versions."
         )
         warnings.warn(msg, DeprecationWarning, stacklevel=2)
+    _validate_crystal(crystal)
 
     phc = GeomGroup()
+    if len(crystal.xpts) == 0:
+        return phc
+
+    if len(cellparams) != crystal.params.shape[0]:
+        msg = (
+            "The number of cell parameters must match the number of parameter sets "
+            "in the crystal."
+        )
+        raise ValueError(msg)
+
     xpts_scaled = np.asarray(crystal.xpts) * scaling
     ypts_scaled = np.asarray(crystal.ypts) * scaling
     params = np.asarray(crystal.params) * np.asarray(cellparams)[:, np.newaxis]
@@ -610,9 +628,11 @@ def make_phc_inpoly(
     Raises
     ------
     TypeError
-        If the cellfun function does not return an integer when called with "test" as
-        the params argument, or if it does not return a GeomGroup when called with
+        If the cellfun function does not return a GeomGroup when called with
         valid parameters.
+    ValueError
+        If the passed crystal has inconsistent dimensions or parameters or if the number
+        of cell parameters does not match the number of parameter sets in the crystal.
 
     """
     if name:
@@ -620,8 +640,19 @@ def make_phc_inpoly(
             "The 'name' parameter is deprecated and will be removed in future versions."
         )
         warnings.warn(msg, DeprecationWarning, stacklevel=2)
+    _validate_crystal(crystal)
 
     phc = GeomGroup()
+    if len(crystal.xpts) == 0:
+        return phc
+
+    if len(cellparams) != crystal.params.shape[0]:
+        msg = (
+            "The number of cell parameters must match the number of parameter sets "
+            "in the crystal."
+        )
+        raise ValueError(msg)
+
     xpts_scaled = np.asarray(crystal.xpts) * scaling
     ypts_scaled = np.asarray(crystal.ypts) * scaling
     params = np.asarray(crystal.params) * np.asarray(cellparams)[:, np.newaxis]
