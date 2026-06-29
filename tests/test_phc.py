@@ -5,8 +5,8 @@ from collections.abc import Sequence
 import numpy as np
 import pytest
 
-from samplemaker import LayoutPool
 import samplemaker.makers as sm
+from samplemaker import LayoutPool
 from samplemaker.phc import (
     Crystal,
     make_phc,
