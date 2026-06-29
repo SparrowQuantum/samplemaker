@@ -10,10 +10,7 @@ as input (e.g. the radius of a circle) and produces a geometry.
 
 For example the default unit cell function is a circle defined as:
 
-    def __circ_cellfun__(x,y,params):
-    if params=="test":
-        return 1
-    else:
+    def make_phc_circle(x,y,params):
         return sm.make_circle(x, y, params[0], 0)
 
 The `Crystal` class provides a template for periodic structures consisting of an
