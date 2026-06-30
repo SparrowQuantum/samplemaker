@@ -10,10 +10,7 @@ as input (e.g. the radius of a circle) and produces a geometry.
 
 For example the default unit cell function is a circle defined as:
 
-    def __circ_cellfun__(x,y,params):
-    if params=="test":
-        return 1
-    else:
+    def make_phc_circle(x,y,params):
         return sm.make_circle(x, y, params[0], 0)
 
 The `Crystal` class provides a template for periodic structures consisting of an
@@ -42,9 +39,7 @@ from samplemaker import _legacy
 from samplemaker.layout import LayoutPool
 from samplemaker.shapes import GeomGroup, Poly
 
-CELLFUN_TYPE: TypeAlias = Callable[
-    [float, float, Sequence[float] | str], GeomGroup | int
-]
+CELLFUN_TYPE: TypeAlias = Callable[[float, float, Sequence[float]], GeomGroup]
 
 
 class Crystal:
@@ -450,9 +445,7 @@ class Crystal:
         return heterophc
 
 
-def make_phc_circle(
-    x: float, y: float, params: Sequence[float] | str
-) -> GeomGroup | int:
+def make_phc_circle(x: float, y: float, params: Sequence[float]) -> GeomGroup:
     """Create a circular unit cell for a photonic crystal.
 
     Parameters
@@ -461,37 +454,20 @@ def make_phc_circle(
         x-coordinate of the center of the circle.
     y : float
         y-coordinate of the center of the circle.
-    params : Sequence[float] | str
-        Parameters for the unit cell. If "test" is passed, the function returns the
-        number of parameters required to draw the unit cell. Otherwise, it should be a
-        sequence containing the radius of the circle.
+    params : Sequence[float]
+        Parameters for the unit cell. It should be a sequence containing the radius of
+        the circle.
 
     Returns
     -------
-    GeomGroup | int
-        A geometry containing the circular unit cell, or the number of parameters
-        required if "test" is passed as params.
-
-    Raises
-    ------
-    TypeError
-        If an invalid string parameter is passed to the function.
+    GeomGroup
+        A geometry containing the circular unit cell.
 
     """
-    if isinstance(params, str):
-        if params == "test":
-            return 1
-        msg = (
-            f"Invalid string parameter '{params}' "
-            "passed to make_phc_circle. Expected 'test'."
-        )
-        raise TypeError(msg)
     return sm.make_circle(x, y, params[0], 0)
 
 
-def make_phc_circle_ref(
-    x: float, y: float, params: Sequence[float] | str
-) -> GeomGroup | int:
+def make_phc_circle_ref(x: float, y: float, params: Sequence[float]) -> GeomGroup:
     """Create a circular unit cell for a photonic crystal using a circle reference.
 
     Parameters
@@ -500,32 +476,32 @@ def make_phc_circle_ref(
         x-coordinate of the center of the circle.
     y : float
         y-coordinate of the center of the circle.
-    params : Sequence[float] | str
-        Parameters for the unit cell. If "test" is passed, the function returns the
-        number of parameters required to draw the unit cell. Otherwise, it should be a
-        sequence containing the radius of the circle.
+    params : Sequence[float]
+        Parameters for the unit cell. It should be a sequence containing the radius of
+        the circle.
 
     Returns
     -------
-    GeomGroup | int
-        A geometry containing the circular unit cell, or the number of parameters
-        required if "test" is passed as params.
-
-    Raises
-    ------
-    TypeError
-        If an invalid string parameter is passed to the function.
+    GeomGroup
+        A geometry containing the circular unit cell.
 
     """
-    if isinstance(params, str):
-        if params == "test":
-            return 1
-        msg = (
-            f"Invalid string parameter '{params}' "
-            "passed to make_phc_circle_ref. Expected 'test'."
-        )
-        raise TypeError(msg)
     return sm.make_sref(x, y, "_CIRCLE", LayoutPool["_CIRCLE"], mag=params[0])
+
+
+def _validate_crystal(crystal: Crystal) -> None:
+    if len(crystal.xpts) != len(crystal.ypts):
+        msg = "The number of x-coordinates must match the number of y-coordinates."
+        raise ValueError(msg)
+    if len(crystal.xpts) == 0:
+        # We allow empty crystals
+        return
+    if crystal.params.ndim != 2:
+        msg = "The params array must be 2-dimensional."
+        raise ValueError(msg)
+    if crystal.params.shape[1] != len(crystal.xpts):
+        msg = "The number of parameter sets must match the number of lattice sites."
+        raise ValueError(msg)
 
 
 def make_phc(
@@ -551,10 +527,9 @@ def make_phc(
         Position x-coordinate in um.
     y0 : float
         Position y-coordinate in um.
-    cellfun : Callable[[float, float, list[float] | str], GeomGroup], optional
-        A function of the type fun(x,y,params) that returns the geometry of the unit
-        cell. It should also return the number of parameters required to draw the unit
-        cell if "test" is passed as params, by default make_phc_circle.
+    cellfun : Callable[[float, float, Sequence[float]], GeomGroup], optional
+        A function of the type fun(x,y,params) that returns the geometry of a single
+        site in the crystal.
     name : str, optional
         DEPRECATED. Name of the crystal, by default "".
 
@@ -566,9 +541,11 @@ def make_phc(
     Raises
     ------
     TypeError
-        If the cellfun function does not return an integer when called with "test" as
-        the params argument, or if it does not return a GeomGroup when called with
+        If the cellfun function does not return a GeomGroup when called with
         valid parameters.
+    ValueError
+        If the passed crystal has inconsistent dimensions or parameters or if the number
+        of cell parameters does not match the number of parameter sets in the crystal.
 
     """
     if name:
@@ -576,30 +553,31 @@ def make_phc(
             "The 'name' parameter is deprecated and will be removed in future versions."
         )
         warnings.warn(msg, DeprecationWarning, stacklevel=2)
-
-    nargs = cellfun(0, 0, "test")
-    if not isinstance(nargs, int):
-        msg = (
-            "The cellfun function must return an integer when called with 'test' as "
-            "the params argument."
-        )
-        raise TypeError(msg)
+    _validate_crystal(crystal)
 
     phc = GeomGroup()
-    for i in range(len(crystal.xpts)):
-        xpos = crystal.xpts[i] * scaling
-        ypos = crystal.ypts[i] * scaling
-        params = [0.0] * nargs
-        for j in range(nargs):
-            params[j] = crystal.params[j, i] * cellparams[j]
-        g = cellfun(xpos, ypos, params)
+    if len(crystal.xpts) == 0:
+        return phc
+
+    if len(cellparams) != crystal.params.shape[0]:
+        msg = (
+            "The number of cell parameters must match the number of parameter sets "
+            "in the crystal."
+        )
+        raise ValueError(msg)
+
+    xpts_scaled = np.asarray(crystal.xpts) * scaling
+    ypts_scaled = np.asarray(crystal.ypts) * scaling
+    params = np.asarray(crystal.params) * np.asarray(cellparams)[:, np.newaxis]
+    for i, (x, y) in enumerate(zip(xpts_scaled, ypts_scaled, strict=True)):
+        g = cellfun(x, y, params[:, i].tolist())
         if not isinstance(g, GeomGroup):
             msg = (
                 "The cellfun function must return a GeomGroup when called with "
                 "valid parameters."
             )
             raise TypeError(msg)
-        phc += g
+        phc.group.extend(g.group)
 
     phc.translate(x0, y0)
     return phc
@@ -631,10 +609,9 @@ def make_phc_inpoly(
         Position x-coordinate in um.
     y0 : float
         Position y-coordinate in um.
-    cellfun : Callable[[float, float, list[float] | str], GeomGroup], optional
-        A function of the type fun(x,y,params) that returns the geometry of the unit
-        cell. It should also return the number of parameters required to draw the unit
-        cell if "test" is passed as params, by default make_phc_circle.
+    cellfun : Callable[[float, float, Sequence[float]], GeomGroup], optional
+        A function of the type fun(x,y,params) that returns the geometry of a single
+        site in the crystal.
     name : str, optional
         DEPRECATED. Name of the crystal, by default "".
 
@@ -646,9 +623,11 @@ def make_phc_inpoly(
     Raises
     ------
     TypeError
-        If the cellfun function does not return an integer when called with "test" as
-        the params argument, or if it does not return a GeomGroup when called with
+        If the cellfun function does not return a GeomGroup when called with
         valid parameters.
+    ValueError
+        If the passed crystal has inconsistent dimensions or parameters or if the number
+        of cell parameters does not match the number of parameter sets in the crystal.
 
     """
     if name:
@@ -656,31 +635,33 @@ def make_phc_inpoly(
             "The 'name' parameter is deprecated and will be removed in future versions."
         )
         warnings.warn(msg, DeprecationWarning, stacklevel=2)
-
-    nargs = cellfun(0, 0, "test")
-    if not isinstance(nargs, int):
-        msg = (
-            "The cellfun function must return an integer when called with 'test' as "
-            "the params argument."
-        )
-        raise TypeError(msg)
+    _validate_crystal(crystal)
 
     phc = GeomGroup()
-    for i in range(len(crystal.xpts)):
-        xpos = crystal.xpts[i] * scaling
-        ypos = crystal.ypts[i] * scaling
-        if poly.point_inside(xpos, ypos):
-            params = [0.0] * nargs
-            for j in range(nargs):
-                params[j] = crystal.params[j, i] * cellparams[j]
-            g = cellfun(xpos, ypos, params)
-            if not isinstance(g, GeomGroup):
-                msg = (
-                    "The cellfun function must return a GeomGroup when called with "
-                    "valid parameters."
-                )
-                raise TypeError(msg)
-            phc += g
+    if len(crystal.xpts) == 0:
+        return phc
+
+    if len(cellparams) != crystal.params.shape[0]:
+        msg = (
+            "The number of cell parameters must match the number of parameter sets "
+            "in the crystal."
+        )
+        raise ValueError(msg)
+
+    xpts_scaled = np.asarray(crystal.xpts) * scaling
+    ypts_scaled = np.asarray(crystal.ypts) * scaling
+    params = np.asarray(crystal.params) * np.asarray(cellparams)[:, np.newaxis]
+    for i, (x, y) in enumerate(zip(xpts_scaled, ypts_scaled, strict=True)):
+        if not poly.point_inside(x, y):
+            continue
+        g = cellfun(x, y, params[:, i].tolist())
+        if not isinstance(g, GeomGroup):
+            msg = (
+                "The cellfun function must return a GeomGroup when called with "
+                "valid parameters."
+            )
+            raise TypeError(msg)
+        phc.group.extend(g.group)
 
     phc.translate(x0, y0)
     return phc
