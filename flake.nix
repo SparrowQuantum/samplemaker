@@ -42,7 +42,13 @@
           dependencies = [
             pyPkgs.matplotlib
             pyPkgs.numpy
+            pyPkgs.asteval
           ];
+
+          nativeCheckInputs = [
+            pyPkgs.pytestCheckHook
+          ];
+          enabledTestPaths = [ "tests/" ];
 
           # scikit-build-core invokes cmake internally; skip Nix's cmake configure hook
           dontUseCmakeConfigure = true;
