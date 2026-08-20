@@ -53,7 +53,6 @@ with `samplemaker`.
 """
 
 import math
-import warnings
 from collections.abc import Callable, MutableMapping, Sequence
 from copy import deepcopy
 from typing import Any, TypeAlias
@@ -330,28 +329,11 @@ class Sequencer:
             errmsg = str(e)
             if "positional argument" not in errmsg or "were given" not in errmsg:
                 raise e
-
-            try:
-                # Legacy init function signature, only state and options are passed
-                # and the function returns None.
-                init_fun(self.state, self.options)  # type: ignore[arg-type]
-                warnings.warn(
-                    "The supplied INIT command function signature is deprecated. "
-                    "Use the new signature with three parameters: args, state, and "
-                    "options.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-            except TypeError as ee:
-                errmsg = str(ee)
-                if "positional argument" not in errmsg or "were given" not in errmsg:
-                    raise ee
-
-                msg = (
-                    "The supplied INIT command function signature is invalid. "
-                    "It should accept three parameters: args, state, and options."
-                )
-                raise TypeError(msg) from e
+            msg = (
+                "The supplied INIT command function signature is invalid. "
+                "It should accept three parameters: args, state, and options."
+            )
+            raise TypeError(msg) from e
 
         for instr in self.seq:
             if not len(instr):

@@ -112,33 +112,6 @@ def view_geometry(grp: GeomGroup) -> None:
     plt.show()
 
 
-def GeomView(grp: GeomGroup) -> None:  # noqa: N802
-    """Plot a geometry in a matplotlib window.
-
-    Only polygons and circles are displayed. Most elements are either ignored or
-    converted to polygon.
-
-    No flattening is performed, thus structure references are not displayed.
-
-    Parameters
-    ----------
-    grp : GeomGroup
-        The geometry to be displayed.
-
-    Returns
-    -------
-    None
-
-    """
-    warnings.warn(
-        "This function is deprecated and will be removed "
-        "in a future version. Use view_geometry() instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    view_geometry(grp)
-
-
 def __update_scrollbar(_val: float) -> None:
     dev = _ViewerCurrentDevice
     ax = _ViewerCurrentAxes
@@ -264,33 +237,3 @@ def inspect_device(devcl: Device | type[Device]) -> None:
         _ViewerCurrentSliders.append(samp)
 
     plt.show()
-
-
-def DeviceInspect(devcl: Device | type[Device]) -> None:  # noqa: N802
-    """Interactive display of devices defined from `samplemaker.devices`.
-
-    If a device class is provided, the device is rendered using its default
-    parameter values. If a device instance is provided, the device is rendered
-    using the instance's current parameter values.
-
-    Additionally a set of scrollbars is created to interactively modify
-    the parameters and observe the changes in real time.
-    If the device includes ports, they are displayed as blue arrows.
-
-    Parameters
-    ----------
-    devcl : Device | type[Device]
-        A device instance or class to be displayed.
-
-    Returns
-    -------
-    None
-
-    """
-    warnings.warn(
-        "This function is deprecated and will be removed "
-        "in a future version. Use inspect_device() instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    inspect_device(devcl)

@@ -29,13 +29,12 @@ import math
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from copy import deepcopy
-from typing import Any, Self, TypeAlias
+from typing import Self, TypeAlias
 
 import numpy as np
 from numpy.typing import ArrayLike
 
 import samplemaker.makers as sm
-from samplemaker import _legacy
 from samplemaker.layout import LayoutPool
 from samplemaker.shapes import GeomGroup, Poly
 
@@ -229,10 +228,9 @@ class Crystal:
     @classmethod
     def triangular_hexagonal(
         cls,
-        n: int | _legacy.MissingType = _legacy.MISSING,
-        filled: bool | _legacy.MissingType = _legacy.MISSING,
+        n: int,
+        filled: bool,
         nparams: int = 1,
-        **kwargs: Any,  # noqa: ANN401
     ) -> Self:
         """Create a triangular photonic crystal in the shape of a hexagon.
 
@@ -247,9 +245,6 @@ class Crystal:
             If True, creates a filled hexagonal crystal, otherwise a ring of radius n.
         nparams : int, optional
             Number of parameters to be controlled for each lattice site, by default 1.
-        kwargs : dict
-            Additional keyword arguments. Supports 'N' and 'Nparams' for backward
-            compatibility.
 
         Returns
         -------
@@ -257,14 +252,6 @@ class Crystal:
             A crystal object with the pre-compiled lattice sites.
 
         """
-        n = _legacy.get_kwarg("n", n, "N", kwargs)
-        nparams = _legacy.get_optional_kwarg("nparams", nparams, 1, "Nparams", kwargs)
-        _legacy.ensure_empty_kwargs("Crystal.triangular_hexagonal", kwargs)
-        _legacy.check_missing_args("Crystal.triangular_hexagonal", n=n, filled=filled)
-
-        n = _legacy.ensure_arg_type("n", n)
-        filled = _legacy.ensure_arg_type("filled", filled)
-
         if n == 0:
             return cls(np.array([0]), np.array([0]), np.ones((nparams, 1)))
         xpts = np.array([])
@@ -290,13 +277,7 @@ class Crystal:
         return cls(xpts, ypts, params)
 
     @classmethod
-    def triangular_box(
-        cls,
-        nx: int | _legacy.MissingType = _legacy.MISSING,
-        ny: int | _legacy.MissingType = _legacy.MISSING,
-        nparams: int = 1,
-        **kwargs: int,
-    ) -> Self:
+    def triangular_box(cls, nx: int, ny: int, nparams: int = 1) -> Self:
         """Create a triangular photonic crystal in the shape of a box.
 
         Parameters
@@ -309,9 +290,6 @@ class Crystal:
             row where y=sqrt(3). The crystal will span from -ny to ny.
         nparams : int, optional
             Number of parameters to be controlled for each lattice site, by default 1.
-        kwargs : dict
-            Additional keyword arguments. Supports 'Nx', 'Ny' and 'Nparams' for backward
-            compatibility.
 
         Returns
         -------
@@ -319,15 +297,6 @@ class Crystal:
             A crystal object with the pre-compiled lattice sites.
 
         """
-        nx = _legacy.get_kwarg("nx", nx, "Nx", kwargs)
-        ny = _legacy.get_kwarg("ny", ny, "Ny", kwargs)
-        nparams = _legacy.get_optional_kwarg("nparams", nparams, 1, "Nparams", kwargs)
-        _legacy.ensure_empty_kwargs("Crystal.triangular_box", kwargs)
-        _legacy.check_missing_args("Crystal.triangular_box", nx=nx, ny=ny)
-
-        nx = _legacy.ensure_arg_type("nx", nx)
-        ny = _legacy.ensure_arg_type("ny", ny)
-
         if nx == 0 and ny == 0:
             return cls(np.array([0]), np.array([0]), np.ones((nparams, 1)))
 
@@ -345,12 +314,11 @@ class Crystal:
     @classmethod
     def triangular_heterophc(
         cls,
-        nx: float | _legacy.MissingType = _legacy.MISSING,
-        ny: int | _legacy.MissingType = _legacy.MISSING,
-        spacing: list[float] | _legacy.MissingType = _legacy.MISSING,
-        periods: list[int] | _legacy.MissingType = _legacy.MISSING,
+        nx: float,
+        ny: int,
+        spacing: list[float],
+        periods: list[int],
         nparams: int = 1,
-        **kwargs: Any,  # noqa: ANN401
     ) -> Self:
         """Create a triangular photonic crystal.
 
@@ -374,9 +342,6 @@ class Crystal:
             remaining).
         nparams : int, optional
             Number of parameters to be controlled for each lattice site, by default 1.
-        kwargs : dict
-            Additional keyword arguments. Supports 'Nx', 'Ny' and 'Nparams' for backward
-            compatibility.
 
         Returns
         -------
@@ -384,23 +349,6 @@ class Crystal:
             A crystal object with the pre-compiled lattice sites.
 
         """
-        nx = _legacy.get_kwarg("nx", nx, "Nx", kwargs)
-        ny = _legacy.get_kwarg("ny", ny, "Ny", kwargs)
-        nparams = _legacy.get_optional_kwarg("nparams", nparams, 1, "Nparams", kwargs)
-        _legacy.ensure_empty_kwargs("Crystal.triangular_heterophc", kwargs)
-        _legacy.check_missing_args(
-            "Crystal.triangular_heterophc",
-            nx=nx,
-            ny=ny,
-            spacing=spacing,
-            periods=periods,
-        )
-
-        nx = _legacy.ensure_arg_type("nx", nx)
-        ny = _legacy.ensure_arg_type("ny", ny)
-        spacing = _legacy.ensure_arg_type("spacing", spacing)
-        periods = _legacy.ensure_arg_type("periods", periods)
-
         startx = 0
         x1 = []
         x2 = []
@@ -511,7 +459,6 @@ def make_phc(
     x0: float,
     y0: float,
     cellfun: CELLFUN_TYPE = make_phc_circle,
-    name: str = "",
 ) -> GeomGroup:
     """Create a photonic crystal geometry.
 
@@ -530,8 +477,6 @@ def make_phc(
     cellfun : Callable[[float, float, Sequence[float]], GeomGroup], optional
         A function of the type fun(x,y,params) that returns the geometry of a single
         site in the crystal.
-    name : str, optional
-        DEPRECATED. Name of the crystal, by default "".
 
     Returns
     -------
@@ -548,11 +493,6 @@ def make_phc(
         of cell parameters does not match the number of parameter sets in the crystal.
 
     """
-    if name:
-        msg = (
-            "The 'name' parameter is deprecated and will be removed in future versions."
-        )
-        warnings.warn(msg, DeprecationWarning, stacklevel=2)
     _validate_crystal(crystal)
 
     phc = GeomGroup()
@@ -591,7 +531,6 @@ def make_phc_inpoly(
     x0: float,
     y0: float,
     cellfun: CELLFUN_TYPE = make_phc_circle,
-    name: str = "",
 ) -> GeomGroup:
     """Create a photonic crystal geometry clipped inside a polygon area.
 
@@ -612,8 +551,6 @@ def make_phc_inpoly(
     cellfun : Callable[[float, float, Sequence[float]], GeomGroup], optional
         A function of the type fun(x,y,params) that returns the geometry of a single
         site in the crystal.
-    name : str, optional
-        DEPRECATED. Name of the crystal, by default "".
 
     Returns
     -------
@@ -630,11 +567,6 @@ def make_phc_inpoly(
         of cell parameters does not match the number of parameter sets in the crystal.
 
     """
-    if name:
-        msg = (
-            "The 'name' parameter is deprecated and will be removed in future versions."
-        )
-        warnings.warn(msg, DeprecationWarning, stacklevel=2)
     _validate_crystal(crystal)
 
     phc = GeomGroup()

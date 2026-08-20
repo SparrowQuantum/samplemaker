@@ -1,7 +1,6 @@
 """Automatic port-to-port routing functions."""
 
 import math
-import warnings
 from copy import deepcopy
 from typing import Any
 
@@ -272,46 +271,6 @@ def connect_waveguide_ports(
     return False, []
 
 
-def WaveguideConnect(  # noqa: N802
-    port1: DevicePort, port2: DevicePort, rad: float = 3
-) -> tuple[bool, list[list[Any]]]:
-    """Calculate a sequence of commands to connect two ports.
-
-    Given a start port and an end port, the function attempts to connect the ports using
-    a sequence of straight lines (sequencer command S), 90 degrees bends (sequencer
-    command B) and cosine bends (sequencer command C). The bending radius is also given.
-    If the ports are too close to be connected via Manhattan-style connectors the
-    function returns False. The sequence can be used in combination with any
-    `samplemaker.sequencer.Sequencer` class that implements the commands S, C, and B.
-
-    DEPRECATED: Use connect_waveguide_ports() instead.
-
-    Parameters
-    ----------
-    port1 : DevicePort
-        Start port for the connection.
-    port2 : DevicePort
-        End port for the connection.
-    rad : float, optional
-        The maximum bend radius in um, by default 3.
-
-    Returns
-    -------
-    bool
-        True if connection succeeded, False otherwise.
-    list[list[Any]]
-        A sequence that realizes the connection.
-
-    """
-    warnings.warn(
-        "This function is deprecated and will be removed "
-        "in a future version. Use connect_waveguide_ports() instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return connect_waveguide_ports(port1, port2, rad)
-
-
 def calculate_elbow_path(
     port1: DevicePort, port2: DevicePort, offset: float = 5
 ) -> tuple[list[float], list[float]]:
@@ -379,41 +338,3 @@ def calculate_elbow_path(
     ypts = sint * x + cost * y + y0
 
     return xpts.tolist(), ypts.tolist()
-
-
-def ElbowRouter(  # noqa: N802
-    port1: DevicePort, port2: DevicePort, offset: float = 5
-) -> tuple[list[float], list[float]]:
-    """Calculate the connector path between two ports using an elbow style connection.
-
-    Typically used for electrical interconnects. Does not check collisions.
-    The offset parameter controls how far should the connector go straight out
-
-    of the ports before attempting a connection (using cubic Bezier).
-
-    DEPRECATED: Use calculate_elbow_path() instead.
-
-    Parameters
-    ----------
-    port1 : DevicePort
-        Start port for the connection.
-    port2 : DevicePort
-        End port for the connection.
-    offset : float, optional
-        How far should the connector stick away from ports, by default 5.
-
-    Returns
-    -------
-    xpts : list[float]
-        1D list of X coordinates of the connector path.
-    ypts : list[float]
-        1D list of Y coordinates of the connector path.
-
-    """
-    warnings.warn(
-        "This function is deprecated and will be removed "
-        "in a future version. Use calculate_elbow_path() instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return calculate_elbow_path(port1, port2, offset)

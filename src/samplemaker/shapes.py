@@ -69,17 +69,16 @@ to save memory and computation time. For example
 
 import math
 import pathlib
-import warnings
 from collections.abc import Collection, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
-from typing import Any, Self
+from typing import Self
 
 import numpy as np
 from asteval import Interpreter
 from numpy.typing import ArrayLike
 
-from samplemaker import _BoundingBoxPool, _legacy
+from samplemaker import _BoundingBoxPool
 from samplemaker.resources import boopy  # type: ignore[import]
 
 _glyphs = {}
@@ -321,30 +320,6 @@ class GeomGroup:
             geom.mirror_x(x0)
         return self
 
-    def mirrorX(self, x0: float) -> Self:  # noqa: N802
-        """Mirror the geometry around x-axis.
-
-        DEPRECATED: Use GeomGroup.mirror_x() instead.
-
-        Parameters
-        ----------
-        x0 : float
-            x-coordinate of the mirroring axis.
-
-        Returns
-        -------
-        Self
-            Reference to the object.
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use GeomGroup.mirror_x() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.mirror_x(x0)
-
     def mirror_y(self, y0: float) -> Self:
         """Mirror the geometry around y-axis.
 
@@ -362,30 +337,6 @@ class GeomGroup:
         for geom in self.group:
             geom.mirror_y(y0)
         return self
-
-    def mirrorY(self, y0: float) -> Self:  # noqa: N802
-        """Mirror the geometry around y-axis.
-
-        DEPRECATED: Use GeomGroup.mirror_y() instead.
-
-        Parameters
-        ----------
-        y0 : float
-            y-coordinate of the mirroring axis.
-
-        Returns
-        -------
-        Self
-            Reference to the object.
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use GeomGroup.mirror_y() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.mirror_y(y0)
 
     def __entity_count(
         self, recursive: bool = True, layer_wise: bool = False, layer: int = 0
@@ -789,7 +740,6 @@ class GeomGroup:
         npts_circle: int = 12,
         npts_arc: int = 32,
         split_arc: bool = False,
-        **kwargs: int,
     ) -> None:
         """Convert all elements except for SRef and Aref to polygons.
 
@@ -803,23 +753,12 @@ class GeomGroup:
         split_arc : bool, optional
             Whether to split arcs into multiple segments when converting to polygons,
             by default False.
-        kwargs: dict
-            Additional keyword arguments. Supports `Npts_circ` and `Npts_arc` for
-            backward compatibility.
 
         Returns
         -------
         None
 
         """
-        npts_circle = _legacy.get_optional_kwarg(
-            "npts_circle", npts_circle, 12, "Npts_circ", kwargs
-        )
-        npts_arc = _legacy.get_optional_kwarg(
-            "npts_arc", npts_arc, 32, "Npts_arc", kwargs
-        )
-        _legacy.ensure_empty_kwargs("GeomGroup.all_to_poly", kwargs)
-
         polys = GeomGroup()
         for i in range(len(self.group)):
             g = self.group[i]
@@ -985,10 +924,9 @@ class GeomGroup:
 
     def boolean_difference(
         self,
-        target_b: "GeomGroup | _legacy.MissingType" = _legacy.MISSING,
-        layer_a: int | _legacy.MissingType = _legacy.MISSING,
-        layer_b: int | _legacy.MissingType = _legacy.MISSING,
-        **kwargs: Any,  # noqa: ANN401
+        target_b: "GeomGroup",
+        layer_a: int,
+        layer_b: int,
     ) -> Self:
         """Perform a boolean difference operation between polygons.
 
@@ -1006,9 +944,6 @@ class GeomGroup:
             The layer from which subtraction should be performed.
         layer_b: int
             The layer to be subtracted.
-        kwargs: dict
-            Additional keyword arguments. Supports `TargetB`, `LayerA`, `LayerB` for
-            backward compatibility.
 
         Returns
         -------
@@ -1016,21 +951,6 @@ class GeomGroup:
             Reference to the object.
 
         """
-        target_b = _legacy.get_kwarg("target_b", target_b, "TargetB", kwargs)
-        layer_a = _legacy.get_kwarg("layer_a", layer_a, "LayerA", kwargs)
-        layer_b = _legacy.get_kwarg("layer_b", layer_b, "LayerB", kwargs)
-        _legacy.ensure_empty_kwargs("GeomGroup.boolean_difference", kwargs)
-        _legacy.check_missing_args(
-            func_name="GeomGroup.boolean_difference",
-            target_b=target_b,
-            layer_a=layer_a,
-            layer_b=layer_b,
-        )
-
-        target_b = _legacy.ensure_arg_type("target_b", target_b)
-        layer_a = _legacy.ensure_arg_type("layer_a", layer_a)
-        layer_b = _legacy.ensure_arg_type("layer_b", layer_b)
-
         # Get the boost python data
         polygroup_a = self.__get_boopy__(layer_a)
         polygroup_b = target_b.__get_boopy__(layer_b)
@@ -1046,10 +966,9 @@ class GeomGroup:
 
     def boolean_xor(
         self,
-        target_b: "GeomGroup | _legacy.MissingType" = _legacy.MISSING,
-        layer_a: int | _legacy.MissingType = _legacy.MISSING,
-        layer_b: int | _legacy.MissingType = _legacy.MISSING,
-        **kwargs: Any,  # noqa: ANN401
+        target_b: "GeomGroup",
+        layer_a: int,
+        layer_b: int,
     ) -> Self:
         """Perform a boolean exclusive-OR (XOR) operation between polygons.
 
@@ -1067,9 +986,6 @@ class GeomGroup:
             The layer from which XOR operation should be performed.
         layer_b: int
             The layer to be XORed.
-        kwargs: dict
-            Additional keyword arguments. Supports `TargetB`, `LayerA`, `LayerB` for
-            backward compatibility.
 
         Returns
         -------
@@ -1077,21 +993,6 @@ class GeomGroup:
             Reference to the object.
 
         """
-        target_b = _legacy.get_kwarg("target_b", target_b, "TargetB", kwargs)
-        layer_a = _legacy.get_kwarg("layer_a", layer_a, "LayerA", kwargs)
-        layer_b = _legacy.get_kwarg("layer_b", layer_b, "LayerB", kwargs)
-        _legacy.ensure_empty_kwargs("GeomGroup.boolean_xor", kwargs)
-        _legacy.check_missing_args(
-            func_name="GeomGroup.boolean_xor",
-            target_b=target_b,
-            layer_a=layer_a,
-            layer_b=layer_b,
-        )
-
-        target_b = _legacy.ensure_arg_type("target_b", target_b)
-        layer_a = _legacy.ensure_arg_type("layer_a", layer_a)
-        layer_b = _legacy.ensure_arg_type("layer_b", layer_b)
-
         # Get the boost python data
         polygroup_a = self.__get_boopy__(layer_a)
         polygroup_b = target_b.__get_boopy__(layer_b)
@@ -1107,10 +1008,9 @@ class GeomGroup:
 
     def boolean_intersection(
         self,
-        target_b: "GeomGroup | _legacy.MissingType" = _legacy.MISSING,
-        layer_a: int | _legacy.MissingType = _legacy.MISSING,
-        layer_b: int | _legacy.MissingType = _legacy.MISSING,
-        **kwargs: Any,  # noqa: ANN401
+        target_b: "GeomGroup",
+        layer_a: int,
+        layer_b: int,
     ) -> Self:
         """Perform a boolean intersection (AND) operation between polygons.
 
@@ -1128,9 +1028,6 @@ class GeomGroup:
             The layer from which subtraction should be performed.
         layer_b: int
             The layer to be subtracted.
-        kwargs: dict
-            Additional keyword arguments. Supports `TargetB`, `LayerA`, `LayerB` for
-            backward compatibility.
 
         Returns
         -------
@@ -1138,21 +1035,6 @@ class GeomGroup:
             Reference to the object.
 
         """
-        target_b = _legacy.get_kwarg("target_b", target_b, "TargetB", kwargs)
-        layer_a = _legacy.get_kwarg("layer_a", layer_a, "LayerA", kwargs)
-        layer_b = _legacy.get_kwarg("layer_b", layer_b, "LayerB", kwargs)
-        _legacy.ensure_empty_kwargs("GeomGroup.boolean_intersection", kwargs)
-        _legacy.check_missing_args(
-            func_name="GeomGroup.boolean_intersection",
-            target_b=target_b,
-            layer_a=layer_a,
-            layer_b=layer_b,
-        )
-
-        target_b = _legacy.ensure_arg_type("target_b", target_b)
-        layer_a = _legacy.ensure_arg_type("layer_a", layer_a)
-        layer_b = _legacy.ensure_arg_type("layer_b", layer_b)
-
         # Get the boost python data
         polygroup_a = self.__get_boopy__(layer_a)
         polygroup_b = target_b.__get_boopy__(layer_b)
@@ -1539,29 +1421,6 @@ class Dot:
         """
         self.x = 2 * x0 - self.x
 
-    def mirrorX(self, x0: float) -> None:  # noqa: N802
-        """Mirror the point with respect to a vertical axis.
-
-        DEPRECATED: Use Dot.mirror_x() instead.
-
-        Parameters
-        ----------
-        x0 : float
-            X coordinate of the mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Dot.mirror_x() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.mirror_x(x0)
-
     def mirror_y(self, y0: float) -> None:
         """Mirror the point with respect to a horizontal axis.
 
@@ -1576,57 +1435,6 @@ class Dot:
 
         """
         self.y = 2 * y0 - self.y
-
-    def mirrorY(self, y0: float) -> None:  # noqa: N802
-        """Mirror the point with respect to a horizontal axis.
-
-        DEPRECATED: Use Dot.mirror_y() instead.
-
-        Parameters
-        ----------
-        y0 : float
-            Y coordinate of the mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Dot.mirror_y() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.mirror_y(y0)
-
-
-_BW_COMPAT_FLOAT_CACHE: dict[str, type[float]] = {}
-
-
-def _bw_compat_float_factory(method_name: str) -> type[float]:
-    if method_name in _BW_COMPAT_FLOAT_CACHE:
-        return _BW_COMPAT_FLOAT_CACHE[method_name]
-
-    class _BWCompatFloat(float):
-        """Backward compatibility class for properties that used to be methods."""
-
-        def __call__(self) -> float:
-            """Return the float value after raising a deprecation warning."""
-            msg = (
-                f"Calling {method_name}() is deprecated and will "
-                "be removed in a future version. "
-                f"Use the property {method_name} instead."
-            )
-            warnings.warn(
-                msg,
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            return float(self)
-
-    _BW_COMPAT_FLOAT_CACHE[method_name] = _BWCompatFloat
-    return _BWCompatFloat
 
 
 class Box:
@@ -1666,8 +1474,7 @@ class Box:
             x-coordinate of the box center.
 
         """
-        float_class = _bw_compat_float_factory("Box.cx")
-        return float_class(self.llx + self.width / 2)
+        return self.llx + self.width / 2
 
     @property
     def cy(self) -> float:
@@ -1679,8 +1486,7 @@ class Box:
             y-coordinate of the box center.
 
         """
-        float_class = _bw_compat_float_factory("Box.cy")
-        return float_class(self.lly + self.height / 2)
+        return self.lly + self.height / 2
 
     @property
     def urx(self) -> float:
@@ -1692,8 +1498,7 @@ class Box:
             x-coordinate of the upper-right corner.
 
         """
-        float_class = _bw_compat_float_factory("Box.urx")
-        return float_class(self.llx + self.width)
+        return self.llx + self.width
 
     @property
     def ury(self) -> float:
@@ -1705,8 +1510,7 @@ class Box:
             y-coordinate of the upper-right corner.
 
         """
-        float_class = _bw_compat_float_factory("Box.ury")
-        return float_class(self.lly + self.height)
+        return self.lly + self.height
 
     def combine(self, other: "Box") -> None:
         """Extend the box to fit another box.
@@ -1748,25 +1552,6 @@ class Box:
             0,
         )
 
-    def toPoly(self) -> "Poly":  # noqa: N802
-        """Convert the box to a `Poly` object that can be added to geometry groups.
-
-        The resulting polygon will be initialized in layer 0.
-
-        Returns
-        -------
-        Poly
-            The poly representing the box.
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Box.to_poly() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.to_poly()
-
     def to_rect(self) -> GeomGroup:
         """Create a group with a rectangle for drawing.
 
@@ -1779,23 +1564,6 @@ class Box:
         g = GeomGroup()
         g.add(self.to_poly())
         return g
-
-    def toRect(self) -> GeomGroup:  # noqa: N802
-        """Create a group with a rectangle for drawing.
-
-        Returns
-        -------
-        GeomGroup
-            The group containing the bounding box rectangle.
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Box.to_rect() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.to_rect()
 
     def get_numkey_point(self, numkey: int) -> tuple[float, float]:
         """Get a tuple with coordinates of the point matching a numerical keypad.
@@ -2014,29 +1782,6 @@ class Poly:
         """
         self.data[0::2] = 2 * x0 - self.data[0::2]
 
-    def mirrorX(self, x0: float) -> None:  # noqa: N802
-        """Mirror polygon vertices with respect to a vertical axis.
-
-        DEPRECATED: Use Poly.mirror_x() instead.
-
-        Parameters
-        ----------
-        x0 : float
-            X coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Poly.mirror_x() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.mirror_x(x0)
-
     def mirror_y(self, y0: float) -> None:
         """Mirror polygon vertices with respect to a horizontal axis.
 
@@ -2051,29 +1796,6 @@ class Poly:
 
         """
         self.data[1::2] = 2 * y0 - self.data[1::2]
-
-    def mirrorY(self, y0: float) -> None:  # noqa: N802
-        """Mirror polygon vertices with respect to a horizontal axis.
-
-        DEPRECATED: Use Poly.mirror_y() instead.
-
-        Parameters
-        ----------
-        y0 : float
-            Y coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Poly.mirror_y() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.mirror_y(y0)
 
     def bounding_box(self) -> Box:
         """Compute the polygon bounding box.
@@ -2564,29 +2286,6 @@ class Path:
         for i in range(self.Npts):
             self.xpts[i] = 2 * x0 - self.xpts[i]
 
-    def mirrorX(self, x0: float) -> None:  # noqa: N802
-        """Mirror path vertices with respect to a vertical axis.
-
-        DEPRECATED: Use Path.mirror_x() instead.
-
-        Parameters
-        ----------
-        x0 : float
-            X coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Path.mirror_x() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.mirror_x(x0)
-
     def mirror_y(self, y0: float) -> None:
         """Mirror path vertices with respect to a horizontal axis.
 
@@ -2602,29 +2301,6 @@ class Path:
         """
         for i in range(self.Npts):
             self.ypts[i] = 2 * y0 - self.ypts[i]
-
-    def mirrorY(self, y0: float) -> None:  # noqa: N802
-        """Mirror path vertices with respect to a horizontal axis.
-
-        DEPRECATED: Use Path.mirror_y() instead.
-
-        Parameters
-        ----------
-        y0 : float
-            Y coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Path.mirror_y() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.mirror_y(y0)
 
     def bounding_box(self) -> Box:
         """Compute the path bounding box.
@@ -2945,29 +2621,6 @@ class Text:
         self.x0 = 2 * xc - self.x0
         self.angle = 180 - self.angle
 
-    def mirrorX(self, xc: float) -> None:  # noqa: N802
-        """Mirror text with respect to a vertical axis.
-
-        DEPRECATED: Use Text.mirror_x() instead.
-
-        Parameters
-        ----------
-        xc : float
-            X coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Text.mirror_x() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.mirror_x(xc)
-
     def mirror_y(self, yc: float) -> None:
         """Mirror text with respect to a horizontal axis.
 
@@ -2983,29 +2636,6 @@ class Text:
         """
         self.y0 = 2 * yc - self.y0
         self.angle = -self.angle
-
-    def mirrorY(self, yc: float) -> None:  # noqa: N802
-        """Mirror text with respect to a horizontal axis.
-
-        DEPRECATED: Use Text.mirror_y() instead.
-
-        Parameters
-        ----------
-        yc : float
-            Y coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Text.mirror_y() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.mirror_y(yc)
 
     def bounding_box(self) -> Box:
         """Return a degenerate bounding box at text anchor.
@@ -3237,29 +2867,6 @@ class RefBase:
         self.angle = 180 - self.angle
         self.angle = self.angle % 360
 
-    def mirrorX(self, xc: float) -> None:  # noqa: N802
-        """Mirror reference with respect to a vertical axis.
-
-        DEPRECATED: Use RefBase.mirror_x() instead.
-
-        Parameters
-        ----------
-        xc : float
-            X coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use RefBase.mirror_x() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.mirror_x(xc)
-
     def mirror_y(self, yc: float) -> None:
         """Mirror reference with respect to a horizontal axis.
 
@@ -3276,29 +2883,6 @@ class RefBase:
         self.y0 = 2 * yc - self.y0
         self.mirror = not self.mirror
         self.angle = -self.angle
-
-    def mirrorY(self, yc: float) -> None:  # noqa: N802
-        """Mirror reference with respect to a horizontal axis.
-
-        DEPRECATED: Use RefBase.mirror_y() instead.
-
-        Parameters
-        ----------
-        yc : float
-            Y coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use RefBase.mirror_y() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.mirror_y(yc)
 
     def centroid(self) -> tuple[float, float]:
         """Return reference anchor point.
@@ -3631,29 +3215,6 @@ class Circle:
         """
         self.x0 = 2 * xc - self.x0
 
-    def mirrorX(self, xc: float) -> None:  # noqa: N802
-        """Mirror circle center with respect to a vertical axis.
-
-        DEPRECATED: Use Circle.mirror_x() instead.
-
-        Parameters
-        ----------
-        xc : float
-            X coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Circle.mirror_x() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.mirror_x(xc)
-
     def mirror_y(self, yc: float) -> None:
         """Mirror circle center with respect to a horizontal axis.
 
@@ -3668,29 +3229,6 @@ class Circle:
 
         """
         self.y0 = 2 * yc - self.y0
-
-    def mirrorY(self, yc: float) -> None:  # noqa: N802
-        """Mirror circle center with respect to a horizontal axis.
-
-        DEPRECATED: Use Circle.mirror_y() instead.
-
-        Parameters
-        ----------
-        yc : float
-            Y coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Circle.mirror_y() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.mirror_y(yc)
 
     def bounding_box(self) -> Box:
         """Compute circle bounding box.
@@ -3736,15 +3274,13 @@ class Circle:
         """
         return 2 * np.pi * self.r
 
-    def to_polygon(self, npts: int = 12, **kwargs: int) -> GeomGroup:
+    def to_polygon(self, npts: int = 12) -> GeomGroup:
         """Approximate the circle with a polygon.
 
         Parameters
         ----------
         npts : int, optional
             Number of polygon vertices. Default is 12.
-        kwargs : dict
-            Additional keyword arguments for backward compatibility. Supports `Npts`.
 
         Returns
         -------
@@ -3752,9 +3288,6 @@ class Circle:
             Group containing one polygon approximation.
 
         """
-        npts = _legacy.get_optional_kwarg("npts", npts, 12, "Npts", kwargs)
-        _legacy.ensure_empty_kwargs("Circle.to_polygon", kwargs)
-
         xc = np.array([0.0] * npts)
         yc = np.array([0.0] * npts)
         for i in range(npts):
@@ -3769,14 +3302,7 @@ class Ellipse(Circle):
     """Ellipse primitive with independent x/y radii and rotation."""
 
     def __init__(
-        self,
-        x0: float,
-        y0: float,
-        rx: float | _legacy.MissingType = _legacy.MISSING,
-        ry: float | _legacy.MissingType = _legacy.MISSING,
-        layer: int | _legacy.MissingType = _legacy.MISSING,
-        rot: float | _legacy.MissingType = _legacy.MISSING,
-        **kwargs: float,
+        self, x0: float, y0: float, rx: float, ry: float, layer: int, rot: float
     ) -> None:
         """Create an ellipse.
 
@@ -3794,27 +3320,8 @@ class Ellipse(Circle):
             Layer number.
         rot : float
             Rotation angle in degrees.
-        kwargs : dict
-            Additional keyword arguments for backward compatibility. Supports
-            `rX` and `rY`.
 
         """
-        rx = _legacy.get_kwarg("rx", rx, "rX", kwargs)
-        ry = _legacy.get_kwarg("ry", ry, "rY", kwargs)
-        _legacy.ensure_empty_kwargs("Ellipse.__init__", kwargs)
-        _legacy.check_missing_args(
-            func_name="Ellipse.__init__",
-            rx=rx,
-            ry=ry,
-            layer=layer,
-            rot=rot,
-        )
-
-        rx = _legacy.ensure_arg_type("rx", rx)
-        ry = _legacy.ensure_arg_type("ry", ry)
-        layer = _legacy.ensure_arg_type("layer", layer)
-        rot = _legacy.ensure_arg_type("rot", rot)
-
         Circle.__init__(self, x0, y0, rx, layer)
         self.r1 = ry
         self.rot = rot
@@ -3897,29 +3404,6 @@ class Ellipse(Circle):
         Circle.mirror_x(self, xc)
         self.rot = 180 - self.rot
 
-    def mirrorX(self, xc: float) -> None:  # noqa: N802
-        """Mirror ellipse with respect to a vertical axis.
-
-        DEPRECATED: Use Ellipse.mirror_x() instead.
-
-        Parameters
-        ----------
-        xc : float
-            X coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Ellipse.mirror_x() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.mirror_x(xc)
-
     def mirror_y(self, yc: float) -> None:
         """Mirror ellipse with respect to a horizontal axis.
 
@@ -3935,29 +3419,6 @@ class Ellipse(Circle):
         """
         Circle.mirror_y(self, yc)
         self.rot = -self.rot
-
-    def mirrorY(self, yc: float) -> None:  # noqa: N802
-        """Mirror ellipse with respect to a horizontal axis.
-
-        DEPRECATED: Use Ellipse.mirror_y() instead.
-
-        Parameters
-        ----------
-        yc : float
-            Y coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Ellipse.mirror_y() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.mirror_y(yc)
 
     def bounding_box(self) -> Box:
         """Compute ellipse bounding box from polygon approximation.
@@ -3995,16 +3456,13 @@ class Ellipse(Circle):
         b = self.r1
         return np.pi * (3 * (a + b) - np.sqrt((3 * a + b) * (a + 3 * b)))
 
-    def to_polygon(self, npts: int = 32, **kwargs: int) -> GeomGroup:
+    def to_polygon(self, npts: int = 32) -> GeomGroup:
         """Approximate the ellipse with a polygon.
 
         Parameters
         ----------
         npts : int, optional
             Number of polygon vertices. Default is 32.
-        kwargs : dict
-            Additional keyword arguments. Supports `Npts` for backward
-            compatibility.
 
         Returns
         -------
@@ -4012,9 +3470,6 @@ class Ellipse(Circle):
             Group containing one polygon approximation.
 
         """
-        npts = _legacy.get_optional_kwarg("npts", npts, 32, "Npts", kwargs)
-        _legacy.ensure_empty_kwargs("Ellipse.to_polygon", kwargs)
-
         xc = np.array([0.0] * npts)
         yc = np.array([0.0] * npts)
         for i in range(npts):
@@ -4033,12 +3488,11 @@ class Ring(Ellipse):
         self,
         x0: float,
         y0: float,
-        rx: float | _legacy.MissingType = _legacy.MISSING,
-        ry: float | _legacy.MissingType = _legacy.MISSING,
-        layer: int | _legacy.MissingType = _legacy.MISSING,
-        rot: float | _legacy.MissingType = _legacy.MISSING,
-        w: float | _legacy.MissingType = _legacy.MISSING,
-        **kwargs: float,
+        rx: float,
+        ry: float,
+        layer: int,
+        rot: float,
+        w: float,
     ) -> None:
         """Create a ring.
 
@@ -4058,29 +3512,8 @@ class Ring(Ellipse):
             Rotation angle in degrees.
         w : float
             Ring width.
-        kwargs : dict
-            Additional keyword arguments for backward compatibility.
-            Supports `rX` and `rY`.
 
         """
-        rx = _legacy.get_kwarg("rx", rx, "rX", kwargs)
-        ry = _legacy.get_kwarg("ry", ry, "rY", kwargs)
-        _legacy.ensure_empty_kwargs("Ring.__init__", kwargs)
-        _legacy.check_missing_args(
-            func_name="Ring.__init__",
-            rx=rx,
-            ry=ry,
-            layer=layer,
-            rot=rot,
-            w=w,
-        )
-
-        rx = _legacy.ensure_arg_type("rx", rx)
-        ry = _legacy.ensure_arg_type("ry", ry)
-        layer = _legacy.ensure_arg_type("layer", layer)
-        rot = _legacy.ensure_arg_type("rot", rot)
-        w = _legacy.ensure_arg_type("w", w)
-
         Ellipse.__init__(self, x0, y0, rx, ry, layer, rot)
         self.w = w
 
@@ -4143,16 +3576,13 @@ class Ring(Ellipse):
         g = self.to_polygon(12)
         return g.group[0].perimeter()
 
-    def to_polygon(self, npts: int = 32, **kwargs: int) -> GeomGroup:
+    def to_polygon(self, npts: int = 32) -> GeomGroup:
         """Approximate ring contours with a polygon.
 
         Parameters
         ----------
         npts : int, optional
             Number of segments used per contour. Default is 32.
-        kwargs : dict
-            Additional keyword arguments. Supports `Npts` for backward
-            compatibility.
 
         Returns
         -------
@@ -4160,9 +3590,6 @@ class Ring(Ellipse):
             Group containing one polygon for the ring.
 
         """
-        npts = _legacy.get_optional_kwarg("npts", npts, 32, "Npts", kwargs)
-        _legacy.ensure_empty_kwargs("Ring.to_polygon", kwargs)
-
         xpts = np.array([0.0] * (2 + npts * 2))
         ypts = np.array([0.0] * (2 + npts * 2))
         for i in range(1 + npts):
@@ -4192,14 +3619,13 @@ class Arc(Ring):
         self,
         x0: float,
         y0: float,
-        rx: float | _legacy.MissingType = _legacy.MISSING,
-        ry: float | _legacy.MissingType = _legacy.MISSING,
-        layer: int | _legacy.MissingType = _legacy.MISSING,
-        rot: float | _legacy.MissingType = _legacy.MISSING,
-        w: float | _legacy.MissingType = _legacy.MISSING,
-        a1: float | _legacy.MissingType = _legacy.MISSING,
-        a2: float | _legacy.MissingType = _legacy.MISSING,
-        **kwargs: float,
+        rx: float,
+        ry: float,
+        layer: int,
+        rot: float,
+        w: float,
+        a1: float,
+        a2: float,
     ) -> None:
         """Create an arc.
 
@@ -4223,33 +3649,8 @@ class Arc(Ring):
             Start angle in degrees.
         a2 : float
             End angle in degrees.
-        kwargs : dict
-            Additional keyword arguments for backward compatibility.
-            Supports `rX` and `rY`.
 
         """
-        rx = _legacy.get_kwarg("rx", rx, "rX", kwargs)
-        ry = _legacy.get_kwarg("ry", ry, "rY", kwargs)
-        _legacy.check_missing_args(
-            func_name="Arc.__init__",
-            rx=rx,
-            ry=ry,
-            layer=layer,
-            rot=rot,
-            w=w,
-            a1=a1,
-            a2=a2,
-        )
-        _legacy.ensure_empty_kwargs("Arc.__init__", kwargs)
-
-        rx = _legacy.ensure_arg_type("rx", rx)
-        ry = _legacy.ensure_arg_type("ry", ry)
-        layer = _legacy.ensure_arg_type("layer", layer)
-        rot = _legacy.ensure_arg_type("rot", rot)
-        w = _legacy.ensure_arg_type("w", w)
-        a1 = _legacy.ensure_arg_type("a1", a1)
-        a2 = _legacy.ensure_arg_type("a2", a2)
-
         super().__init__(x0, y0, rx, ry, layer, rot, w)
         self.a1 = a1
         self.a2 = a2
@@ -4290,9 +3691,7 @@ class Arc(Ring):
         g = self.to_polygon(12)
         return g.group[0].centroid()
 
-    def to_polygon(
-        self, npts: int = 32, autosplit: bool = False, **kwargs: int
-    ) -> GeomGroup:
+    def to_polygon(self, npts: int = 32, autosplit: bool = False) -> GeomGroup:
         """Convert arc to polygon.
 
         Parameters
@@ -4301,9 +3700,6 @@ class Arc(Ring):
             Number of points to approximate the arc. Default is 32.
         autosplit : bool, optional
             Whether to split the arc into multiple polygons. Default is False.
-        kwargs : dict
-            Additional keyword arguments. Currently supports `Npts` for backward
-            compatibility.
 
         Returns
         -------
@@ -4311,9 +3707,6 @@ class Arc(Ring):
             GeomGroup containing the polygon representation of the arc.
 
         """
-        npts = _legacy.get_optional_kwarg("npts", npts, 32, "Npts", kwargs)
-        _legacy.ensure_empty_kwargs("Arc.to_polygon", kwargs)
-
         npts += 1
         th = np.linspace(math.radians(self.a1), math.radians(self.a2), npts)
         xpts1 = np.cos(th) * (self.r + self.w / 2) + self.x0

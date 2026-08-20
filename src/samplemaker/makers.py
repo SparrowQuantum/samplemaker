@@ -19,7 +19,6 @@ from collections.abc import Sequence
 from numpy.typing import ArrayLike
 
 import samplemaker.shapes as smsh
-from samplemaker import _legacy
 from samplemaker.shapes import GeomGroup
 
 
@@ -315,13 +314,12 @@ def make_circle(
 def make_ellipse(
     x0: float,
     y0: float,
-    rx: float | _legacy.MissingType = _legacy.MISSING,
-    ry: float | _legacy.MissingType = _legacy.MISSING,
-    rot: float | _legacy.MissingType = _legacy.MISSING,
+    rx: float,
+    ry: float,
+    rot: float,
     layer: int = 1,
     to_poly: bool = False,
     vertices: int = 32,
-    **kwargs: float,
 ) -> GeomGroup:
     """Create a filled ellipse.
 
@@ -344,8 +342,6 @@ def make_ellipse(
     vertices : int, optional
         Specify the number of vertices to be used for conversion to polygon, by
         default 32.
-    kwargs : float
-        Additional keyword arguments. Supports 'rX' and 'rY' for backward compatibility.
 
     Returns
     -------
@@ -353,14 +349,6 @@ def make_ellipse(
         A geometry containing a single ellipse.
 
     """
-    rx = _legacy.get_kwarg("rx", rx, "rX", kwargs)
-    ry = _legacy.get_kwarg("ry", ry, "rY", kwargs)
-    _legacy.ensure_empty_kwargs("make_ellipse", kwargs)
-    _legacy.check_missing_args("make_ellipse", rx=rx, ry=ry, rot=rot)
-
-    rx = _legacy.ensure_arg_type("rx", rx)
-    ry = _legacy.ensure_arg_type("ry", ry)
-
     g = GeomGroup()
     c = smsh.Ellipse(x0, y0, rx, ry, layer, rot)
     if to_poly:
@@ -373,14 +361,13 @@ def make_ellipse(
 def make_ring(
     x0: float,
     y0: float,
-    rx: float | _legacy.MissingType = _legacy.MISSING,
-    ry: float | _legacy.MissingType = _legacy.MISSING,
-    rot: float | _legacy.MissingType = _legacy.MISSING,
-    w: float | _legacy.MissingType = _legacy.MISSING,
+    rx: float,
+    ry: float,
+    rot: float,
+    w: float,
     layer: int = 1,
     to_poly: bool = False,
     vertices: int = 32,
-    **kwargs: float,
 ) -> GeomGroup:
     """Create an elliptical ring.
 
@@ -405,8 +392,6 @@ def make_ring(
     vertices : int, optional
         Specify the number of vertices to be used for conversion to polygon, by
         default 32.
-    kwargs : float
-        Additional keyword arguments. Supports 'rX' and 'rY' for backward compatibility.
 
     Returns
     -------
@@ -414,14 +399,6 @@ def make_ring(
         A geometry containing a single ring.
 
     """
-    rx = _legacy.get_kwarg("rx", rx, "rX", kwargs)
-    ry = _legacy.get_kwarg("ry", ry, "rY", kwargs)
-    _legacy.ensure_empty_kwargs("make_ring", kwargs)
-    _legacy.check_missing_args("make_ring", rx=rx, ry=ry, rot=rot, w=w)
-
-    rx = _legacy.ensure_arg_type("rx", rx)
-    ry = _legacy.ensure_arg_type("ry", ry)
-
     g = GeomGroup()
     c = smsh.Ring(x0, y0, rx, ry, layer, rot, w)
     if to_poly:
@@ -434,17 +411,16 @@ def make_ring(
 def make_arc(
     x0: float,
     y0: float,
-    rx: float | _legacy.MissingType = _legacy.MISSING,
-    ry: float | _legacy.MissingType = _legacy.MISSING,
-    rot: float | _legacy.MissingType = _legacy.MISSING,
-    w: float | _legacy.MissingType = _legacy.MISSING,
-    a1: float | _legacy.MissingType = _legacy.MISSING,
-    a2: float | _legacy.MissingType = _legacy.MISSING,
+    rx: float,
+    ry: float,
+    rot: float,
+    w: float,
+    a1: float,
+    a2: float,
     layer: int = 1,
     to_poly: bool = False,
     vertices: int = 32,
     split: bool = False,
-    **kwargs: float,
 ) -> GeomGroup:
     """Create an elliptical arc.
 
@@ -477,8 +453,6 @@ def make_arc(
         default 32.
     split : bool, optional
         Will also split the arc in quadrangles if to_poly is True, by default False.
-    kwargs : float
-        Additional keyword arguments. Supports 'rX' and 'rY' for backward compatibility.
 
     Returns
     -------
@@ -486,18 +460,6 @@ def make_arc(
         A geometry containing a single arc.
 
     """
-    rx = _legacy.get_kwarg("rx", rx, "rX", kwargs)
-    ry = _legacy.get_kwarg("ry", ry, "rY", kwargs)
-    _legacy.ensure_empty_kwargs("make_arc", kwargs)
-    _legacy.check_missing_args("make_arc", rx=rx, ry=ry, rot=rot, w=w, a1=a1, a2=a2)
-
-    rx = _legacy.ensure_arg_type("rx", rx)
-    ry = _legacy.ensure_arg_type("ry", ry)
-    rot = _legacy.ensure_arg_type("rot", rot)
-    w = _legacy.ensure_arg_type("w", w)
-    a1 = _legacy.ensure_arg_type("a1", a1)
-    a2 = _legacy.ensure_arg_type("a2", a2)
-
     g = GeomGroup()
     c = smsh.Arc(x0, y0, rx, ry, layer, rot, w, a1, a2)
     if to_poly:
