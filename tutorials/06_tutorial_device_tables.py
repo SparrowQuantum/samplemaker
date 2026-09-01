@@ -5,13 +5,13 @@
 
 # Here we look at how to organize devices in different files, for reusing them over
 # different scripts. We moved the device from the previous tutorial into a separate file
-# and we called it TutorialCollection.py. Check out this file before starting.
+# and we called it tutorial_collection.py. Check out this file before starting.
 
 # Let's use numpy arrays
 import numpy as np
 
 # Let's import the tutorial collection of devices, they get automatically registered:
-import TutorialCollection  # noqa: F401
+import tutorial_collection  # noqa: F401
 
 import samplemaker.devices as smdev  # used for device function
 import samplemaker.layout as smlay  # used for layout

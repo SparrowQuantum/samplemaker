@@ -10,12 +10,12 @@ It is recommended to instantiate only a single `Mask` object in each script.
 An empty GDS file can be created as follows:
 
     mask = Mask("test_mask")
-    mask.exportGDS()
+    mask.export_gds()
 
 By default, the GDS file contains a single structure called 'CELL00'. To modify
 the symbol name, change the `Mask.mainsymbol` variable.
 By default, new geometry elements should be added to the main cell with the
-`Mask.addToMainCell` method. To add more cells manually, use `Mask.addCell` instead.
+`Mask.add_to_main_cell` method. To add more cells manually, use `Mask.add_cell` instead.
 At export time, all cell references that are not referenced by the main cell are
 automatically discarded.
 
@@ -48,23 +48,23 @@ To help the mask design process, it is possible to define and display write-fiel
 in the `Mask` class. These can either be added individually or as a grid. To add
 a 10x10, 500x500 um2 large write-field grid:
 
-    mask.addWriteFieldGrid(500,0,0,10,10)
+    mask.add_writefield_grid(500,0,0,10,10)
 
 Write-fields are only used as a visual aid in `samplemaker` to assist the placement
-of geoemetries in the mask.
+of geometries in the mask.
 
-Aligment marks
+Alignment marks
 --------------
 
 When running multiple exposures in UV or e-beam lithography, it is usually required
-to place aligment marks in the layout.
+to place alignment marks in the layout.
 Marks are defined separately using the `Marker` and `MarkerSet` classes.
 The common approach is to define a named `MarkerSet` and add it to the list of
 marker sets in the `Mask` class:
 
     markerset = MarkerSet("Ebeam1", markdev,
                 x0=0,y0=0,mset=4,xdist=2000,ydist=2000)
-    mask.addMarkers(markerset)
+    mask.add_markers(markerset)
 
 The above example creates a 2x2 mark set (mset=4) 2 mm apart called "Ebeam1".
 The actual shape used to draw the marker is provided by the Device object "markdev"

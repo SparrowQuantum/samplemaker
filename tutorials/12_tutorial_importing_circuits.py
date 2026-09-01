@@ -5,7 +5,7 @@
 
 # This is an alternative way of creating circuits using a simple text import instead of
 # creating netlists manually. We will redo the same as 09_Tutorial_Circuits.py but using
-# a circuit file (see CircuitFile.txt).
+# a circuit file (see circuit_file.txt).
 
 # Let's import basic stuff
 import samplemaker.baselib.devices  # noqa: F401
@@ -17,7 +17,7 @@ themask = smlay.Mask("12_Tutorial_ImportCircuits")
 
 # To create a circuit we need to define a netlist. This time we use the import_circuit
 # function for netlist
-netlist = smdev.NetList.import_circuit("CircuitFile.txt", "bigger")
+netlist = smdev.NetList.import_circuit("circuit_file.txt", "bigger")
 
 # as before we just create a circuit device and set the netlist
 cir2 = smdev.Circuit.build()

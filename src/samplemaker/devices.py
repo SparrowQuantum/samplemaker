@@ -42,13 +42,13 @@ This is done in the `Device.initialize` method:
 
     def initialize(self):
         self.set_name("MYDEVICE")
-        self.set_decription("First version of MYDEVICE")
+        self.set_description("First version of MYDEVICE")
 
-The name is used to call devices later on (see Device registraiton below) and
+The name is used to call devices later on (see Device registration below) and
 to instantiate them in circuits.
 
 ### Parameters
-Device paramters must be defined via the function `Device.add_parameter` as follows:
+Device parameters must be defined via the function `Device.add_parameter` as follows:
 
     def parameters(self):
         self.add_parameter("my_param", default_value, "Description", type, (min, max))
@@ -88,7 +88,7 @@ exact sequence of operation is carried out.
 To use the re-use the devices later on, it is common practice to build a library of
 devices (containing all the classes) and register the devices to a shared dictionary
 that other functions can use to build/run named devices.
-This is achieved via the `registerDevicesInModule` which can be called at the end
+This is achieved via the `register_devices_in_module` which can be called at the end
 of each python script and will update a hidden device database.
 Building a device is then simply done as
 
