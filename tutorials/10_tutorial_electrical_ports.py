@@ -1,6 +1,4 @@
-"""
-10_Tutorial_ElectricalPorts
-"""
+"""10_tutorial_electrical_ports."""
 
 
 # So far we used devices with optical port connectivity. You can create arbitrary
@@ -9,7 +7,7 @@
 
 # Let's import basic stuff
 import numpy as np
-from TutorialCollection import FreeFreeMembrane
+from tutorial_collection import FreeFreeMembrane
 
 import samplemaker.layout as smlay  # used for layout
 import samplemaker.makers as sm  # used for drawing
@@ -21,7 +19,7 @@ from samplemaker.devices import DevicePort
 from samplemaker.routers import calculate_elbow_path
 
 # Create a simple mask layout
-themask = smlay.Mask("10_Tutorial_ElectricalPorts")
+themask = smlay.Mask("10_tutorial_electrical_ports")
 
 # Before starting, we need to create an electrical port that we like, for example some
 # global connector options.
@@ -52,17 +50,17 @@ class ElectricalPort(DevicePort):
         x0: float,
         y0: float,
         orient: str = "East",
-        width: float = None,
-        name: str = None,
+        width: float | None = None,
+        name: str | None = None,
     ):
         orient = orient.lower()
         horizontal = True
         forward = True
-        if orient == "west" or orient == "w":
+        if orient in {"west", "w"}:
             forward = False
-        if orient == "north" or orient == "n":
+        if orient in {"north", "n"}:
             horizontal = False
-        if orient == "south" or orient == "s":
+        if orient in {"south", "s"}:
             horizontal = False
             forward = False
 
@@ -109,18 +107,18 @@ class FreeFreeMembraneELE(FreeFreeMembrane):
 
 # To test it, let's create two and connect them!
 ffme1 = FreeFreeMembraneELE.build()
-geomE = ffme1.run()
+geom = ffme1.run()
 
 ffme2 = FreeFreeMembraneELE.build()
 ffme2._x0 = 100  # Note this is usually not recommended, use netlist to place objects!
-geomE += ffme2.run()
+geom += ffme2.run()
 
 # using the connector function of the port, see tutorial 9
 conn_fun = ffme1._ports["emesa"].connector_function
-geomE += conn_fun(ffme1._ports["emesa"], ffme2._ports["emesa"])
+geom += conn_fun(ffme1._ports["emesa"], ffme2._ports["emesa"])
 
 # Let's add all to main cell
-themask.add_to_main_cell(geomE)
+themask.add_to_main_cell(geom)
 
 # Export to GDS
 themask.export_gds()

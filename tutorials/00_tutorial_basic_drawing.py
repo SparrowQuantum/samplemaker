@@ -1,13 +1,11 @@
-"""
-00_Tutorial_BasicDrawing
-"""
+"""00_tutorial_basic_drawing."""
 
 import samplemaker.layout as smlay  # used for layout
 import samplemaker.makers as sm  # used for drawing
 from samplemaker.viewers import view_geometry  # Used to inspect drawing before viewing
 
 # Create a simple mask layout
-themask = smlay.Mask("00_Tutorial_BasicDrawing")
+themask = smlay.Mask("00_tutorial_basic_drawing")
 
 # THe idea of basic drawing is to place geometry elements and manipulate them
 # When we are happy we add them to the mask and write to GDS.
@@ -47,7 +45,7 @@ re0.mirror_y(0)
 # We can inspect the geometry using view_geometry()
 view_geometry(re0)
 
-# To add the rectangles to the final layout use addToMainCell()
+# To add the rectangles to the final layout use add_to_main_cell()
 themask.add_to_main_cell(re0)
 
 # Export to GDS

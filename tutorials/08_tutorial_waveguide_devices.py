@@ -1,6 +1,4 @@
-"""
-08_Tutorial_WaveguideDevices
-"""
+"""08_tutorial_waveguide_devices."""
 
 
 # In this tutorial we create a simple directional coupler
@@ -23,7 +21,7 @@ from samplemaker.viewers import inspect_device
 # the device to the outside (e.g. to other devices in a circuit).
 
 # Create a simple mask layout
-themask = smlay.Mask("08_Tutorial_WaveguideDevices")
+themask = smlay.Mask("08_tutorial_waveguide_devices")
 
 # As in tutorial 05, let's create a device
 

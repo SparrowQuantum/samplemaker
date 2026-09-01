@@ -1,6 +1,4 @@
-"""
-06_Tutorial_DeviceTables
-"""
+"""06_tutorial_device_tables."""
 
 
 # Here we look at how to organize devices in different files, for reusing them over
@@ -18,7 +16,7 @@ import samplemaker.layout as smlay  # used for layout
 import samplemaker.makers as sm  # used for drawing
 
 # Create a simple mask layout
-themask = smlay.Mask("06_Tutorial_DeviceTables")
+themask = smlay.Mask("06_tutorial_device_tables")
 
 # Empty geometry
 g = sm.GeomGroup()

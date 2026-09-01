@@ -1,6 +1,4 @@
-"""
-01_Tutorial_Shapes
-"""
+"""01_tutorial_shapes."""
 
 
 # In this tutorial we start drawing basic shapes
@@ -10,7 +8,7 @@ import samplemaker.layout as smlay  # used for layout
 import samplemaker.makers as sm  # used for drawing
 
 # Create a simple mask layout
-themask = smlay.Mask("01_Tutorial_Shapes")
+themask = smlay.Mask("01_tutorial_shapes")
 
 # Let's look at all shapes available:
 

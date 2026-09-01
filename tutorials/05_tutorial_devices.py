@@ -1,6 +1,4 @@
-"""
-05_Tutorial_Devices
-"""
+"""05_tutorial_devices."""
 
 
 # In this tutorial we look into the samplemaker device architecture.
@@ -18,7 +16,7 @@ from samplemaker.devices import Device
 from samplemaker.viewers import inspect_device
 
 # Create a simple mask layout
-themask = smlay.Mask("05_Tutorial_Devices")
+themask = smlay.Mask("05_tutorial_devices")
 
 # Empty geometry
 g = sm.GeomGroup()

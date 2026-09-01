@@ -1,7 +1,4 @@
-"""
-Tutorial device collection
-
-"""
+"""Tutorial device collection."""
 
 # This is how you create a collection of devices, just add all the classes in this file
 # Check the end of this file, we run a command to make samplemaker aware of our devices

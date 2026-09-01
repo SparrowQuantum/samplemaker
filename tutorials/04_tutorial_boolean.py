@@ -1,6 +1,4 @@
-"""
-04_Tutorial_Boolean
-"""
+"""04_tutorial_boolean."""
 
 
 # In this tutorial we learn how to do boolean operations between groups of polygons.
@@ -10,7 +8,7 @@ import samplemaker.layout as smlay  # used for layout
 import samplemaker.makers as sm  # used for drawing
 
 # Create a simple mask layout
-themask = smlay.Mask("04_Tutorial_Boolean")
+themask = smlay.Mask("04_tutorial_boolean")
 
 # Empty geometry
 g = sm.GeomGroup()

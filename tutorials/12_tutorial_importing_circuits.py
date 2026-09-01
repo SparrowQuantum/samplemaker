@@ -1,6 +1,4 @@
-"""
-12_Tutorial_ImportingCircuits
-"""
+"""12_tutorial_importing_circuits."""
 
 
 # This is an alternative way of creating circuits using a simple text import instead of
@@ -13,7 +11,7 @@ import samplemaker.devices as smdev  # used for device function
 import samplemaker.layout as smlay  # used for layout
 
 # Create a simple mask layout
-themask = smlay.Mask("12_Tutorial_ImportCircuits")
+themask = smlay.Mask("12_tutorial_importing_circuits")
 
 # To create a circuit we need to define a netlist. This time we use the import_circuit
 # function for netlist
@@ -24,11 +22,11 @@ cir2 = smdev.Circuit.build()
 cir2.set_param("NETLIST", netlist)
 
 # And out
-geomE = cir2.run()
+geom = cir2.run()
 
 
 # Let's add all to main cell
-themask.add_to_main_cell(geomE)
+themask.add_to_main_cell(geom)
 
 # Export to GDS
 themask.export_gds()
