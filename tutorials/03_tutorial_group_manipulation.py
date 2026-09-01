@@ -1,6 +1,4 @@
-"""
-03_Tutorial_GroupManipulation
-"""
+"""03_tutorial_group_manipulation."""
 
 
 # In this tutorial we learn what we can do with geometries after they are created
@@ -11,7 +9,7 @@ import samplemaker.layout as smlay  # used for layout
 import samplemaker.makers as sm  # used for drawing
 
 # Create a simple mask layout
-themask = smlay.Mask("03_Tutorial_GroupManipulation")
+themask = smlay.Mask("03_tutorial_group_manipulation")
 
 # Let's start again from a simple shape
 base = sm.make_rect(0, 0, 2, 10)

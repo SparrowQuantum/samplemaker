@@ -1,6 +1,4 @@
-"""
-09_Tutorial_Circuits
-"""
+"""09_tutorial_circuits."""
 
 
 # In the last example we created a device with ports
@@ -13,7 +11,7 @@ import samplemaker.devices as smdev  # used for device function
 import samplemaker.layout as smlay  # used for layout
 
 # Create a simple mask layout
-themask = smlay.Mask("09_Tutorial_Circuits")
+themask = smlay.Mask("09_tutorial_circuits")
 
 # To create a circuit we need to define a netlist:
 # The netlist is built as a list of NetlistEntry objects. Each NetlistEntry specifies

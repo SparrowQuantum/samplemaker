@@ -1,6 +1,4 @@
-"""
-02_Tutorial_CellReferences
-"""
+"""02_tutorial_cell_references."""
 
 
 # In this tutorial we learn to create multiple GDS cells and instantiate references
@@ -11,7 +9,7 @@ import samplemaker.layout as smlay  # used for layout
 import samplemaker.makers as sm  # used for drawing
 
 # Create a simple mask layout
-themask = smlay.Mask("02_Tutorial_CellReferences")
+themask = smlay.Mask("02_tutorial_cell_references")
 
 # Let's draw a simple shape
 base = sm.make_rect(0, 0, 2, 10)
@@ -25,11 +23,11 @@ base += sm.make_circle(4, 5, 1, to_poly=True)
 themask.add_cell("BCELL", base)
 
 # Now create a single reference to it
-g = sm.make_sref(20, 15, "BCELL", base, mag=1.0, angle=0, mirror=False)
+geom = sm.make_sref(20, 15, "BCELL", base, mag=1.0, angle=0, mirror=False)
 # Note that we can move, rotate, scale and mirror the reference.
 
 # Let's create another instance but scaledby 50%  and rotated by 45 degrees
-g += sm.make_sref(40, 15, "BCELL", base, mag=1.5, angle=45, mirror=False)
+geom += sm.make_sref(40, 15, "BCELL", base, mag=1.5, angle=45, mirror=False)
 
 # Now geomE contains a single instance of BCELL
 
@@ -46,23 +44,23 @@ themask.add_cell("B_TWO", b2)
 # Instead of creating a single reference, let's use reference arrays.
 # We can create an array of references on a regular grid specified by the unit cell
 # vectors.
-g += sm.make_aref(0, 50, "B_TWO", b2, 3, 4, 25.0, 0.0, 0.0, 20.0)
+geom += sm.make_aref(0, 50, "B_TWO", b2, 3, 4, 25.0, 0.0, 0.0, 20.0)
 # Above we created a reference starting in (0,50) and a grid with 3 rows and 4 columns
 # the unit cell vectors are [25,0] and [0,20], i.e. a rectangular grid.
 
 # If you at any point require flattening the geometry, you simply call
-geomFlatten = g.flatten()
+flat_geom = geom.flatten()
 # Note that flatten() creates a new geometry that needs to be stored.
 # You can pass a list of layer to flatten to only select some of the layers during the
 # flattening process. You need flattening to perform boolean operations with SREF/AREF,
 # otherwise those entities will be ignored.
-themask.add_cell("FLATCELL", geomFlatten)
+themask.add_cell("FLATCELL", flat_geom)
 
 # Instantiate it into the main cell
-g += sm.make_sref(150, 0, "FLATCELL", geomFlatten)
+geom += sm.make_sref(150, 0, "FLATCELL", flat_geom)
 
 # Let's add all to main cell
-themask.add_to_main_cell(g)
+themask.add_to_main_cell(geom)
 
 # Export to GDS
 themask.export_gds()

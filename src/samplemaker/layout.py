@@ -10,12 +10,12 @@ It is recommended to instantiate only a single `Mask` object in each script.
 An empty GDS file can be created as follows:
 
     mask = Mask("test_mask")
-    mask.exportGDS()
+    mask.export_gds()
 
 By default, the GDS file contains a single structure called 'CELL00'. To modify
 the symbol name, change the `Mask.mainsymbol` variable.
 By default, new geometry elements should be added to the main cell with the
-`Mask.addToMainCell` method. To add more cells manually, use `Mask.addCell` instead.
+`Mask.add_to_main_cell` method. To add more cells manually, use `Mask.add_cell` instead.
 At export time, all cell references that are not referenced by the main cell are
 automatically discarded.
 
@@ -48,23 +48,23 @@ To help the mask design process, it is possible to define and display write-fiel
 in the `Mask` class. These can either be added individually or as a grid. To add
 a 10x10, 500x500 um2 large write-field grid:
 
-    mask.addWriteFieldGrid(500,0,0,10,10)
+    mask.add_writefield_grid(500,0,0,10,10)
 
 Write-fields are only used as a visual aid in `samplemaker` to assist the placement
-of geoemetries in the mask.
+of geometries in the mask.
 
-Aligment marks
+Alignment marks
 --------------
 
 When running multiple exposures in UV or e-beam lithography, it is usually required
-to place aligment marks in the layout.
+to place alignment marks in the layout.
 Marks are defined separately using the `Marker` and `MarkerSet` classes.
 The common approach is to define a named `MarkerSet` and add it to the list of
 marker sets in the `Mask` class:
 
     markerset = MarkerSet("Ebeam1", markdev,
                 x0=0,y0=0,mset=4,xdist=2000,ydist=2000)
-    mask.addMarkers(markerset)
+    mask.add_markers(markerset)
 
 The above example creates a 2x2 mark set (mset=4) 2 mm apart called "Ebeam1".
 The actual shape used to draw the marker is provided by the Device object "markdev"
@@ -90,7 +90,6 @@ This is done via the `DeviceTableAnnotations` class.
 
 import math
 import pickle  # for caching
-import warnings
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
@@ -104,7 +103,6 @@ from samplemaker import (
     _DeviceCountPool,
     _DeviceLocalParamPool,
     _DevicePool,
-    _legacy,
 )
 from samplemaker.devices import Device, DevicePort, IncompatiblePortError
 from samplemaker.gdsreader import GDSReader
@@ -851,54 +849,6 @@ class DeviceTable:
             for j in range(rows)
         ]
 
-    @staticmethod
-    def Regular(  # noqa: N802
-        rows: int,
-        cols: int,
-        ax: float,
-        ay: float,
-        bx: float,
-        by: float,
-        x0: float = 0,
-        y0: float = 0,
-    ) -> TAB_POS_TYPE:
-        """Create coordinates for a regular table array.
-
-        Returns a nested list that can be passed to `DeviceTable.set_table_positions`.
-
-        Parameters
-        ----------
-        rows : int
-            Number of rows.
-        cols : int
-            Number of columns.
-        ax : float
-            x-step along rows.
-        ay : float
-            y-step along rows.
-        bx : float
-            x-step along columns.
-        by : float
-            y-step along columns.
-        x0 : float, optional
-            x-coordinate of the origin, by default 0.
-        y0 : float, optional
-            y-coordinate of the origin, by default 0.
-
-        Returns
-        -------
-        TAB_POS_TYPE
-            3-dimensional list of positions.
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use DeviceTable.create_regular_grid() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return DeviceTable.create_regular_grid(rows, cols, ax, ay, bx, by, x0, y0)
-
 
 class Mask:
     """Main class for managing mask layouts and exporting them to GDS files."""
@@ -988,29 +938,6 @@ class Mask:
         else:
             LayoutPool[self.mainsymbol] += geom_group
 
-    def addToMainCell(self, geom_group: GeomGroup) -> None:  # noqa: N802
-        """Add a geometry to the main cell.
-
-        DEPRECATED: Use Mask.add_to_main_cell() instead.
-
-        Parameters
-        ----------
-        geom_group : GeomGroup
-            The geometry to be added.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Mask.add_to_main_cell() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.add_to_main_cell(geom_group)
-
     def add_cell(self, cellname: str, geom_group: GeomGroup) -> None:
         """Add a new cell to the GDS structure and assigns a geometry to it.
 
@@ -1027,31 +954,6 @@ class Mask:
 
         """
         LayoutPool[cellname] = geom_group
-
-    def addCell(self, cellname: str, geom_group: GeomGroup) -> None:  # noqa: N802
-        """Add a new cell to the GDS structure and assigns a geometry to it.
-
-        DEPRECATED: Use Mask.add_cell() instead.
-
-        Parameters
-        ----------
-        cellname : str
-            The name of the cell.
-        geom_group : GeomGroup
-            The geometry to be added.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Mask.add_cell() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.add_cell(cellname, geom_group)
 
     def get_cell(self, cellname: str) -> GeomGroup:
         """Get a reference to the GeomGroup corresponding to the cellname.
@@ -1074,32 +976,6 @@ class Mask:
             raise ValueError(msg)
 
         return LayoutPool[cellname]
-
-    def getCell(self, cellname: str) -> GeomGroup:  # noqa: N802
-        """Get a reference to the GeomGroup corresponding to the cellname.
-
-        Note: if you modify the cell geometry, it will also be modified in the mask.
-
-        DEPRECATED: Use Mask.get_cell() instead.
-
-        Parameters
-        ----------
-        cellname : str
-            The name of the cell.
-
-        Returns
-        -------
-        GeomGroup
-            Reference to the geometry group.
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Mask.get_cell() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.get_cell(cellname)
 
     def _export_cache(self) -> None:
         print("Storing objects in cache file...")
@@ -1191,24 +1067,6 @@ class Mask:
         if self.cache:
             self._export_cache()
 
-    def exportGDS(self) -> None:  # noqa: N802
-        """Finalize the mask, perform cache operations, if any, and write to GDS.
-
-        DEPRECATED: Use Mask.export_gds() instead.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Mask.export_gds() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.export_gds()
-
     def import_gds(self, filename: str) -> None:
         """Import the full mask from GDS file.
 
@@ -1251,29 +1109,6 @@ class Mask:
                 if isinstance(e, SRef):
                     e.group = LayoutPool[e.cellname]
 
-    def importGDS(self, filename: str) -> None:  # noqa: N802
-        """Import the full mask from GDS file.
-
-        DEPRECATED: Use Mask.import_gds() instead.
-
-        Parameters
-        ----------
-        filename : str
-            name of the GDS file to read from.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Mask.import_gds() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.import_gds(filename)
-
     def add_markers(self, markerset: "MarkerSet") -> None:
         """Add a marker set to the mask.
 
@@ -1292,29 +1127,6 @@ class Mask:
             LayoutPool[self.mainsymbol] = g
         else:
             LayoutPool[self.mainsymbol] += g
-
-    def addMarkers(self, markerset: "MarkerSet") -> None:  # noqa: N802
-        """Add a marker set to the mask.
-
-        DEPRECATED: Use Mask.add_markers() instead.
-
-        Parameters
-        ----------
-        markerset : MarkerSet
-            The MarkerSet class to be added.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Mask.add_markers() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.add_markers(markerset)
 
     def add_writefield(
         self, wf_size: float, x0: float, y0: float, passes: int = 1, shift: float = 0
@@ -1341,49 +1153,15 @@ class Mask:
         """
         self.writefields += [(wf_size, x0, y0, passes, shift)]
 
-    def addWriteField(  # noqa: N802
-        self, wf_size: float, x0: float, y0: float, passes: int = 1, shift: float = 0
-    ) -> None:
-        """Add a square writefield centered in x0,y0.
-
-        DEPRECATED: Use Mask.add_writefield() instead.
-
-        Parameters
-        ----------
-        wf_size : float
-            Size in um of the writefield.
-        x0 : float
-            X-coordinate of the writefield center in um.
-        y0 : float
-            Y-coordinate of the writefield center in um.
-        passes : int, optional
-            Number of write-field passes, not shown in the mask, by default 1.
-        shift : float, optional
-            Shift of each multi-pass writefield, by default 0.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Mask.add_writefield() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.add_writefield(wf_size, x0, y0, passes, shift)
-
     def add_writefield_grid(
         self,
         wf_size: float,
         x0: float,
         y0: float,
-        nx: int | _legacy.MissingType = _legacy.MISSING,
-        ny: int | _legacy.MissingType = _legacy.MISSING,
+        nx: int,
+        ny: int,
         passes: int = 1,
         shift: float = 0,
-        **kwargs: int,
     ) -> None:
         """Create a grid nx x ny of writefields with given size and position.
 
@@ -1403,23 +1181,12 @@ class Mask:
             Number of write-field passes, not shown in the mask, by default 1.
         shift : float, optional
             Shift of each multi-pass writefield, by default 0.
-        kwargs : int
-            Additional keyword arguments. Supports 'Nx' and 'Ny' for backward
-            compatibility.
 
         Returns
         -------
         None
 
         """
-        nx = _legacy.get_kwarg("nx", nx, "Nx", kwargs)
-        ny = _legacy.get_kwarg("ny", ny, "Ny", kwargs)
-        _legacy.ensure_empty_kwargs("Mask.add_writefield_grid", kwargs)
-        _legacy.check_missing_args("Mask.add_writefield_grid", nx=nx, ny=ny)
-
-        nx = _legacy.ensure_arg_type("nx", nx)
-        ny = _legacy.ensure_arg_type("ny", ny)
-
         for i in range(nx):
             for j in range(ny):
                 self.add_writefield(
@@ -1442,56 +1209,6 @@ class Mask:
                 wfpath.translate(x, y)
                 wfs += wfpath
             self.add_to_main_cell(wfs)
-
-    def addWriteFieldGrid(  # noqa: N802
-        self,
-        wf_size: float,
-        x0: float,
-        y0: float,
-        nx: int | _legacy.MissingType = _legacy.MISSING,
-        ny: int | _legacy.MissingType = _legacy.MISSING,
-        passes: int = 1,
-        shift: float = 0,
-        **kwargs: int,
-    ) -> None:
-        """Create a grid nx x ny of writefields with given size and position.
-
-        DEPRECATED: Use Mask.add_writefield_grid() instead.
-
-        Parameters
-        ----------
-        wf_size : float
-            Size in um of the writefield.
-        x0 : float
-            X-coordinate of the writefield center in um.
-        y0 : float
-            Y-coordinate of the writefield center in um.
-        nx : int
-            Number of write fields in x direction.
-        ny : int
-            Number of write fields in y direction.
-        passes : int, optional
-            Number of write-field passes, not shown in the mask, by default 1.
-        shift : float, optional
-            Shift of each multi-pass writefield, by default 0.
-        kwargs : int
-            Additional keyword arguments. Supports 'Nx' and 'Ny' for backward
-            compatibility.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Mask.add_writefield_grid() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.add_writefield_grid(
-            wf_size, x0, y0, nx=nx, ny=ny, passes=passes, shift=shift, **kwargs
-        )
 
     def add_device_table(
         self, device_table: DeviceTable, x0: float, y0: float, cell: str = ""
@@ -1521,34 +1238,3 @@ class Mask:
             self.add_to_main_cell(geoms)
         else:
             self.add_cell(cell, geoms)
-
-    def addDeviceTable(  # noqa: N802
-        self, device_table: DeviceTable, x0: float, y0: float, cell: str = ""
-    ) -> None:
-        """Add a `DeviceTable` to the layout.
-
-        DEPRECATED: Use Mask.add_device_table() instead.
-
-        Parameters
-        ----------
-        device_table : DeviceTable
-            A DeviceTable object to be placed in the layout.
-        x0 : float
-            Controls the x position of the table center.
-        y0 : float
-            Controls the y position of the table center.
-        cell : str, optional
-            Adds the table to a named cell, by default "" (main cell).
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use Mask.add_device_table() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.add_device_table(device_table, x0, y0, cell)

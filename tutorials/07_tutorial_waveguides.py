@@ -1,6 +1,4 @@
-"""
-07_Tutorial_Waveguides
-"""
+"""07_tutorial_waveguides."""
 
 
 # We now look at some more advanced features, i.e. how to make waveguides.
@@ -14,10 +12,10 @@ import samplemaker.makers as sm  # used for drawing
 from samplemaker.baselib.waveguides import BaseWaveguideSequencer
 
 # Create a simple mask layout
-themask = smlay.Mask("07_Tutorial_Waveguides")
+themask = smlay.Mask("07_tutorial_waveguides")
 
 # Empty geometry
-geomE = sm.GeomGroup()
+geom = sm.GeomGroup()
 
 # We can draw waveguides using a custom sequencer provided in the baselib module.
 # Sequencers are a general class provided in samplemaker to create waveguides however
@@ -39,7 +37,7 @@ seq = [["S", 10], ["B", 90, 3], ["S", 10], ["B", -90, 3]]
 sequencer = BaseWaveguideSequencer(seq)
 
 # Step 4 Run the sequencer and get the geometry
-geomE += sequencer.run()
+geom += sequencer.run()
 
 # Now, let's change some default parameters. After run, it's a good idea to reset
 sequencer.reset()
@@ -49,7 +47,7 @@ sequencer.options["bendResolution"] = 60  # Default is 30 points
 
 g2 = sequencer.run()  # Re-run the sequencer
 g2.translate(30, 0)  # move the waveguide up, so we can compare
-geomE += g2
+geom += g2
 
 # More advanced sequences:
 # T 2 0.5: linear taper with length of 2 um to a width of 0.5
@@ -75,7 +73,7 @@ print(sequencer.state)
 # using the CENTER command.
 
 g3.translate(0, 30)
-geomE += g3
+geom += g3
 
 # Now let's go back to the previous sequence
 seq = [
@@ -97,11 +95,11 @@ print(sequencer.state)
 # Now STORED contains [0,-10], which is relative to the new center. Note that subsequent
 # translations on the geometry g4, will not alter the sequencer state.
 g4.translate(50, 50)
-geomE += g4
+geom += g4
 
 
 # Let's add all to main cell
-themask.add_to_main_cell(geomE)
+themask.add_to_main_cell(geom)
 
 # Export to GDS
 themask.export_gds()

@@ -42,13 +42,13 @@ This is done in the `Device.initialize` method:
 
     def initialize(self):
         self.set_name("MYDEVICE")
-        self.set_decription("First version of MYDEVICE")
+        self.set_description("First version of MYDEVICE")
 
-The name is used to call devices later on (see Device registraiton below) and
+The name is used to call devices later on (see Device registration below) and
 to instantiate them in circuits.
 
 ### Parameters
-Device paramters must be defined via the function `Device.add_parameter` as follows:
+Device parameters must be defined via the function `Device.add_parameter` as follows:
 
     def parameters(self):
         self.add_parameter("my_param", default_value, "Description", type, (min, max))
@@ -88,7 +88,7 @@ exact sequence of operation is carried out.
 To use the re-use the devices later on, it is common practice to build a library of
 devices (containing all the classes) and register the devices to a shared dictionary
 that other functions can use to build/run named devices.
-This is achieved via the `registerDevicesInModule` which can be called at the end
+This is achieved via the `register_devices_in_module` which can be called at the end
 of each python script and will update a hidden device database.
 Building a device is then simply done as
 
@@ -400,27 +400,6 @@ class DevicePort:
         self.x0 += self.dx() * amount
         self.y0 += self.dy() * amount
 
-    def S(self, amount: float) -> None:  # noqa: N802
-        """Move the port straight by the given amount.
-
-        Parameters
-        ----------
-        amount : float
-            The distance to move the port.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use DevicePort.move_straight() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.move_straight(amount)
-
     def bend_left(self, radius: float) -> None:
         """Make a 90 degree left bend with the given radius.
 
@@ -441,29 +420,6 @@ class DevicePort:
         self.y0 = radius * math.sin(phi + math.pi / 2) + yc
         self.set_angle(self.angle() + math.pi / 2)
 
-    def BL(self, radius: float) -> None:  # noqa: N802
-        """Make a 90 degree left bend with the given radius.
-
-        DEPRECATED: Use DevicePort.bend_left() instead.
-
-        Parameters
-        ----------
-        radius : float
-            The radius of the bend.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use DevicePort.bend_left() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.bend_left(radius)
-
     def bend_right(self, radius: float) -> None:
         """Make a 90 degree right bend with the given radius.
 
@@ -483,29 +439,6 @@ class DevicePort:
         self.x0 = radius * math.cos(phi - math.pi / 2) + xc
         self.y0 = radius * math.sin(phi - math.pi / 2) + yc
         self.set_angle(self.angle() - math.pi / 2)
-
-    def BR(self, radius: float) -> None:  # noqa: N802
-        """Make a 90 degree right bend with the given radius.
-
-        DEPRECATED: Use DevicePort.bend_right() instead.
-
-        Parameters
-        ----------
-        radius : float
-            The radius of the bend.
-
-        Returns
-        -------
-        None
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use DevicePort.bend_right() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.bend_right(radius)
 
     def reset(self) -> None:
         """Reset the port position and orientation to a fixed position.
@@ -1371,38 +1304,6 @@ class NetList:
             return all_lists
         return all_lists[circuit_name]
 
-    @classmethod
-    def ImportCircuit(  # noqa: N802
-        cls, file_name: str, circuit_name: str = ""
-    ) -> Self | dict[str, Self]:
-        """Generate a NetList object from a circuit file.
-
-        The input is a text file with circuit description similar to the
-        SPICE netlist format (yet with some important differences).
-        Check the tutorials for examples.
-
-        Parameters
-        ----------
-        file_name : str
-            The circuit filename.
-        circuit_name : str, optional
-            The subcircuit to load inside the circuit file, by default "", which reads
-            the entire circuit structure.
-
-        Returns
-        -------
-        NetList | dict[str, NetList]
-            The NetList with the imported circuit.
-
-        """
-        warnings.warn(
-            "This method is deprecated and will be removed "
-            "in a future version. Use NetList.import_circuit() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return cls.import_circuit(file_name, circuit_name)
-
 
 class Circuit(Device):
     """A Circuit is a Device that generates its geometry from a NetList.
@@ -1738,31 +1639,6 @@ def register_devices_in_module(module_name: str) -> None:
                 print(f"Loaded {oj._name}: {oj._description}")
 
 
-def registerDevicesInModule(module_name: str) -> None:  # noqa: N802
-    """Register the device names in a global variable.
-
-    To be called at the end of a python module containing device classes that inherit
-    the `Device` class.
-
-    Parameters
-    ----------
-    module_name : str
-        The python module name, if used in the same file, just use `__name__`.
-
-    Returns
-    -------
-    None
-
-    """
-    warnings.warn(
-        "This function is deprecated and will be removed "
-        "in a future version. Use register_devices_in_module() instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    register_devices_in_module(module_name)
-
-
 def create_device_library(devname: str, params: dict, filename: str) -> None:
     """Generate a GDS file with a re-usable GDS-format device.
 
@@ -1802,37 +1678,6 @@ def create_device_library(devname: str, params: dict, filename: str) -> None:
     gdsw.open_library(filename)
     gdsw.write_structure(devname, g)
     gdsw.close_library()
-
-
-def CreateDeviceLibrary(devname: str, params: dict, filename: str) -> None:  # noqa: N802
-    """Generate a GDS file with a re-usable GDS-format device.
-
-    Also exports ports as text element in GDS.
-    Flattens everything.
-
-    DEPRECATED: Use create_device_library() instead.
-
-    Parameters
-    ----------
-    devname : str
-        The registered name of the device.
-    params : dict
-        The parameters to be used when saving. Modifies the default.
-    filename: str
-        The output library filename
-
-    Returns
-    -------
-    None
-
-    """
-    warnings.warn(
-        "This function is deprecated and will be removed "
-        "in a future version. Use create_device_library() instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    create_device_library(devname, params, filename)
 
 
 def export_device_schematics(filename: str = "SampleMakerLibrary.lel") -> None:
@@ -1916,31 +1761,3 @@ def export_device_schematics(filename: str = "SampleMakerLibrary.lel") -> None:
 
             f.write("\n</Netlist>\n")
             f.write("</Component>\n")
-
-
-def ExportDeviceSchematics(filename: str = "SampleMakerLibrary.lel") -> None:  # noqa: N802
-    """Generate a Layout Editor library file (LEL).
-
-    This file contains the Devices currently loaded on the Device List. The library file
-    can be used in combination with Layout Editor Schematic to produce spice netlists
-    for circuit design.
-
-    DEPRECATED: Use export_device_schematics() instead.
-
-    Parameters
-    ----------
-    filename : str, optional
-        The library filename with .lel extension, by default "SampleMakerLibrary.lel".
-
-    Returns
-    -------
-    None
-
-    """
-    warnings.warn(
-        "This function is deprecated and will be removed "
-        "in a future version. Use export_device_schematics() instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    export_device_schematics(filename)

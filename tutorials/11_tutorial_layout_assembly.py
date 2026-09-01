@@ -1,6 +1,4 @@
-"""
-11_Tutorial_LayoutAssembly
-"""
+"""11_tutorial_layout_assembly."""
 
 
 # Now we will look into final assembly of the mask
@@ -14,7 +12,7 @@ import samplemaker.layout as smlay  # used for layout
 import samplemaker.makers as sm  # used for drawing
 
 # Create a simple mask layout
-themask = smlay.Mask("11_Tutorial_LayoutAssembly")
+themask = smlay.Mask("11_tutorial_layout_assembly")
 
 # When editing large projects, it can easily take a lot of time to run the entire mask.
 # To speed up the process you can store some of the generated geometry in the cache, so
