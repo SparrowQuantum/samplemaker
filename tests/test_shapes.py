@@ -1361,6 +1361,23 @@ class TestGeomGroup:
         assert g.group[0] is circle_obj
         assert g.group[1] is ellipse_obj
 
+    def test_add_to_geomgroup_in_place(
+        self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse
+    ) -> None:
+        g1 = sp.GeomGroup()
+        g1.add(circle_obj)
+        original = g1
+
+        g2 = sp.GeomGroup()
+        g2.add(ellipse_obj)
+
+        g1 += g2
+
+        assert g1 is original
+        assert len(g1.group) == 2
+        assert g1.group[0] is circle_obj
+        assert g1.group[1] is ellipse_obj
+
     def test_copy_geomgroup(self, circle_obj: sp.Circle) -> None:
         # Geometry copy creates a deep copy of the geometry, so that modifying the copy
         # does not affect the original.
