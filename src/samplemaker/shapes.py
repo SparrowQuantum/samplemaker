@@ -119,12 +119,29 @@ class GeomGroup:
         gg.group = self.group + other.group
         return gg
 
+    def __iadd__(self, other: "GeomGroup") -> Self:
+        """In-place addition of another geometry group.
+
+        Parameters
+        ----------
+        other : GeomGroup
+            The GeomGroup you want to add.
+
+        Returns
+        -------
+        Self
+            The updated GeomGroup.
+
+        """
+        self.group += other.group
+        return self
+
     def add(self, geom: "Poly | SRef | Path | Text | Circle") -> None:
         """Add a shape to the group.
 
         Parameters
         ----------
-        geom : Poly | SRef | Path | Text
+        geom : Poly | SRef | Path | Text | Circle
             The geometry to be added.
 
         Returns
