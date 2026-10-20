@@ -62,6 +62,7 @@
 
         devEnv = python.withPackages (ps: [
           samplemaker
+          ps.mypy
           ps.pytest
           ps.pytest-cov
         ]);

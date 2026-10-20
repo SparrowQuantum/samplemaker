@@ -77,6 +77,11 @@ ignore = ["D203", "D213", "PLR2004", "PLR091"]
 "tests/*" = ["D1", "S101", "ARG"]
 "*.pyi" = ["N802"]
 
+[tool.mypy]
+files = ["src/samplemaker"]
+python_version = "3.13"
+show_error_codes = true
+
 [tool.scikit-build]
 minimum-version = "0.11.6"
 build-dir = "build/{wheel_tag}"
@@ -105,4 +110,5 @@ dev = [
     "pytest==9.0.2",
     "pytest-cov==7.1.0",
     "ruff==0.17.4",
+    "mypy==2.1.0",
 ]
