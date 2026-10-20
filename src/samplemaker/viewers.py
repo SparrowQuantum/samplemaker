@@ -205,15 +205,19 @@ def inspect_device(devcl: Device | type[Device]) -> None:
     n_params = len(dev._p.keys())
     for pn, param in enumerate(dev._p.keys()):
         ax_amp = plt.axes((0.25, 0.05 + pn * 1.0 / n_params * 0.35, 0.65, 0.03))
-        minv = 0
-        maxv = dev._p[param] * 10
+        minv: float | int = 0
+        try:
+            maxv = float(dev._p[param]) * 10  # type: ignore[arg-type]
+        except TypeError:
+            # Likely not a numeric parameter, skip it
+            continue
         prange = dev._prange[param]
         if prange[1] != np.inf:
             maxv = prange[1]
         if prange[0] != 0:
             minv = prange[0]
 
-        valstep = dev._p[param] / 10
+        valstep = dev._p[param] / 10  # type: ignore[operator]
         if valstep == 0:
             valstep = 0.1
         if isinstance(dev._ptype[param], int):
@@ -229,7 +233,7 @@ def inspect_device(devcl: Device | type[Device]) -> None:
             param,
             minv,
             maxv,
-            valinit=dev._p[param],
+            valinit=dev._p[param],  # type: ignore[arg-type]
             color="green",
             valstep=valstep,
         )
