@@ -102,6 +102,7 @@ from samplemaker import (
     _BoundingBoxPool,
     _DeviceCountPool,
     _DeviceLocalParamPool,
+    _DeviceLocalPortPool,
     _DevicePool,
 )
 from samplemaker.devices import Device, DevicePort, IncompatiblePortError
@@ -468,7 +469,7 @@ class DeviceTable:
         self.annotations = None
         self.use_references = True
         self.pos_xy = [[(0, 0) for _ in range(ncol)] for _ in range(nrow)]
-        self._external_ports = {}
+        self._external_ports: dict[str, DevicePort] = {}
         self._geometries = []
         self._portmap = []
         self._backup_dev = deepcopy(dev)  # Keep it to reset the whole thing
@@ -879,6 +880,7 @@ class Mask:
         LayoutPool.clear()
         _DeviceCountPool.clear()
         _DeviceLocalParamPool.clear()
+        _DeviceLocalPortPool.clear()
         _DevicePool.clear()
         _BoundingBoxPool.clear()
         self.writefields.clear()
@@ -1042,6 +1044,7 @@ class Mask:
             LayoutPool,
             _DeviceCountPool,
             _DeviceLocalParamPool,
+            _DeviceLocalPortPool,
             _DevicePool,
             _BoundingBoxPool,
         )
@@ -1063,9 +1066,11 @@ class Mask:
                 for key in data[2]:
                     _DeviceLocalParamPool[key] = data[2][key]
                 for key in data[3]:
-                    _DevicePool[key] = data[3][key]
+                    _DeviceLocalPortPool[key] = data[3][key]
                 for key in data[4]:
-                    _BoundingBoxPool[key] = data[4][key]
+                    _DevicePool[key] = data[4][key]
+                for key in data[5]:
+                    _BoundingBoxPool[key] = data[5][key]
         except OSError:
             pass
 
@@ -1089,6 +1094,7 @@ class Mask:
         for hsh in unref_hsh:
             # _DeviceCountPool.pop(hsh,None)
             _DeviceLocalParamPool.pop(hsh, None)
+            _DeviceLocalPortPool.pop(hsh, None)
             _DevicePool.pop(hsh, None)
 
     def export_gds(self) -> None:

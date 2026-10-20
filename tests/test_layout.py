@@ -16,6 +16,7 @@ from samplemaker import (
     _BoundingBoxPool,
     _DeviceCountPool,
     _DeviceLocalParamPool,
+    _DeviceLocalPortPool,
     _DevicePool,
 )
 from samplemaker.baselib.devices import CrossMark
@@ -976,6 +977,7 @@ class TestMask:
         _DeviceLocalParamPool["h_extra"] = {"param": 42}
         _DeviceCountPool["EXTRA"] = 1
         _BoundingBoxPool["EXTRA"] = Box(0, 0, 1, 1)
+        _DeviceLocalPortPool["h_extra"] = {"port": "dummy"}
 
         themask._export_cache()
         expected_filepath = tmp_cwd_dir / f"{name}.cache"
@@ -985,6 +987,7 @@ class TestMask:
         assert "EXTRA" not in LayoutPool
         assert "h_extra" not in _DevicePool
         assert "h_extra" not in _DeviceLocalParamPool
+        assert "h_extra" not in _DeviceLocalPortPool
         assert "EXTRA" not in _DeviceCountPool
         assert "EXTRA" not in _BoundingBoxPool
 
@@ -993,6 +996,7 @@ class TestMask:
         assert "_CIRCLE" in LayoutPool
         assert _DevicePool["h_extra"] == "EXTRA"
         assert _DeviceLocalParamPool["h_extra"] == {"param": 42}
+        assert _DeviceLocalPortPool["h_extra"] == {"port": "dummy"}
         assert _DeviceCountPool["EXTRA"] == 1
         assert isinstance(_BoundingBoxPool["EXTRA"], Box)
         bbox = _BoundingBoxPool["EXTRA"]

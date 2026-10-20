@@ -141,15 +141,16 @@ class TestDevice:
     def test_initialize_sets_default_attributes(self) -> None:
         dev = dm.DummyDevice()
         assert dev._p == {}
-        assert dev._pdescr == {"_ports_": "Ports calculated by geom"}
-        assert "_ports_" in dev._ptype  # Is really float...
-        assert "_ports_" in dev._prange  # Range not applicable to ports.
-        assert dev._localp == {"_ports_": {}}
+        assert dev._pdescr == {}
+        assert dev._ptype == {}
+        assert dev._prange == {}
+        assert dev._localp == {}
         assert dev._x0 == 0
         assert dev._y0 == 0
         assert dev._hv is True
         assert dev._bf is True
         assert dev._ports == {}
+        assert dev._localports == {}
         assert dev._name == ""
         assert dev._description == "No description yet"
         assert dev.use_references is True
@@ -246,9 +247,9 @@ class TestDevice:
     def test_remove_localport(self, dummy_device: smdev.Device) -> None:
         port = BaseWaveguidePort(0, 0, name="test")
         dummy_device.addlocalport(port)
-        assert "test" in dummy_device._localp["_ports_"]
+        assert "test" in dummy_device._localports
         dummy_device.remove_localport("test")
-        assert "test" not in dummy_device._localp["_ports_"]
+        assert "test" not in dummy_device._localports
 
     def test_remove_localport_unknown_raises(self, dummy_device: smdev.Device) -> None:
         with pytest.raises(ValueError, match="Could not find port"):

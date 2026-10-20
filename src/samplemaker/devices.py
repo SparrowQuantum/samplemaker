@@ -185,7 +185,7 @@ import inspect
 import math
 import sys
 import warnings
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Hashable, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
 from typing import Any, NoReturn, Self, TypeAlias
@@ -197,6 +197,7 @@ from samplemaker import (
     _BoundingBoxPool,
     _DeviceCountPool,
     _DeviceLocalParamPool,
+    _DeviceLocalPortPool,
     _DevicePool,
 )
 from samplemaker.gdswriter import GDSWriter
@@ -505,17 +506,17 @@ class Device:
 
     def __init__(self) -> None:
         """Initialize a Device. Should never be called by the user."""
-        self._p = {}
-        self._pdescr = {}
-        self._ptype = {}  # stores the type of the parameter
-        self._prange = {}  # stores the min-max range of the parameter in a tuple
-        self._localp = {}
-        self.addlocalparameter("_ports_", {}, "Ports calculated by geom")
+        self._p: dict[str, Hashable] = {}
+        self._pdescr: dict[str, str] = {}
+        self._ptype: dict[str, type] = {}
+        self._prange: dict[str, tuple[float, float]] = {}
+        self._localp: dict[str, Hashable] = {}
         self._x0 = 0
         self._y0 = 0
         self._hv = True
         self._bf = True
-        self._ports = {}
+        self._ports: dict[str, DevicePort] = {}
+        self._localports: dict[str, DevicePort] = {}
         self._name = ""
         self._description = "No description yet"
         self.use_references = True
@@ -716,7 +717,7 @@ class Device:
         None
 
         """
-        self._localp["_ports_"][port.name] = port
+        self._localports[port.name] = port
 
     def get_localport(self, portname: str) -> DevicePort:
         """Get the local port (i.e. within the geom() function.).
@@ -737,14 +738,13 @@ class Device:
             If the port is not defined by the device.
 
         """
-        lports = self._localp["_ports_"]
-        if portname not in lports:
+        if portname not in self._localports:
             msg = (
                 f"Could not find port named {portname} in {self._name} as it was "
                 f"not defined by device."
             )
             raise ValueError(msg)
-        return lports[portname]
+        return self._localports[portname]
 
     def remove_localport(self, portname: str) -> None:
         """Remove a local port.
@@ -764,14 +764,13 @@ class Device:
             If the port is not defined by the device.
 
         """
-        lports = self._localp["_ports_"]
-        if portname not in lports:
+        if portname not in self._localports:
             msg = (
                 f"Could not find port named {portname} in {self._name} as it was "
                 f"not defined by device."
             )
             raise ValueError(msg)
-        self._localp["_ports_"].pop(portname)
+        self._localports.pop(portname)
 
     def set_param(self, param_name: str, value: Any) -> None:  # noqa: ANN401
         """Change a paramter. To be called after build().
@@ -952,9 +951,11 @@ class Device:
                 _BoundingBoxPool[srefname] = LayoutPool[srefname].bounding_box()
                 _DevicePool[hsh] = srefname
                 _DeviceLocalParamPool[hsh] = deepcopy(self._localp)
+                _DeviceLocalPortPool[hsh] = deepcopy(self._localports)
             else:
                 srefname += f"_{_DeviceCountPool[srefname]:04d}"
                 self._localp = _DeviceLocalParamPool[hsh]
+                self._localports = _DeviceLocalPortPool[hsh]
             # now create a ref
             g = make_sref(
                 self._x0,
@@ -990,9 +991,8 @@ class Device:
         None
 
         """
-        if "_ports_" in self._localp:
-            for p in self._localp["_ports_"].values():
-                self.addport(deepcopy(p))
+        for p in self._localports.values():
+            self.addport(deepcopy(p))
 
     @staticmethod
     def build_registered(name: str) -> "Device":

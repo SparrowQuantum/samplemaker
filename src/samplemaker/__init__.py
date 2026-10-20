@@ -20,6 +20,12 @@ Council (ERC) under the European Union's Horizon 2020 research and innovation pr
 .. include:: ./documentation.md
 """
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from samplemaker.devices import DevicePort
+
+
 __pdoc__: dict[str, bool | str] = {
     "samplemaker.Tutorials": False,
     "samplemaker.tests": False,
@@ -40,6 +46,9 @@ _DevicePool = {}
 # _DeviceLocalParamPool connects a device hash to local parameters created by the call
 # to geom():
 _DeviceLocalParamPool = {}
+
+# _DeviceLocalPortPool connects a device hash to its local ports
+_DeviceLocalPortPool: dict[int, dict[str, "DevicePort"]] = {}
 
 # _DeviceCountPool connects a device name to a device count
 _DeviceCountPool = {}
