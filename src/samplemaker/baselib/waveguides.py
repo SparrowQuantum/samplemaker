@@ -6,8 +6,9 @@ This module can be used as template to develop different waveguide libraries.
 """
 
 import math
+from collections.abc import Hashable
 from copy import deepcopy
-from typing import Any
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 
@@ -22,16 +23,19 @@ from samplemaker.shapes import GeomGroup
 
 
 # Let's define some options for the BaseWaveguide sequencer
-def create_base_waveguide_options() -> smseq.OPTIONS_TYPE:
+_BaseWaveguideOptionsType: TypeAlias = dict[str, dict[str, Hashable] | bool | float]
+
+
+def create_base_waveguide_options() -> _BaseWaveguideOptionsType:
     """Create a dictionary with the default options for the BaseWaveguide sequencer.
 
     Returns
     -------
-    smseq.OPTIONS_TYPE
+    _BaseWaveguideOptionsType
         The default options for the BaseWaveguide sequencer.
 
     """
-    options = smseq.default_options()
+    options = cast("_BaseWaveguideOptionsType", smseq.default_options())
     # Let's define the default waveguide layer
     options["wgLayer"] = 1
     # For waveguide bends, let's use a fixed resolution
@@ -214,9 +218,9 @@ def base_waveguide_cosine_bend(
         for x in t
         if x >= 1
     ]
-    s = np.array(s)
-    xpts = s / math.pi * 2 * radius + state["x"]
-    ypts = off * (np.cos(s + math.pi) + 1) / 2 + state["y"]
+    s_np = np.array(s)
+    xpts = s_np / math.pi * 2 * radius + state["x"]
+    ypts = off * (np.cos(s_np + math.pi) + 1) / 2 + state["y"]
     xpts = np.append(xpts[0], xpts + delta)
     xpts = list(np.append(xpts, xpts[-1] + delta))
     ypts = np.append(ypts[0], ypts)
