@@ -20,10 +20,12 @@ Council (ERC) under the European Union's Horizon 2020 research and innovation pr
 .. include:: ./documentation.md
 """
 
+from collections.abc import Hashable
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from samplemaker.devices import DevicePort
+    from samplemaker.shapes import Box, GeomGroup
 
 
 __pdoc__: dict[str, bool | str] = {
@@ -34,24 +36,25 @@ __pdoc__: dict[str, bool | str] = {
     "samplemaker.devices.DevicePort": False,
 }
 
-# The LayoutPool contains all the current layout, this class should generally not
-# be used directly, but only through the Mask class.
-LayoutPool = {}  # connects a SREF name to a particular geomgroup in the current memory
+LayoutPool: dict[str, "GeomGroup"] = {}
+"""Contains the current layout pool, mapping SREF names to GeomGroup instances.
+
+This class should generally not be used directly, but only through the Mask class.
+"""
 
 # Additional cache pool:
 
-# _DevicePool Connects a device hash to a SREF to be instantiated:
-_DevicePool = {}
+_DevicePool: dict[int, str] = {}
+"""Connects a device hash to a SREF to be instantiated."""
 
-# _DeviceLocalParamPool connects a device hash to local parameters created by the call
-# to geom():
-_DeviceLocalParamPool = {}
+_DeviceLocalParamPool: dict[int, dict[str, Hashable]] = {}
+"""Connects a device hash to local parameters created by the call to geom()."""
 
-# _DeviceLocalPortPool connects a device hash to its local ports
 _DeviceLocalPortPool: dict[int, dict[str, "DevicePort"]] = {}
+"""Connects a device hash to its local ports."""
 
-# _DeviceCountPool connects a device name to a device count
-_DeviceCountPool = {}
+_DeviceCountPool: dict[str, int] = {}
+"""Connects a device name to a device count."""
 
-# _BoundingBoxPool connects a SREF name to its bounding box
-_BoundingBoxPool = {}
+_BoundingBoxPool: dict[str, "Box"] = {}
+"""Connects a SREF name to its bounding box."""
