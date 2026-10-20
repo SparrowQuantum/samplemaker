@@ -10,7 +10,7 @@ import warnings
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import PatchCollection
-from matplotlib.patches import Arrow, Circle, Ellipse, PathPatch, Polygon
+from matplotlib.patches import Arrow, Circle, Ellipse, Patch, PathPatch, Polygon
 from matplotlib.textpath import TextPath
 from matplotlib.widgets import Slider
 
@@ -26,7 +26,7 @@ _ViewerCurrentAxes: plt.Axes | None = None
 def __get_geom_patches(grp: GeomGroup) -> list:
     prop_cycle = plt.rcParams["axes.prop_cycle"]
     colors = prop_cycle.by_key()["color"]
-    patches = []
+    patches: list[Patch] = []
     for geom in grp.group:
         if geom.layer < 0:
             continue
