@@ -82,6 +82,10 @@ files = ["src/samplemaker"]
 python_version = "3.13"
 show_error_codes = true
 
+[[tool.mypy.overrides]]
+module = ["asteval.*"]
+ignore_missing_imports = true
+
 [tool.scikit-build]
 minimum-version = "0.11.6"
 build-dir = "build/{wheel_tag}"
