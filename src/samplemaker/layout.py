@@ -111,8 +111,12 @@ from samplemaker.gdswriter import GDSWriter
 from samplemaker.makers import make_aref, make_circle, make_path, make_text
 from samplemaker.shapes import Box, GeomGroup, SRef, _DumpContext, _fingerprint
 
-TAB_POS_TYPE: TypeAlias = list[list[tuple[float, float]]]
-TAB_POS_INPUT_TYPE: TypeAlias = Sequence[Sequence[Sequence[float]]]
+_TablePositions: TypeAlias = list[list[tuple[float, float]]]
+_TablePositionInput: TypeAlias = Sequence[Sequence[Sequence[float]]]
+_WriteFieldInfo: TypeAlias = tuple[float, float, float, int, float]
+_Coordinate: TypeAlias = tuple[float, float]
+_PortMapRow: TypeAlias = list[dict[str, DevicePort]]
+_RowGeometries: TypeAlias = list[GeomGroup]
 
 
 class Marker:
@@ -465,17 +469,19 @@ class DeviceTable:
         self.row_linkports: Sequence[tuple[str, str]] = ()
         self.col_alignports = False
         self.row_alignports = False
-        self.device_rotation = 0
-        self.annotations = None
+        self.device_rotation: float = 0.0
+        self.annotations: DeviceTableAnnotations | None = None
         self.use_references = True
-        self.pos_xy = [[(0, 0) for _ in range(ncol)] for _ in range(nrow)]
+        self.pos_xy: list[list[_Coordinate]] = [
+            [(0, 0) for _ in range(ncol)] for _ in range(nrow)
+        ]
         self._external_ports: dict[str, DevicePort] = {}
-        self._geometries = []
-        self._portmap = []
+        self._geometries: list[_RowGeometries] = []
+        self._portmap: list[_PortMapRow] = []
         self._backup_dev = deepcopy(dev)  # Keep it to reset the whole thing
         self._getgeom_ran = False
 
-    def set_table_positions(self, positions: TAB_POS_INPUT_TYPE) -> None:
+    def set_table_positions(self, positions: _TablePositionInput) -> None:
         """Define the position of each element in the table.
 
         Uses a 3-dimensional Sequence of the kind pos[i][j][k] where i,j control the row
@@ -483,7 +489,7 @@ class DeviceTable:
 
         Parameters
         ----------
-        positions : TAB_POS_INPUT_TYPE
+        positions : _TablePositionInput
             The sequence describing the position of each element in the table.
 
         Returns
@@ -815,7 +821,7 @@ class DeviceTable:
         by: float,
         x0: float = 0,
         y0: float = 0,
-    ) -> TAB_POS_TYPE:
+    ) -> _TablePositions:
         """Create coordinates for a regular table array.
 
         Returns a nested list that can be passed to `DeviceTable.set_table_positions`.
@@ -841,7 +847,7 @@ class DeviceTable:
 
         Returns
         -------
-        TAB_POS_TYPE
+        _TablePositions
             3-dimensional list of positions.
 
         """
@@ -865,7 +871,7 @@ class Mask:
         """
         self.name = name
         self.mainsymbol = "CELL00"
-        self.writefields = []
+        self.writefields: list[_WriteFieldInfo] = []
         self.cache = False
         self.clear()  # A new mask clears the pool
 
