@@ -53,7 +53,7 @@ with `samplemaker`.
 """
 
 import math
-from collections.abc import Callable, MutableMapping, Sequence
+from collections.abc import Callable, Hashable, MutableMapping, Sequence
 from copy import deepcopy
 from typing import Any, TypeAlias
 
@@ -186,18 +186,18 @@ def default_command_list() -> COMMANDS_DICT_TYPE:
     }
 
 
-def default_options() -> OPTIONS_TYPE:
+def default_options() -> dict[str, dict[str, Hashable] | bool]:
     """Create default options for the sequencer.
 
     This returns the essential base options.
 
     Returns
     -------
-    OPTIONS_TYPE
+    dict[str, dict[str, Hashable] | bool]
         Returns the default options for the sequencer.
 
     """
-    defopts = {}
+    defopts: dict[str, dict[str, Hashable] | bool] = {}
     for dname in _DeviceList:
         dev = _DeviceList[dname]()
         dev.parameters()
