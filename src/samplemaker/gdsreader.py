@@ -5,7 +5,6 @@ It only imports the binary streams for reuse.
 Not to be used in actual scripts, unless it is for very special purposes.
 """
 
-import math
 import struct
 from copy import deepcopy
 from io import BufferedReader
@@ -64,8 +63,8 @@ class GDSReader:
 
     def __init__(self) -> None:
         """Initialize the GDS reader."""
-        self.buf = b""
-        self.ptr = 0
+        self.buf: bytes = b""
+        self.ptr: int = 0
         self.celldata: dict[str, bytes] = {}  # store binary GDS celldata
 
     @staticmethod
@@ -91,11 +90,11 @@ class GDSReader:
     def __read_real8(data: tuple[int, ...]) -> float:
         # sign = -1 if data[0] >> 7 else 1
         ex = 64 - data[0] % 128
-        mantissa = 0
+        mantissa = 0.0
         for i in range(6, -1, -1):
-            mantissa += data[6 - i + 1] * math.pow(2, 8 * i)
+            mantissa += data[6 - i + 1] * 2 ** (8 * i)
 
-        return mantissa / math.pow(2, 4 * ex) / math.pow(2, 56)
+        return mantissa / 2 ** (4 * ex) / 2**56
 
     def get_cell(self, cellname: str) -> smsh.GeomGroup:
         """Get a cell from the GDS file.
@@ -114,15 +113,15 @@ class GDSReader:
 
         self.buf = self.celldata[cellname]
         self.ptr = 0
-        cur_layer = 0
-        cur_width = 0
-        cur_el = 8  # BND
-        cur_xy = []
+        cur_layer: int = 0
+        cur_width: float = 0.0
+        cur_el: int = 8  # BND
+        cur_xy: list[float] = []
         cur_txt_posu = 0
         cur_txt_posv = 0
-        cur_strans_mir = 0
-        cur_strans_mag = 1
-        cur_strans_angle = 0
+        cur_strans_mir = False
+        cur_strans_mag = 1.0
+        cur_strans_angle = 0.0
         cur_string = ""
         cur_sname = ""
         cur_col = 1
@@ -140,25 +139,25 @@ class GDSReader:
             if rtype == 10:  # SREF
                 cur_el = 10
                 cur_sname = ""
-                cur_strans_mir = 0
-                cur_strans_mag = 1
-                cur_strans_angle = 0
+                cur_strans_mir = False
+                cur_strans_mag = 1.0
+                cur_strans_angle = 0.0
             if rtype == 11:  # AREF
                 cur_el = 11
                 cur_sname = ""
                 cur_col = 1
                 cur_row = 1
-                cur_strans_mir = 0
-                cur_strans_mag = 1
-                cur_strans_angle = 0
+                cur_strans_mir = False
+                cur_strans_mag = 1.0
+                cur_strans_angle = 0.0
 
             if rtype == 12:  # TEXT
                 cur_el = 12
                 cur_txt_posu = 0
                 cur_txt_posv = 0
-                cur_strans_mir = 0
-                cur_strans_mag = 1
-                cur_strans_angle = 0
+                cur_strans_mir = False
+                cur_strans_mag = 1.0
+                cur_strans_angle = 0.0
 
             if rtype == 13:  # LAYER
                 data = self.buf[(pos + 4) : (pos + hlen)]
@@ -169,20 +168,21 @@ class GDSReader:
             if rtype == 16:  # XY
                 data = self.buf[(pos + 4) : (pos + hlen)]
                 npts = int(len(data) / 4)
-                cur_xy = np.array(struct.unpack(f">{npts}i", data))
+                unpacked_data = struct.unpack(f">{npts}i", data)
+                cur_xy = list(map(float, unpacked_data))
             if rtype == 17:  # ENDEL
                 if cur_el == 8:  # Make a poly
                     p1 = smsh.Poly([0], [0], cur_layer)
-                    p1.set_int_data(cur_xy)
+                    p1.set_int_data(np.array(cur_xy))
                     gg.add(p1)
                 if cur_el == 9:  # Make a path
-                    xpts = np.copy(cur_xy[0::2]).astype(float) / 1000
-                    ypts = np.copy(cur_xy[1::2]).astype(float) / 1000
+                    xpts = [x / 1000 for x in cur_xy[0::2]]
+                    ypts = [y / 1000 for y in cur_xy[1::2]]
                     gg += sm.make_path(xpts, ypts, cur_width, layer=cur_layer)
                 if cur_el == 10:  # Make a SREF
                     r1 = smsh.SRef(
-                        cur_xy[0].astype(float) / 1000,
-                        cur_xy[1].astype(float) / 1000,
+                        float(cur_xy[0]) / 1000,
+                        float(cur_xy[1]) / 1000,
                         cur_sname,
                         smsh.GeomGroup(),
                         cur_strans_mag,
@@ -191,7 +191,7 @@ class GDSReader:
                     )
                     gg.add(r1)
                 if cur_el == 11:  # Make a AREF
-                    pts = np.copy(cur_xy).astype(float) / 1000
+                    pts = [xy / 1000 for xy in cur_xy]
                     x0 = pts[0]
                     y0 = pts[1]
                     ax = (pts[2] - x0) / cur_col
@@ -217,8 +217,8 @@ class GDSReader:
                     gg.add(a1)
                 if cur_el == 12:  # Make text
                     t1 = smsh.Text(
-                        cur_xy[0].astype(float) / 1000,
-                        cur_xy[1].astype(float) / 1000,
+                        cur_xy[0] / 1000,
+                        cur_xy[1] / 1000,
                         cur_string,
                         cur_txt_posu,
                         cur_txt_posv,
@@ -253,9 +253,9 @@ class GDSReader:
             if rtype == 26:  # STRANS
                 data = self.buf[(pos + 4) : (pos + hlen)]
                 strans = struct.unpack(">H", data)[0]
-                cur_strans_mir = strans >> 15
-                cur_strans_mag = 1
-                cur_strans_angle = 0
+                cur_strans_mir = bool(strans >> 15)
+                cur_strans_mag = 1.0
+                cur_strans_angle = 0.0
 
             if rtype == 27:  # MAG
                 data = self.buf[(pos + 4) : (pos + hlen)]
