@@ -43,7 +43,7 @@ def _connectable_facing(
         # Case1: port 1 is horizontal
         if abs(dy) < 2 * rad:
             # the y offset is small enough to use a C bend
-            dxsign = 1
+            dxsign = 1.0
             if abs(dx) != 0:  # Note: sometimes this can be zero
                 dxsign = dx / abs(dx)
             if port1.dx() + port2.dx() == 0 and dxsign == port1.dx():
@@ -64,7 +64,7 @@ def _connectable_facing(
     # Case2 : port 1 is vertical
     if abs(dx) < 2 * rad:
         # the y offset is small enough to use a C bend
-        dysign = 1
+        dysign = 1.0
         if abs(dy) != 0:
             dysign = dy / abs(dy)
         if port1.dy() + port2.dy() == 0 and dysign == port1.dy():
@@ -167,7 +167,7 @@ def _connect_step(
     seq = []
     if port1.dx() != 0:
         if abs(port2.y0 - port1.y0) < 2 * rad:  # It's better to bend if too close
-            s_len = -1
+            s_len = -1.0
         else:
             s_len = port1.dx() * (port2.x0 + port2.dx() * rad - port1.x0) - rad
         # print("s_len in x",s_len)
@@ -178,7 +178,7 @@ def _connect_step(
                 s_len -= 2 * rad
     else:
         if abs(port2.x0 - port1.x0) < 2 * rad:  # It's better to bend if too close
-            s_len = -1
+            s_len = -1.0
         else:
             s_len = port1.dy() * (port2.y0 + port2.dy() * rad - port1.y0) - rad
         # print("s_len in y",s_len)
