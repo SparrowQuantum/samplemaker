@@ -73,7 +73,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Collection, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
-from typing import Self
+from typing import Self, cast
 
 import numpy as np
 from asteval import Interpreter
@@ -870,7 +870,7 @@ class GeomGroup:
         plook = self.copy().boolean_union(layer)
         b1 = psearch.bounding_box()
         psearch.translate(-b1.cx, -b1.cy)
-        g2 = psearch.group[0]
+        g2 = cast("Poly", psearch.group[0])
         res = []
         for g in plook.group:
             if isinstance(g, Poly):
@@ -890,11 +890,8 @@ class GeomGroup:
 
         """
         area = 0
-        for i in range(len(self.group)):
-            if isinstance(self.group[i], SRef):
-                area += self.group[i].group.get_area()
-            else:
-                area += self.group[i].area()
+        for primitive in self.group:
+            area += primitive.area()
         return float(round(area * 1e6)) / 1e6
 
     def path_to_poly(self) -> None:
@@ -954,16 +951,17 @@ class GeomGroup:
 
         """
         polys = GeomGroup()
-        for i in range(len(self.group)):
-            g = self.group[i]
-            if isinstance(g, (Poly, Text, Path)):
-                polys += self.group[i].to_polygon()
-            elif isinstance(g, Arc):
-                polys += self.group[i].to_polygon(npts_arc, split_arc)
-            elif isinstance(g, Ellipse):  # Also covers Ring
-                polys += self.group[i].to_polygon(npts_arc)
-            elif isinstance(g, Circle):
-                polys += self.group[i].to_polygon(npts_circle)
+        for primitive in self.group:
+            if isinstance(primitive, SRef):
+                continue
+            if isinstance(primitive, Arc):
+                polys += primitive.to_polygon(npts_arc, split_arc)
+            elif isinstance(primitive, Ellipse):  # Also covers Ring
+                polys += primitive.to_polygon(npts_arc)
+            elif isinstance(primitive, Circle):
+                polys += primitive.to_polygon(npts_circle)
+            else:
+                polys += primitive.to_polygon()
 
         self.group[:] = [g for g in self.group if isinstance(g, SRef)]
         self.group = self.group + polys.group
@@ -991,20 +989,17 @@ class GeomGroup:
 
         """
         polys = GeomGroup()
-        for i in range(len(self.group)):
-            if isinstance(self.group[i], Poly):
-                convp = self.group[i].to_circle(thresh, vcount)
-                if not convp.group:
-                    polys.group += [self.group[i]]
+        for primitive in self.group:
+            if isinstance(primitive, Poly):
+                circle_geom = primitive.to_circle(thresh, vcount)
+                if not circle_geom.group:
+                    polys.add(primitive)
                 else:
-                    polys += convp
-                continue
-            if isinstance(self.group[i], SRef):
-                if include_refs:
-                    self.group[i].group.poly_to_circle(thresh, vcount)
-                continue
+                    polys += circle_geom
+            elif include_refs and isinstance(primitive, SRef):
+                primitive.group.poly_to_circle(thresh, vcount)
             # None of the above, just keep
-            polys.group += [self.group[i]]
+            polys.add(primitive)
 
         self.group[:] = [g for g in self.group if isinstance(g, SRef)]
         self.group = self.group + polys.group
@@ -1055,9 +1050,9 @@ class GeomGroup:
 
         """
         pg0 = boopy.PolyGroup()
-        for i in range(len(self.group)):
-            if isinstance(self.group[i], Poly) and self.group[i].layer == layer:
-                pdata = self.group[i].int_data()
+        for primitive in self.group:
+            if isinstance(primitive, Poly) and primitive.layer == layer:
+                pdata = list(primitive.int_data())
                 pg0.addPolyData(pdata)
         return pg0
 
@@ -1302,9 +1297,9 @@ class GeomGroup:
             Reference to the object.
 
         """
-        for i in range(len(self.group)):
-            if isinstance(self.group[i], Poly) and self.group[i].layer == layer:
-                self.group[i].anisotropic_resize(angles, deltas)
+        for primitive in self.group:
+            if isinstance(primitive, Poly) and primitive.layer == layer:
+                primitive.anisotropic_resize(angles, deltas)
         return self
 
     def poly_outlining(
@@ -1365,15 +1360,14 @@ class GeomGroup:
             self.__set_boopy__(original_polygroup, layer)
 
         # Circles
-        for i in range(len(self.group)):
-            if isinstance(self.group[i], Circle):
-                g = self.group[i]
+        for i, primitive in enumerate(self.group):
+            if isinstance(primitive, Circle):
                 self.group[i] = Arc(
-                    g.x0,
-                    g.y0,
-                    g.r + offset / 2 + distance,
-                    g.r + offset / 2 + distance,
-                    g.layer,
+                    primitive.x0,
+                    primitive.y0,
+                    primitive.r + offset / 2 + distance,
+                    primitive.r + offset / 2 + distance,
+                    primitive.layer,
                     0,
                     offset,
                     0,
@@ -3372,6 +3366,7 @@ for i, data in caps.items():
     gl = GeomGroup()
     xpts = []
     ypts = []
+    x = None
     for j in range(0, len(data), 3):
         x = data[j] / 3.6
         y = (data[j + 1]) / 3.6
@@ -3386,6 +3381,9 @@ for i, data in caps.items():
             ypts.append(y)
         else:
             gl.add(Path(xpts, ypts, 1, 0))
+    if x is None:
+        msg = f"No points found for glyph {i}"
+        raise ValueError(msg)
     _glyphs[i] = (gl, x)
 
 del caps
