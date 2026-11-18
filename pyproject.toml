@@ -104,5 +104,5 @@ before-all = ["vcpkg install boost-polygon:x64-windows"]
 dev = [
     "pytest==9.0.2",
     "pytest-cov==7.1.0",
-    "ruff==0.17.5",
+    "ruff==0.17.4",
 ]
