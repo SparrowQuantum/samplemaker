@@ -69,6 +69,7 @@ to save memory and computation time. For example
 
 import math
 import pathlib
+from abc import ABC, abstractmethod
 from collections.abc import Collection, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
@@ -90,6 +91,182 @@ _STENCIL_FONT_PATH = (
 )
 
 
+class GeomPrimitive(ABC):
+    """Abstract base class for all geometry primitives."""
+
+    def __init__(self, layer: int = 0) -> None:
+        """Initialize the geometry primitive with a layer.
+
+        Parameters
+        ----------
+        layer : int
+            The layer of the geometry. The default is 0.
+
+        """
+        self.layer: int = layer
+
+    @abstractmethod
+    def translate(self, dx: float, dy: float) -> None:
+        """Translate the geometry by the given offsets.
+
+        Parameters
+        ----------
+        dx : float
+            The offset in the x-direction.
+        dy : float
+            The offset in the y-direction.
+
+        Returns
+        -------
+        None
+
+        """
+
+    @abstractmethod
+    def rotate(self, x0: float, y0: float, rot: float) -> None:
+        """Rotate the geometry around a point by the given angle.
+
+        Parameters
+        ----------
+        x0 : float
+            The x-coordinate of the rotation center.
+        y0 : float
+            The y-coordinate of the rotation center.
+        rot : float
+            The rotation angle in degrees.
+
+        Returns
+        -------
+        None
+
+        """
+
+    @abstractmethod
+    def rotate_translate(self, dx: float, dy: float, rot: float) -> None:
+        """Rotate the geometry around origin and then translate.
+
+        Parameters
+        ----------
+        dx : float
+            The translation offset in the x-direction.
+        dy : float
+            The translation offset in the y-direction.
+        rot : float
+            The rotation angle in degrees.
+
+        Returns
+        -------
+        None
+
+        """
+
+    @abstractmethod
+    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:
+        """Scale the geometry around a center point.
+
+        Parameters
+        ----------
+        x0 : float
+            The x-coordinate of the scaling center.
+        y0 : float
+            The y-coordinate of the scaling center.
+        scale_x : float
+            The scaling factor in the x-direction.
+        scale_y : float
+            The scaling factor in the y-direction.
+
+        Returns
+        -------
+        None
+
+        """
+
+    @abstractmethod
+    def mirror_x(self, x0: float) -> None:
+        """Mirror the geometry across a vertical line.
+
+        Parameters
+        ----------
+        x0 : float
+            The x-coordinate of the vertical mirror line.
+
+        Returns
+        -------
+        None
+
+        """
+
+    @abstractmethod
+    def mirror_y(self, y0: float) -> None:
+        """Mirror the geometry across a horizontal line.
+
+        Parameters
+        ----------
+        y0 : float
+            The y-coordinate of the horizontal mirror line.
+
+        Returns
+        -------
+        None
+
+        """
+
+    @abstractmethod
+    def bounding_box(self) -> "Box":
+        """Get the bounding box of the geometry.
+
+        Returns
+        -------
+        Box
+            The bounding box of the geometry.
+
+        """
+
+    @abstractmethod
+    def to_polygon(self) -> "GeomGroup":
+        """Convert the geometry to a polygon representation.
+
+        Returns
+        -------
+        GeomGroup
+            Geometry group containing the polygon representation.
+
+        """
+
+    @abstractmethod
+    def area(self) -> float:
+        """Calculate the area of the geometry.
+
+        Returns
+        -------
+        float
+            The area of the geometry.
+
+        """
+
+    @abstractmethod
+    def centroid(self) -> tuple[float, float]:
+        """Calculate the centroid of the geometry.
+
+        Returns
+        -------
+        tuple[float, float]
+            The (x, y) coordinates of the centroid.
+
+        """
+
+    @abstractmethod
+    def perimeter(self) -> float:
+        """Calculate the perimeter of the geometry.
+
+        Returns
+        -------
+        float
+            The perimeter of the geometry.
+
+        """
+
+
 class GeomGroup:
     """A group of geometry elements.
 
@@ -99,7 +276,7 @@ class GeomGroup:
 
     def __init__(self) -> None:
         """Create an empty GeomGroup with no elements."""
-        self.group = []
+        self.group: list[GeomPrimitive] = []
 
     def __add__(self, other: "GeomGroup") -> "GeomGroup":
         """Combine two geometry groups.
@@ -136,12 +313,12 @@ class GeomGroup:
         self.group += other.group
         return self
 
-    def add(self, geom: "Poly | SRef | Path | Text | Circle") -> None:
+    def add(self, geom: GeomPrimitive) -> None:
         """Add a shape to the group.
 
         Parameters
         ----------
-        geom : Poly | SRef | Path | Text | Circle
+        geom : GeomPrimitive
             The geometry to be added.
 
         Returns
@@ -1316,7 +1493,7 @@ class GeomGroup:
         return ndisc
 
 
-class Dot:
+class Dot(GeomPrimitive):
     """Point helper class used for geometric transformations."""
 
     def __init__(self, x: float, y: float) -> None:
@@ -1330,44 +1507,15 @@ class Dot:
             Y coordinate.
 
         """
+        super().__init__()
         self.x = x
         self.y = y
 
-    def translate(self, dx: float, dy: float) -> None:
-        """Translate the point.
-
-        Parameters
-        ----------
-        dx : float
-            Translation along x.
-        dy : float
-            Translation along y.
-
-        Returns
-        -------
-        None
-
-        """
+    def translate(self, dx: float, dy: float) -> None:  # noqa: D102
         self.x += dx
         self.y += dy
 
-    def rotate(self, x0: float, y0: float, rot: float) -> None:
-        """Rotate the point around a center.
-
-        Parameters
-        ----------
-        x0 : float
-            Rotation center x coordinate.
-        y0 : float
-            Rotation center y coordinate.
-        rot : float
-            Rotation angle in degrees.
-
-        Returns
-        -------
-        None
-
-        """
+    def rotate(self, x0: float, y0: float, rot: float) -> None:  # noqa: D102
         xc = self.x - x0
         yc = self.y - y0
         cost = math.cos(rot / 180 * math.pi)
@@ -1375,29 +1523,13 @@ class Dot:
         self.x = cost * xc - sint * yc + x0
         self.y = sint * xc + cost * yc + y0
 
-    def rotate_translate(self, x0: float, y0: float, rot: float) -> None:
-        """Rotate the point around origin and then translate.
-
-        Parameters
-        ----------
-        x0 : float
-            Translation along x after rotation.
-        y0 : float
-            Translation along y after rotation.
-        rot : float
-            Rotation angle in degrees around origin.
-
-        Returns
-        -------
-        None
-
-        """
+    def rotate_translate(self, dx: float, dy: float, rot: float) -> None:  # noqa: D102
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         x = self.x
         y = self.y
-        self.x = cost * x - sint * y + x0
-        self.y = sint * x + cost * y + y0
+        self.x = cost * x - sint * y + dx
+        self.y = sint * x + cost * y + dy
 
     def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:
         """Scale the point around a center.
@@ -1423,35 +1555,46 @@ class Dot:
         self.x = (self.x - x0) * scale_x + x0
         self.y = (self.y - y0) * scale_y + y0
 
-    def mirror_x(self, x0: float) -> None:
-        """Mirror the point with respect to a vertical axis.
-
-        Parameters
-        ----------
-        x0 : float
-            X coordinate of the mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
+    def mirror_x(self, x0: float) -> None:  # noqa: D102
         self.x = 2 * x0 - self.x
 
-    def mirror_y(self, y0: float) -> None:
-        """Mirror the point with respect to a horizontal axis.
+    def mirror_y(self, y0: float) -> None:  # noqa: D102
+        self.y = 2 * y0 - self.y
 
-        Parameters
-        ----------
-        y0 : float
-            Y coordinate of the mirror axis.
+    def bounding_box(self) -> "Box":
+        """Get the axis-aligned bounding box of the point.
+
+        Returns a zero-width, zero-height bounding box at the point's location.
 
         Returns
         -------
-        None
+        Box
+            The bounding box of the point.
 
         """
-        self.y = 2 * y0 - self.y
+        return Box(self.x, self.y, 0, 0)
+
+    def to_polygon(self) -> "GeomGroup":
+        """Convert the point to a polygon representation.
+
+        The point is represented as an empty geometry group since it has no area.
+
+        Returns
+        -------
+        GeomGroup
+            An empty geometry group.
+
+        """
+        return GeomGroup()
+
+    def area(self) -> float:  # noqa: D102
+        return 0.0
+
+    def centroid(self) -> tuple[float, float]:  # noqa: D102
+        return self.x, self.y
+
+    def perimeter(self) -> float:  # noqa: D102
+        return 0.0
 
 
 class Box:
@@ -1607,7 +1750,7 @@ class Box:
         return self.cx - xoff * self.width / 2, self.cy - yoff * self.height / 2
 
 
-class Poly:
+class Poly(GeomPrimitive):
     """Closed polygon represented by interleaved coordinate data."""
 
     def __init__(self, xpts: ArrayLike, ypts: ArrayLike, layer: int) -> None:
@@ -1623,7 +1766,7 @@ class Poly:
             Layer number.
 
         """
-        self.layer = layer
+        super().__init__(layer)
         self.set_points(xpts, ypts)
 
     def set_points(self, xpts: ArrayLike, ypts: ArrayLike) -> None:
@@ -1694,65 +1837,19 @@ class Poly:
         self.data = idata.astype("float64") / 1000
         self.Npts = math.floor(self.data.size / 2)
 
-    def translate(self, dx: float, dy: float) -> None:
-        """Translate the polygon.
-
-        Parameters
-        ----------
-        dx : float
-            Translation along x.
-        dy : float
-            Translation along y.
-
-        Returns
-        -------
-        None
-
-        """
+    def translate(self, dx: float, dy: float) -> None:  # noqa: D102
         self.data[0::2] += dx
         self.data[1::2] += dy
 
-    def rotate_translate(self, x0: float, y0: float, rot: float) -> None:
-        """Rotate the polygon around origin and then translate.
-
-        Parameters
-        ----------
-        x0 : float
-            Translation along x after rotation.
-        y0 : float
-            Translation along y after rotation.
-        rot : float
-            Rotation angle in degrees around origin.
-
-        Returns
-        -------
-        None
-
-        """
+    def rotate_translate(self, dx: float, dy: float, rot: float) -> None:  # noqa: D102
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         x = np.copy(self.data[0::2])
         y = np.copy(self.data[1::2])
-        self.data[0::2] = cost * (x) - sint * (y) + x0
-        self.data[1::2] = sint * (x) + cost * (y) + y0
+        self.data[0::2] = cost * (x) - sint * (y) + dx
+        self.data[1::2] = sint * (x) + cost * (y) + dy
 
-    def rotate(self, x0: float, y0: float, rot: float) -> None:
-        """Rotate the polygon around a center.
-
-        Parameters
-        ----------
-        x0 : float
-            Rotation center x coordinate.
-        y0 : float
-            Rotation center y coordinate.
-        rot : float
-            Rotation angle in degrees.
-
-        Returns
-        -------
-        None
-
-        """
+    def rotate(self, x0: float, y0: float, rot: float) -> None:  # noqa: D102
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         x = np.copy(self.data[0::2])
@@ -1760,84 +1857,26 @@ class Poly:
         self.data[0::2] = cost * (x - x0) - sint * (y - y0) + x0
         self.data[1::2] = sint * (x - x0) + cost * (y - y0) + y0
 
-    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:
-        """Scale polygon coordinates around a center.
-
-        Parameters
-        ----------
-        x0 : float
-            Scaling center x coordinate.
-        y0 : float
-            Scaling center y coordinate.
-        scale_x : float
-            Scale factor along x.
-        scale_y : float
-            Scale factor along y.
-
-        Returns
-        -------
-        None
-
-        """
+    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:  # noqa: D102
         x = self.data[0::2]
         y = self.data[1::2]
         self.data[0::2] = scale_x * (x - x0) + x0
         self.data[1::2] = scale_y * (y - y0) + y0
 
-    def mirror_x(self, x0: float) -> None:
-        """Mirror polygon vertices with respect to a vertical axis.
-
-        Parameters
-        ----------
-        x0 : float
-            X coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
+    def mirror_x(self, x0: float) -> None:  # noqa: D102
         self.data[0::2] = 2 * x0 - self.data[0::2]
 
-    def mirror_y(self, y0: float) -> None:
-        """Mirror polygon vertices with respect to a horizontal axis.
-
-        Parameters
-        ----------
-        y0 : float
-            Y coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
+    def mirror_y(self, y0: float) -> None:  # noqa: D102
         self.data[1::2] = 2 * y0 - self.data[1::2]
 
-    def bounding_box(self) -> Box:
-        """Compute the polygon bounding box.
-
-        Returns
-        -------
-        Box
-            Axis-aligned bounding box.
-
-        """
+    def bounding_box(self) -> Box:  # noqa: D102
         llx = min(self.data[0::2])
         urx = max(self.data[0::2])
         lly = min(self.data[1::2])
         ury = max(self.data[1::2])
         return Box(llx, lly, urx - llx, ury - lly)
 
-    def area(self) -> float:
-        """Compute polygon area.
-
-        Returns
-        -------
-        float
-            Absolute polygon area.
-
-        """
+    def area(self) -> float:  # noqa: D102
         area = 0.0
         x = self.data[0::2]
         y = self.data[1::2]
@@ -1848,15 +1887,7 @@ class Poly:
             j = i
         return float(round(1e6 * abs(area / 2.0))) / 1.0e6
 
-    def centroid(self) -> tuple[float, float]:
-        """Compute polygon centroid.
-
-        Returns
-        -------
-        tuple[float, float]
-            Centroid coordinates `(x, y)`.
-
-        """
+    def centroid(self) -> tuple[float, float]:  # noqa: D102
         cx = 0
         cy = 0
         area = 0
@@ -1874,15 +1905,7 @@ class Poly:
         cy /= 3 * area
         return cx, cy
 
-    def perimeter(self) -> float:
-        """Compute polygon perimeter.
-
-        Returns
-        -------
-        float
-            Polygon perimeter length.
-
-        """
+    def perimeter(self) -> float:  # noqa: D102
         p = 0
         x = self.data[0::2]
         y = self.data[1::2]
@@ -2166,7 +2189,7 @@ class Poly:
         self.set_points(xpts, ypts)
 
 
-class Path:
+class Path(GeomPrimitive):
     """Open polyline with finite width."""
 
     def __init__(
@@ -2186,73 +2209,27 @@ class Path:
             Layer number.
 
         """
+        super().__init__(layer)
         self.xpts = list(xpts)
         self.ypts = list(ypts)
         self.width = width
-        self.layer = layer
         self.Npts = len(self.xpts)
 
-    def translate(self, dx: float, dy: float) -> None:
-        """Translate the path.
-
-        Parameters
-        ----------
-        dx : float
-            Translation along x.
-        dy : float
-            Translation along y.
-
-        Returns
-        -------
-        None
-
-        """
+    def translate(self, dx: float, dy: float) -> None:  # noqa: D102
         for i in range(self.Npts):
             self.xpts[i] = self.xpts[i] + dx
             self.ypts[i] = self.ypts[i] + dy
 
-    def rotate_translate(self, x0: float, y0: float, rot: float) -> None:
-        """Rotate around origin and then translate path vertices.
-
-        Parameters
-        ----------
-        x0 : float
-            Translation along x after rotation.
-        y0 : float
-            Translation along y after rotation.
-        rot : float
-            Rotation angle in degrees around origin.
-
-        Returns
-        -------
-        None
-
-        """
+    def rotate_translate(self, dx: float, dy: float, rot: float) -> None:  # noqa: D102
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         for i in range(self.Npts):
             x = self.xpts[i]
             y = self.ypts[i]
-            self.xpts[i] = cost * (x) - sint * (y) + x0
-            self.ypts[i] = sint * (x) + cost * (y) + y0
+            self.xpts[i] = cost * (x) - sint * (y) + dx
+            self.ypts[i] = sint * (x) + cost * (y) + dy
 
-    def rotate(self, x0: float, y0: float, rot: float) -> None:
-        """Rotate the path around a center.
-
-        Parameters
-        ----------
-        x0 : float
-            Rotation center x coordinate.
-        y0 : float
-            Rotation center y coordinate.
-        rot : float
-            Rotation angle in degrees.
-
-        Returns
-        -------
-        None
-
-        """
+    def rotate(self, x0: float, y0: float, rot: float) -> None:  # noqa: D102
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         for i in range(self.Npts):
@@ -2261,25 +2238,7 @@ class Path:
             self.xpts[i] = cost * (x - x0) - sint * (y - y0) + x0
             self.ypts[i] = sint * (x - x0) + cost * (y - y0) + y0
 
-    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:
-        """Scale path vertices around a center.
-
-        Parameters
-        ----------
-        x0 : float
-            Scaling center x coordinate.
-        y0 : float
-            Scaling center y coordinate.
-        scale_x : float
-            Scale factor along x.
-        scale_y : float
-            Scale factor along y.
-
-        Returns
-        -------
-        None
-
-        """
+    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:  # noqa: D102
         for i in range(self.Npts):
             x = self.xpts[i]
             y = self.ypts[i]
@@ -2287,47 +2246,15 @@ class Path:
             self.ypts[i] = scale_y * (y - y0) + y0
             self.width *= scale_x
 
-    def mirror_x(self, x0: float) -> None:
-        """Mirror path vertices with respect to a vertical axis.
-
-        Parameters
-        ----------
-        x0 : float
-            X coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
+    def mirror_x(self, x0: float) -> None:  # noqa: D102
         for i in range(self.Npts):
             self.xpts[i] = 2 * x0 - self.xpts[i]
 
-    def mirror_y(self, y0: float) -> None:
-        """Mirror path vertices with respect to a horizontal axis.
-
-        Parameters
-        ----------
-        y0 : float
-            Y coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
+    def mirror_y(self, y0: float) -> None:  # noqa: D102
         for i in range(self.Npts):
             self.ypts[i] = 2 * y0 - self.ypts[i]
 
-    def bounding_box(self) -> Box:
-        """Compute the path bounding box.
-
-        Returns
-        -------
-        Box
-            Axis-aligned bounding box of path vertices.
-
-        """
+    def bounding_box(self) -> Box:  # noqa: D102
         llx = min(self.xpts)
         urx = max(self.xpts)
         lly = min(self.ypts)
@@ -2481,7 +2408,7 @@ class Path:
         return g
 
 
-class Text:
+class Text(GeomPrimitive):
     """Text annotation object with stroke-based polygon conversion."""
 
     def __init__(
@@ -2497,6 +2424,10 @@ class Text:
         layer: int,
     ) -> None:
         """Create a text object.
+
+        Text objects create labels, rather than physical geometry in the GDS file.
+        Convert the text to polygons using the `to_polygon` method if physical geometry
+        is needed.
 
         Parameters
         ----------
@@ -2520,6 +2451,7 @@ class Text:
             Layer number.
 
         """
+        super().__init__(layer)
         self.x0 = x0
         self.y0 = y0
         self.text = text
@@ -2528,43 +2460,12 @@ class Text:
         self.height = height
         self.width = width
         self.angle = angle
-        self.layer = layer
 
-    def translate(self, dx: float, dy: float) -> None:
-        """Translate text anchor position.
-
-        Parameters
-        ----------
-        dx : float
-            Translation along x.
-        dy : float
-            Translation along y.
-
-        Returns
-        -------
-        None
-
-        """
+    def translate(self, dx: float, dy: float) -> None:  # noqa: D102
         self.x0 += dx
         self.y0 += dy
 
-    def rotate_translate(self, dx: float, dy: float, rot: float) -> None:
-        """Rotate around origin then translate text anchor.
-
-        Parameters
-        ----------
-        dx : float
-            Translation along x after rotation.
-        dy : float
-            Translation along y after rotation.
-        rot : float
-            Rotation angle in degrees around origin.
-
-        Returns
-        -------
-        None
-
-        """
+    def rotate_translate(self, dx: float, dy: float, rot: float) -> None:  # noqa: D102
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         xv = self.x0
@@ -2573,39 +2474,23 @@ class Text:
         self.y0 = sint * xv + cost * yv + dy
         self.angle += rot
 
-    def rotate(self, xc: float, yc: float, rot: float) -> None:
-        """Rotate text around a center.
-
-        Parameters
-        ----------
-        xc : float
-            Rotation center x coordinate.
-        yc : float
-            Rotation center y coordinate.
-        rot : float
-            Rotation angle in degrees.
-
-        Returns
-        -------
-        None
-
-        """
+    def rotate(self, x0: float, y0: float, rot: float) -> None:  # noqa: D102
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
-        xv = self.x0 - xc
-        yv = self.y0 - yc
-        self.x0 = cost * xv - sint * yv + xc
-        self.y0 = sint * xv + cost * yv + yc
+        xv = self.x0 - x0
+        yv = self.y0 - y0
+        self.x0 = cost * xv - sint * yv + x0
+        self.y0 = sint * xv + cost * yv + y0
         self.angle += rot
 
-    def scale(self, xc: float, yc: float, scale_x: float, scale_y: float) -> None:
+    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:
         """Scale text anchor and glyph dimensions.
 
         Parameters
         ----------
-        xc : float
+        x0 : float
             Scaling center x coordinate.
-        yc : float
+        y0 : float
             Scaling center y coordinate.
         scale_x : float
             Scale factor along x.
@@ -2617,17 +2502,17 @@ class Text:
         None
 
         """
-        self.x0 = scale_x * (self.x0 - xc) + xc
-        self.y0 = scale_y * (self.y0 - yc) + yc
+        self.x0 = scale_x * (self.x0 - x0) + x0
+        self.y0 = scale_y * (self.y0 - y0) + y0
         self.height *= scale_y
         self.width *= scale_x
 
-    def mirror_x(self, xc: float) -> None:
+    def mirror_x(self, x0: float) -> None:
         """Mirror text with respect to a vertical axis.
 
         Parameters
         ----------
-        xc : float
+        x0 : float
             X coordinate of mirror axis.
 
         Returns
@@ -2635,15 +2520,15 @@ class Text:
         None
 
         """
-        self.x0 = 2 * xc - self.x0
+        self.x0 = 2 * x0 - self.x0
         self.angle = 180 - self.angle
 
-    def mirror_y(self, yc: float) -> None:
+    def mirror_y(self, y0: float) -> None:
         """Mirror text with respect to a horizontal axis.
 
         Parameters
         ----------
-        yc : float
+        y0 : float
             Y coordinate of mirror axis.
 
         Returns
@@ -2651,7 +2536,7 @@ class Text:
         None
 
         """
-        self.y0 = 2 * yc - self.y0
+        self.y0 = 2 * y0 - self.y0
         self.angle = -self.angle
 
     def bounding_box(self) -> Box:
@@ -2744,176 +2629,7 @@ class Text:
         return g
 
 
-class RefBase:
-    """Base transformation class for cell references."""
-
-    def __init__(
-        self, x0: float, y0: float, mag: float, angle: float, mirror: bool
-    ) -> None:
-        """Initialize common reference transform parameters.
-
-        Parameters
-        ----------
-        x0 : float
-            Reference x coordinate.
-        y0 : float
-            Reference y coordinate.
-        mag : float
-            Magnification factor.
-        angle : float
-            Rotation angle in degrees.
-        mirror : bool
-            Whether reflection is enabled.
-
-        """
-        self.x0 = x0
-        self.y0 = y0
-        self.mag = mag
-        self.angle = angle
-        self.mirror = mirror
-        self.layer = 0  # Unused
-
-    def translate(self, dx: float, dy: float) -> None:
-        """Translate reference position.
-
-        Parameters
-        ----------
-        dx : float
-            Translation along x.
-        dy : float
-            Translation along y.
-
-        Returns
-        -------
-        None
-
-        """
-        self.x0 += dx
-        self.y0 += dy
-
-    def rotate_translate(self, dx: float, dy: float, rot: float) -> None:
-        """Rotate around origin and then translate reference position.
-
-        Parameters
-        ----------
-        dx : float
-            Translation along x after rotation.
-        dy : float
-            Translation along y after rotation.
-        rot : float
-            Rotation angle in degrees.
-
-        Returns
-        -------
-        None
-
-        """
-        cost = math.cos(rot / 180 * math.pi)
-        sint = math.sin(rot / 180 * math.pi)
-        xv = self.x0
-        yv = self.y0
-        self.x0 = cost * xv - sint * yv + dx
-        self.y0 = sint * xv + cost * yv + dy
-        self.angle += rot
-        self.angle = self.angle % 360
-
-    def rotate(self, xc: float, yc: float, rot: float) -> None:
-        """Rotate reference position around a center.
-
-        Parameters
-        ----------
-        xc : float
-            Rotation center x coordinate.
-        yc : float
-            Rotation center y coordinate.
-        rot : float
-            Rotation angle in degrees.
-
-        Returns
-        -------
-        None
-
-        """
-        cost = math.cos(rot / 180 * math.pi)
-        sint = math.sin(rot / 180 * math.pi)
-        xv = self.x0 - xc
-        yv = self.y0 - yc
-        self.x0 = cost * xv - sint * yv + xc
-        self.y0 = sint * xv + cost * yv + yc
-        self.angle += rot
-        self.angle = self.angle % 360
-
-    def scale(self, xc: float, yc: float, scale_x: float, scale_y: float) -> None:
-        """Scale reference position and magnification.
-
-        Parameters
-        ----------
-        xc : float
-            Scaling center x coordinate.
-        yc : float
-            Scaling center y coordinate.
-        scale_x : float
-            Scale factor along x.
-        scale_y : float
-            Scale factor along y.
-
-        Returns
-        -------
-        None
-
-        """
-        self.x0 = scale_x * (self.x0 - xc) + xc
-        self.y0 = scale_y * (self.y0 - yc) + yc
-        self.mag *= scale_x
-
-    def mirror_x(self, xc: float) -> None:
-        """Mirror reference with respect to a vertical axis.
-
-        Parameters
-        ----------
-        xc : float
-            X coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        self.x0 = 2 * xc - self.x0
-        self.mirror = not self.mirror
-        self.angle = 180 - self.angle
-        self.angle = self.angle % 360
-
-    def mirror_y(self, yc: float) -> None:
-        """Mirror reference with respect to a horizontal axis.
-
-        Parameters
-        ----------
-        yc : float
-            Y coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        self.y0 = 2 * yc - self.y0
-        self.mirror = not self.mirror
-        self.angle = -self.angle
-
-    def centroid(self) -> tuple[float, float]:
-        """Return reference anchor point.
-
-        Returns
-        -------
-        tuple[float, float]
-            Anchor coordinates `(x, y)`.
-
-        """
-        return self.x0, self.y0
-
-
-class SRef(RefBase):
+class SRef(GeomPrimitive):
     """Single-cell reference geometry."""
 
     def __init__(
@@ -2946,9 +2662,103 @@ class SRef(RefBase):
             Whether reflection is enabled.
 
         """
-        RefBase.__init__(self, x0, y0, mag, angle, mirror)
+        super().__init__()
+        self.x0 = x0
+        self.y0 = y0
+        self.mag = mag
+        self.angle = angle
+        self.mirror = mirror
         self.cellname = cellname
         self.group = group
+
+    def translate(self, dx: float, dy: float) -> None:  # noqa: D102
+        self.x0 += dx
+        self.y0 += dy
+
+    def rotate_translate(self, dx: float, dy: float, rot: float) -> None:  # noqa: D102
+        cost = math.cos(rot / 180 * math.pi)
+        sint = math.sin(rot / 180 * math.pi)
+        xv = self.x0
+        yv = self.y0
+        self.x0 = cost * xv - sint * yv + dx
+        self.y0 = sint * xv + cost * yv + dy
+        self.angle += rot
+        self.angle = self.angle % 360
+
+    def rotate(self, x0: float, y0: float, rot: float) -> None:  # noqa: D102
+        cost = math.cos(rot / 180 * math.pi)
+        sint = math.sin(rot / 180 * math.pi)
+        xv = self.x0 - x0
+        yv = self.y0 - y0
+        self.x0 = cost * xv - sint * yv + x0
+        self.y0 = sint * xv + cost * yv + y0
+        self.angle += rot
+        self.angle = self.angle % 360
+
+    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:  # noqa: D102
+        self.x0 = scale_x * (self.x0 - x0) + x0
+        self.y0 = scale_y * (self.y0 - y0) + y0
+        self.mag *= scale_x
+
+    def mirror_x(self, x0: float) -> None:  # noqa: D102
+        self.x0 = 2 * x0 - self.x0
+        self.mirror = not self.mirror
+        self.angle = 180 - self.angle
+        self.angle = self.angle % 360
+
+    def mirror_y(self, y0: float) -> None:  # noqa: D102
+        self.y0 = 2 * y0 - self.y0
+        self.mirror = not self.mirror
+        self.angle = -self.angle
+
+    def to_polygon(self) -> GeomGroup:
+        """Convert the reference to a polygon representation.
+
+        Returns
+        -------
+        GeomGroup
+            Polygon representation of the reference.
+
+        """
+        flat_group = self.group.flatten()
+        placed_group = self.place_group(flat_group)
+        placed_group.all_to_poly()
+        return placed_group
+
+    def area(self) -> float:
+        """Calculate the area of the reference.
+
+        Returns
+        -------
+        float
+            Area of the reference.
+
+        """
+        group_area = self.group.get_area()
+        return group_area * self.mag * self.mag
+
+    def centroid(self) -> tuple[float, float]:
+        """Return reference anchor point.
+
+        Returns
+        -------
+        tuple[float, float]
+            Anchor coordinates `(x, y)`.
+
+        """
+        return self.x0, self.y0
+
+    def perimeter(self) -> float:
+        """Calculate the perimeter of the reference.
+
+        Returns
+        -------
+        float
+            Perimeter of the reference.
+
+        """
+        group_perimeter = sum(shape.perimeter() for shape in self.group.group)
+        return group_perimeter * self.mag
 
     def bounding_box(self) -> Box:
         """Compute transformed bounding box of referenced geometry.
@@ -3068,7 +2878,7 @@ class ARef(SRef):
             Bounding box covering all placements.
 
         """
-        bb = SRef.bounding_box(self)
+        bb = super().bounding_box()
         bbn = deepcopy(bb)
         for i in range(self.ncols):
             for j in range(self.nrows):
@@ -3091,7 +2901,7 @@ class ARef(SRef):
             Group containing all array instances.
 
         """
-        SRef.place_group(self, flat_group)
+        super().place_group(flat_group)
         base_group = flat_group.copy()
         for i in range(self.ncols):
             for j in range(self.nrows):
@@ -3104,8 +2914,14 @@ class ARef(SRef):
                 flat_group += ng
         return flat_group
 
+    def area(self) -> float:  # noqa: D102
+        return self.ncols * self.nrows * super().area()
 
-class Circle:
+    def perimeter(self) -> float:  # noqa: D102
+        return self.ncols * self.nrows * super().perimeter()
+
+
+class Circle(GeomPrimitive):
     """Circular geometry primitive."""
 
     def __init__(self, x0: float, y0: float, r: float, layer: int) -> None:
@@ -3123,188 +2939,55 @@ class Circle:
             Layer number.
 
         """
+        super().__init__(layer)
         self.x0 = x0
         self.y0 = y0
         self.r = r
-        self.layer = layer
 
-    def translate(self, dx: float, dy: float) -> None:
-        """Translate circle center.
-
-        Parameters
-        ----------
-        dx : float
-            Translation along x.
-        dy : float
-            Translation along y.
-
-        Returns
-        -------
-        None
-
-        """
+    def translate(self, dx: float, dy: float) -> None:  # noqa: D102
         self.x0 += dx
         self.y0 += dy
 
-    def rotate_translate(self, xc: float, yc: float, rot: float) -> None:
-        """Rotate center around origin and then translate.
-
-        Parameters
-        ----------
-        xc : float
-            Translation along x after rotation.
-        yc : float
-            Translation along y after rotation.
-        rot : float
-            Rotation angle in degrees around origin.
-
-        Returns
-        -------
-        None
-
-        """
+    def rotate_translate(self, dx: float, dy: float, rot: float) -> None:  # noqa: D102
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         x = self.x0
         y = self.y0
-        self.x0 = cost * x - sint * y + xc
-        self.y0 = sint * x + cost * y + yc
+        self.x0 = cost * x - sint * y + dx
+        self.y0 = sint * x + cost * y + dy
 
-    def rotate(self, xc: float, yc: float, rot: float) -> None:
-        """Rotate circle center around a point.
-
-        Parameters
-        ----------
-        xc : float
-            Rotation center x coordinate.
-        yc : float
-            Rotation center y coordinate.
-        rot : float
-            Rotation angle in degrees.
-
-        Returns
-        -------
-        None
-
-        """
+    def rotate(self, x0: float, y0: float, rot: float) -> None:  # noqa: D102
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
         x = self.x0
         y = self.y0
-        self.x0 = cost * (x - xc) - sint * (y - yc) + xc
-        self.y0 = sint * (x - xc) + cost * (y - yc) + yc
+        self.x0 = cost * (x - x0) - sint * (y - y0) + x0
+        self.y0 = sint * (x - x0) + cost * (y - y0) + y0
 
-    def scale(self, xc: float, yc: float, scale_x: float, scale_y: float) -> None:
-        """Scale circle center and radius.
-
-        Parameters
-        ----------
-        xc : float
-            Scaling center x coordinate.
-        yc : float
-            Scaling center y coordinate.
-        scale_x : float
-            Scale factor along x.
-        scale_y : float
-            Scale factor along y.
-
-        Returns
-        -------
-        None
-
-        """
-        self.x0 = scale_x * (self.x0 - xc) + xc
-        self.y0 = scale_y * (self.y0 - yc) + yc
+    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:  # noqa: D102
+        self.x0 = scale_x * (self.x0 - x0) + x0
+        self.y0 = scale_y * (self.y0 - y0) + y0
         self.r = scale_x * self.r
 
-    def mirror_x(self, xc: float) -> None:
-        """Mirror circle center with respect to a vertical axis.
+    def mirror_x(self, x0: float) -> None:  # noqa: D102
+        self.x0 = 2 * x0 - self.x0
 
-        Parameters
-        ----------
-        xc : float
-            X coordinate of mirror axis.
+    def mirror_y(self, y0: float) -> None:  # noqa: D102
+        self.y0 = 2 * y0 - self.y0
 
-        Returns
-        -------
-        None
-
-        """
-        self.x0 = 2 * xc - self.x0
-
-    def mirror_y(self, yc: float) -> None:
-        """Mirror circle center with respect to a horizontal axis.
-
-        Parameters
-        ----------
-        yc : float
-            Y coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        self.y0 = 2 * yc - self.y0
-
-    def bounding_box(self) -> Box:
-        """Compute circle bounding box.
-
-        Returns
-        -------
-        Box
-            Axis-aligned bounding box.
-
-        """
+    def bounding_box(self) -> Box:  # noqa: D102
         return Box(self.x0 - self.r, self.y0 - self.r, 2 * self.r, 2 * self.r)
 
-    def area(self) -> float:
-        """Compute circle area.
-
-        Returns
-        -------
-        float
-            Circle area.
-
-        """
+    def area(self) -> float:  # noqa: D102
         return np.pi * self.r * self.r
 
-    def centroid(self) -> tuple[float, float]:
-        """Return circle centroid.
-
-        Returns
-        -------
-        tuple[float, float]
-            Center coordinates `(x, y)`.
-
-        """
+    def centroid(self) -> tuple[float, float]:  # noqa: D102
         return self.x0, self.y0
 
-    def perimeter(self) -> float:
-        """Compute circle perimeter.
-
-        Returns
-        -------
-        float
-            Circumference.
-
-        """
+    def perimeter(self) -> float:  # noqa: D102
         return 2 * np.pi * self.r
 
-    def to_polygon(self, npts: int = 12) -> GeomGroup:
-        """Approximate the circle with a polygon.
-
-        Parameters
-        ----------
-        npts : int, optional
-            Number of polygon vertices. Default is 12.
-
-        Returns
-        -------
-        GeomGroup
-            Group containing one polygon approximation.
-
-        """
+    def to_polygon(self, npts: int = 12) -> GeomGroup:  # noqa: D102
         xc = np.array([0.0] * npts)
         yc = np.array([0.0] * npts)
         for i in range(npts):
@@ -3339,78 +3022,28 @@ class Ellipse(Circle):
             Rotation angle in degrees.
 
         """
-        Circle.__init__(self, x0, y0, rx, layer)
+        super().__init__(x0, y0, rx, layer)
         self.r1 = ry
         self.rot = rot
 
-    def rotate_translate(self, xc: float, yc: float, rot: float) -> None:
-        """Rotate around origin then translate center and orientation.
-
-        Parameters
-        ----------
-        xc : float
-            Translation along x after rotation.
-        yc : float
-            Translation along y after rotation.
-        rot : float
-            Rotation angle in degrees around origin.
-
-        Returns
-        -------
-        None
-
-        """
-        Circle.rotate_translate(self, xc, yc, rot)
+    def rotate_translate(self, dx: float, dy: float, rot: float) -> None:  # noqa: D102
+        super().rotate_translate(dx, dy, rot)
         self.rot += rot
 
-    def rotate(self, xc: float, yc: float, rot: float) -> None:
-        """Rotate ellipse around a center.
-
-        Parameters
-        ----------
-        xc : float
-            Rotation center x coordinate.
-        yc : float
-            Rotation center y coordinate.
-        rot : float
-            Rotation angle in degrees.
-
-        Returns
-        -------
-        None
-
-        """
-        Circle.rotate(self, xc, yc, rot)
+    def rotate(self, x0: float, y0: float, rot: float) -> None:  # noqa: D102
+        super().rotate(x0, y0, rot)
         self.rot += rot
 
-    def scale(self, xc: float, yc: float, scale_x: float, scale_y: float) -> None:
-        """Scale ellipse center and radii.
-
-        Parameters
-        ----------
-        xc : float
-            Scaling center x coordinate.
-        yc : float
-            Scaling center y coordinate.
-        scale_x : float
-            Scale factor along x.
-        scale_y : float
-            Scale factor along y.
-
-        Returns
-        -------
-        None
-
-        """
-        Circle.scale(self, xc, yc, scale_x, scale_y)
+    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:  # noqa: D102
+        super().scale(x0, y0, scale_x, scale_y)
         self.r1 *= scale_y
 
-    def mirror_x(self, xc: float) -> None:
+    def mirror_x(self, x0: float) -> None:
         """Mirror ellipse with respect to a vertical axis.
 
         Parameters
         ----------
-        xc : float
+        x0 : float
             X coordinate of mirror axis.
 
         Returns
@@ -3418,23 +3051,11 @@ class Ellipse(Circle):
         None
 
         """
-        Circle.mirror_x(self, xc)
+        super().mirror_x(x0)
         self.rot = 180 - self.rot
 
-    def mirror_y(self, yc: float) -> None:
-        """Mirror ellipse with respect to a horizontal axis.
-
-        Parameters
-        ----------
-        yc : float
-            Y coordinate of mirror axis.
-
-        Returns
-        -------
-        None
-
-        """
-        Circle.mirror_y(self, yc)
+    def mirror_y(self, y0: float) -> None:  # noqa: D102
+        super().mirror_y(y0)
         self.rot = -self.rot
 
     def bounding_box(self) -> Box:
@@ -3449,26 +3070,10 @@ class Ellipse(Circle):
         g = self.to_polygon(12)
         return g.bounding_box()
 
-    def area(self) -> float:
-        """Compute ellipse area.
-
-        Returns
-        -------
-        float
-            Ellipse area.
-
-        """
+    def area(self) -> float:  # noqa: D102
         return np.pi * self.r * self.r1
 
-    def perimeter(self) -> float:
-        """Estimate ellipse perimeter.
-
-        Returns
-        -------
-        float
-            Ramanujan approximation of perimeter.
-
-        """
+    def perimeter(self) -> float:  # noqa: D102
         a = self.r
         b = self.r1
         return np.pi * (3 * (a + b) - np.sqrt((3 * a + b) * (a + 3 * b)))
@@ -3531,17 +3136,17 @@ class Ring(Ellipse):
             Ring width.
 
         """
-        Ellipse.__init__(self, x0, y0, rx, ry, layer, rot)
+        super().__init__(x0, y0, rx, ry, layer, rot)
         self.w = w
 
-    def scale(self, xc: float, yc: float, scale_x: float, scale_y: float) -> None:
+    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:
         """Scale ring center, radii, and width.
 
         Parameters
         ----------
-        xc : float
+        x0 : float
             Scaling center x coordinate.
-        yc : float
+        y0 : float
             Scaling center y coordinate.
         scale_x : float
             Scale factor along x.
@@ -3553,7 +3158,7 @@ class Ring(Ellipse):
         None
 
         """
-        Ellipse.scale(self, xc, yc, scale_x, scale_y)
+        super().scale(x0, y0, scale_x, scale_y)
         self.w *= scale_x
 
     def bounding_box(self) -> Box:
@@ -3568,15 +3173,7 @@ class Ring(Ellipse):
         g = self.to_polygon(12)
         return g.bounding_box()
 
-    def area(self) -> float:
-        """Compute ring area.
-
-        Returns
-        -------
-        float
-            Area enclosed by outer contour minus inner contour.
-
-        """
+    def area(self) -> float:  # noqa: D102
         a1 = np.pi * (self.r + self.w / 2) * (self.r1 + self.w / 2)
         a2 = np.pi * (self.r - self.w / 2) * (self.r1 - self.w / 2)
         return a1 - a2
@@ -3693,7 +3290,7 @@ class Arc(Ring):
             Arc area.
 
         """
-        ra = Ring.area(self)
+        ra = super().area()
         return ra * (math.radians(self.a2) - math.radians(self.a1)) / 2 / np.pi
 
     def centroid(self) -> tuple[float, float]:
