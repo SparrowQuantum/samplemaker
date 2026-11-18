@@ -328,7 +328,7 @@ class Sequencer:
         except TypeError as e:
             errmsg = str(e)
             if "positional argument" not in errmsg or "were given" not in errmsg:
-                raise e
+                raise
             msg = (
                 "The supplied INIT command function signature is invalid. "
                 "It should accept three parameters: args, state, and options."

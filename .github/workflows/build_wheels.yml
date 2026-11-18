@@ -16,8 +16,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # macos-15-intel is an Intel runner, macos-14 is Apple silicon
-        os: [ubuntu-26.04, ubuntu-26.04-arm, windows-latest, windows-11-arm, macos-15-intel, macos-14]
+        # macos-latest is arm64
+        os: [ubuntu-26.04, ubuntu-26.04-arm, windows-latest, windows-11-arm, macos-15-intel, macos-latest]
 
     steps:
       - uses: actions/checkout@v5
