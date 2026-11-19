@@ -549,6 +549,15 @@ class TestPath:
         assert path_obj.xpts == pytest.approx(expected_xpts)
         assert path_obj.ypts == pytest.approx(expected_ypts)
 
+    @pytest.mark.parametrize("npts", [1, 2, 4])
+    @pytest.mark.parametrize("scale_x", [0.5, 2.0])
+    def test_scale_width_once(self, npts: int, scale_x: float) -> None:
+        path = sp.Path(list(range(npts)), [0.0] * npts, width=1.5, layer=2)
+
+        path.scale(1.0, 2.0, scale_x, 3.0)
+
+        assert path.width == pytest.approx(1.5 * scale_x)
+
     def test_mirror_x(self, path_obj: sp.Path, poly_pts: tuple[_TF, _TF]) -> None:
         xpts, ypts = poly_pts
         path_obj.mirror_x(1.5)
@@ -891,11 +900,6 @@ class TestSRef:
         assert isinstance(original, sp.Poly)
         assert original.data == pytest.approx([0, 1, 2, 1, 2, 4, 0, 4, 0, 1])
 
-    @pytest.mark.xfail(
-        strict=True,
-        raises=AssertionError,
-        reason="path width is scaled once per vertex when placing the reference",
-    )
     def test_to_polygon_scales_path_width_once(self) -> None:
         source = sp.GeomGroup()
         source.add(sp.Path([0, 10], [0, 0], width=1, layer=1))

@@ -2240,7 +2240,7 @@ class Path(GeomPrimitive):
             y = self.ypts[i]
             self.xpts[i] = scale_x * (x - x0) + x0
             self.ypts[i] = scale_y * (y - y0) + y0
-            self.width *= scale_x
+        self.width *= scale_x
 
     def mirror_x(self, x0: float) -> None:  # noqa: D102
         for i in range(self.Npts):
