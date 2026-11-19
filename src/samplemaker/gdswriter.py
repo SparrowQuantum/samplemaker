@@ -9,7 +9,7 @@ import math
 import struct
 import time
 from pathlib import Path as _Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -68,6 +68,9 @@ class GDSWriter:
         self.fid.write(data)
 
     def __write_polygon(self, poly: smsh.Poly) -> None:
+        if not isinstance(poly, smsh.Poly):
+            msg = "Input is not a Poly instance."
+            raise TypeError(msg)
         if poly.layer < 0:
             return
         pdata = poly.int_data()
@@ -77,13 +80,6 @@ class GDSWriter:
         self.__write_data(struct.pack(f">{buf.size}H", *buf))
         self.__write_data(struct.pack(f">{pdata.size}i", *pdata))
         self.__write_data(struct.pack(">2H", 4, 0x1100))
-
-    def __write_circle(self, circ: smsh.Circle) -> None:
-        self.__write_polygon(
-            smsh.Poly(
-                circ.r * self.xc + circ.x0, circ.r * self.yc + circ.y0, circ.layer
-            )
-        )
 
     def __write_path(self, path: smsh.Path) -> None:
         buf = np.array(
@@ -97,6 +93,16 @@ class GDSWriter:
         ).reshape(-1)
         self.__write_data(struct.pack(f">{data.size}i", *data))
         self.__write_data(struct.pack(">2H", 4, 0x1100))
+
+    def __write_geom_primitive(self, geom: smsh.GeomPrimitive) -> None:
+        if isinstance(geom, smsh.Ellipse):
+            g = geom.to_polygon(self.arcres)
+        elif isinstance(geom, smsh.Circle):
+            g = geom.to_polygon(self.circleres)
+        else:
+            g = geom.to_polygon()
+        for poly in g.group:
+            self.__write_polygon(cast("smsh.Poly", poly))
 
     def __write_text(self, text: smsh.Text) -> None:
         if text.text.replace(" ", "") == "":
@@ -190,8 +196,7 @@ class GDSWriter:
     def __large_polygons(self, gg: smsh.GeomGroup) -> smsh.GeomGroup:
         group = []
         for geom in gg.group:
-            geomtype = type(geom)
-            if geomtype == smsh.Poly and geom.Npts > 8000:
+            if isinstance(geom, smsh.Poly) and geom.Npts > 8000:
                 newgrp = smsh.GeomGroup()
                 newgrp.add(geom)
                 newgrp.trapezoids(geom.layer)
@@ -318,37 +323,23 @@ class GDSWriter:
         """
         geom_group = self.__large_polygons(geom_group)
         for geom in geom_group.group:
-            geomtype = type(geom)
-            if geomtype == smsh.Poly:
+            if isinstance(geom, smsh.Poly):
                 self.__write_polygon(geom)
-                continue
-            if geomtype == smsh.Circle:
-                self.__write_circle(geom)
-                continue
-            if geomtype == smsh.Path:
+            elif isinstance(geom, smsh.Path):
                 self.__write_path(geom)
-                continue
-            if geomtype == smsh.Text:
+            elif isinstance(geom, smsh.Text):
                 self.__write_text(geom)
-                continue
-            if geomtype == smsh.SRef:
-                self.__write_sref(geom)
-                continue
-            if geomtype == smsh.ARef:
+            elif isinstance(geom, smsh.ARef):
+                # ARef subclasses SRef. Check for ARef first.
                 self.__write_aref(geom)
-                continue
-            if geomtype == smsh.Ellipse:
-                g = geom.to_polygon(self.arcres)
-                self.__write_polygon(g.group[0])  # produces one geometry only
-                continue
-            if geomtype == smsh.Ring:
-                g = geom.to_polygon(self.arcres)
-                self.__write_polygon(g.group[0])  # produces one geometry only
-                continue
-            if geomtype == smsh.Arc:
-                g = geom.to_polygon(self.arcres)
-                self.__write_polygon(g.group[0])  # produces one geometry only
-                continue
+            elif isinstance(geom, smsh.SRef):
+                self.__write_sref(geom)
+            elif isinstance(geom, smsh.GeomPrimitive):
+                # Fallback -> convert to polygon and write
+                self.__write_geom_primitive(geom)
+            else:
+                msg = f"Unsupported geometry type: {type(geom)}"
+                raise TypeError(msg)
 
     def close_structure(self) -> None:
         """Close the open structure.
