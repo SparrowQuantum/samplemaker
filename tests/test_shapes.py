@@ -208,6 +208,25 @@ def test_dot_transformations() -> None:
     assert (d.x, d.y) == pytest.approx((2.0, -6.0))
 
 
+def test_dot_primitive_geometry() -> None:
+    dot = sp.Dot(2.0, -3.0)
+    dot.rotate_translate(4.0, 5.0, 90.0)
+
+    assert isinstance(dot, sp.GeomPrimitive)
+    assert dot.layer == 0
+    assert dot.centroid() == pytest.approx((7.0, 7.0))
+    box = dot.bounding_box()
+    assert (box.llx, box.lly, box.width, box.height) == pytest.approx((7, 7, 0, 0))
+    assert dot.area() == 0
+    assert dot.perimeter() == 0
+    assert dot.to_polygon().group == []
+
+
+def test_geomprimitive_cannot_be_instantiated() -> None:
+    with pytest.raises(TypeError, match="abstract"):
+        sp.GeomPrimitive()
+
+
 class TestBox:
     def test_basic_ops(self, box_obj: sp.Box) -> None:
         expected_cx = box_obj.llx + box_obj.width / 2
@@ -823,6 +842,58 @@ class TestSRef:
         sref_obj.translate(xoff, yoff)
         assert sref_obj.centroid() == pytest.approx((expected_x0, expected_y0))
 
+    def test_area_and_perimeter_of_nested_reference(self) -> None:
+        inner_group = sp.Box(0, 0, 2, 3).to_rect()
+        inner_ref = sp.SRef(0, 0, "inner", inner_group, 2, 45, True)
+        outer_group = sp.GeomGroup()
+        outer_group.add(inner_ref)
+        outer_ref = sp.SRef(10, -5, "outer", outer_group, 3, 90, False)
+        containing_group = sp.GeomGroup()
+        containing_group.add(outer_ref)
+
+        assert inner_ref.area() == pytest.approx(24)
+        assert inner_ref.perimeter() == pytest.approx(20)
+        assert outer_ref.area() == pytest.approx(216)
+        assert outer_ref.perimeter() == pytest.approx(60)
+        assert containing_group.get_area() == pytest.approx(216)
+
+    def test_empty_reference_geometry(self) -> None:
+        ref = sp.SRef(1, 2, "empty", sp.GeomGroup(), 3, 45, True)
+
+        assert ref.area() == 0
+        assert ref.perimeter() == 0
+        assert ref.to_polygon().group == []
+
+    def test_to_polygon_places_geometry_without_mutating_source(self) -> None:
+        source = sp.Box(0, 1, 2, 3).to_rect()
+        ref = sp.SRef(10, 20, "cell", source, 2, 90, True)
+
+        converted = ref.to_polygon()
+
+        assert len(converted.group) == 1
+        poly = converted.group[0]
+        assert isinstance(poly, sp.Poly)
+        assert poly.data == pytest.approx([12, 20, 12, 24, 18, 24, 18, 20, 12, 20])
+        original = source.group[0]
+        assert isinstance(original, sp.Poly)
+        assert original.data == pytest.approx([0, 1, 2, 1, 2, 4, 0, 4, 0, 1])
+
+    def test_to_polygon_flattens_nested_references_and_converts_shapes(self) -> None:
+        source = sp.GeomGroup()
+        source.add(sp.Circle(1, 0, 1, 7))
+        nested = sp.GeomGroup()
+        nested.add(sp.SRef(2, 0, "inner", source, 1, 0, False))
+        ref = sp.SRef(0, 3, "outer", nested, 1, 0, False)
+
+        converted = ref.to_polygon()
+
+        assert len(converted.group) == 1
+        poly = converted.group[0]
+        assert isinstance(poly, sp.Poly)
+        assert poly.layer == 7
+        assert poly.centroid() == pytest.approx((3, 3))
+        assert isinstance(source.group[0], sp.Circle)
+
     @pytest.mark.parametrize(("xoff", "yoff"), [(1.0, 2.0), (-1.0, -2.0), (0.5, -0.5)])
     def test_bounding_box(
         self, sref_obj: sp.SRef, geomgroup_obj: sp.GeomGroup, xoff: float, yoff: float
@@ -996,6 +1067,35 @@ class TestAref:
     def test_centroid(self, aref_obj: sp.ARef, aref_kwargs: ARefKwargs) -> None:
         expected_centroid = (aref_kwargs.x0, aref_kwargs.y0)
         assert aref_obj.centroid() == pytest.approx(expected_centroid)
+
+    def test_area_and_perimeter_include_magnification_and_array_count(
+        self, aref_obj: sp.ARef
+    ) -> None:
+        aref_obj.mag = 2
+        aref_obj.angle = 90
+        aref_obj.mirror = True
+        group = sp.GeomGroup()
+        group.add(aref_obj)
+
+        assert aref_obj.area() == pytest.approx(144)
+        assert aref_obj.perimeter() == pytest.approx(120)
+        assert group.get_area() == pytest.approx(144)
+
+    def test_to_polygon_places_every_array_element(self, aref_obj: sp.ARef) -> None:
+        aref_obj.mag = 2
+        aref_obj.angle = 90
+        aref_obj.mirror = True
+
+        converted = aref_obj.to_polygon()
+
+        assert len(converted.group) == 6
+        assert all(isinstance(shape, sp.Poly) for shape in converted.group)
+        centers = sorted(shape.centroid() for shape in converted.group)
+        assert np.asarray(centers) == pytest.approx(
+            np.asarray([(6, 4), (6, 9), (6, 14), (10, 4), (10, 9), (10, 14)])
+        )
+        assert converted.get_area() == pytest.approx(144)
+        assert aref_obj.group.get_area() == pytest.approx(6)
 
     def test_bounding_box(
         self,
@@ -1663,6 +1763,38 @@ class TestGeomGroup:
         assert any(isinstance(geom, sp.SRef) for geom in g.group)
         assert any(isinstance(geom, sp.Poly) for geom in g.group)
 
+    def test_all_to_poly_handles_other_primitives(self) -> None:
+        class PolygonPoint(sp.Dot):
+            def to_polygon(self) -> sp.GeomGroup:
+                return sp.Box(self.x, self.y, 2, 3).to_rect()
+
+        g = sp.GeomGroup()
+        g.add(sp.Dot(1, 2))
+        g.add(PolygonPoint(3, 4))
+
+        g.all_to_poly()
+
+        assert len(g.group) == 1
+        assert isinstance(g.group[0], sp.Poly)
+        assert g.group[0].centroid() == pytest.approx((4, 5.5))
+
+    def test_all_to_poly_forwards_resolution_and_arc_split(self) -> None:
+        group = sp.GeomGroup()
+        group.add(sp.Circle(0, 0, 1, 1))
+        group.add(sp.Ellipse(0, 0, 2, 1, 2, 0))
+        group.add(sp.Arc(0, 0, 3, 2, 3, 0, 0.5, 0, 180))
+
+        group.all_to_poly(npts_circle=8, npts_arc=6, split_arc=True)
+
+        assert len(group.group) == 8
+        assert all(isinstance(shape, sp.Poly) for shape in group.group)
+        circle_poly, ellipse_poly = group.group[:2]
+        assert isinstance(circle_poly, sp.Poly)
+        assert isinstance(ellipse_poly, sp.Poly)
+        assert circle_poly.Npts == 9
+        assert ellipse_poly.Npts == 7
+        assert [shape.layer for shape in group.group] == [1, 2, 3, 3, 3, 3, 3, 3]
+
     def test_poly_to_circle_converts_round_poly_and_keeps_non_round(self) -> None:
         circular_poly = sp.Circle(0.0, 0.0, 2.0, layer=5).to_polygon(npts=64).group[0]
         box_poly = sp.Box(0.0, 0.0, 2.0, 2.0).to_poly()
@@ -1674,8 +1806,9 @@ class TestGeomGroup:
 
         g.poly_to_circle(thresh=0.98, vcount=10, include_refs=False)
 
-        assert any(isinstance(geom, sp.Circle) for geom in g.group)
-        assert any(isinstance(geom, sp.Poly) for geom in g.group)
+        assert len(g.group) == 2
+        assert isinstance(g.group[0], sp.Circle)
+        assert g.group[1] is box_poly
 
     def test_poly_to_circle_include_refs_updates_referenced_group(
         self, geomgroup_obj: sp.GeomGroup
@@ -1696,7 +1829,74 @@ class TestGeomGroup:
 
         g.poly_to_circle(thresh=0.98, vcount=10, include_refs=True)
 
-        assert any(isinstance(geom, sp.Circle) for geom in ref.group.group)
+        assert sum(geom is ref for geom in g.group) == 1
+        assert len(ref.group.group) == 1
+        assert isinstance(ref.group.group[0], sp.Circle)
+
+    def test_poly_to_circle_does_not_convert_referenced_group_when_disabled(
+        self,
+    ) -> None:
+        source = sp.Circle(0, 0, 2, 5).to_polygon(npts=64)
+        original = source.group[0]
+        group = sp.GeomGroup()
+        group.add(sp.SRef(0, 0, "cell", source, 1, 0, False))
+
+        group.poly_to_circle(thresh=0.98, vcount=10, include_refs=False)
+
+        assert source.group == [original]
+
+    def test_poly_to_circle_replaces_converted_polygon(self) -> None:
+        group = sp.Circle(0, 0, 2, 5).to_polygon(npts=64)
+
+        group.poly_to_circle(thresh=0.98, vcount=10)
+
+        assert len(group.group) == 1
+        assert isinstance(group.group[0], sp.Circle)
+        assert group.get_area() == pytest.approx(np.pi * 4, abs=1e-5)
+
+    def test_poly_to_circle_keeps_non_round_polygon_once(self) -> None:
+        group = sp.Box(0, 0, 2, 3).to_rect()
+        original = group.group[0]
+
+        group.poly_to_circle()
+
+        assert group.group == [original]
+        assert group.get_area() == pytest.approx(6)
+
+    @pytest.mark.parametrize("include_refs", [False, True])
+    def test_poly_to_circle_keeps_reference_once(self, include_refs: bool) -> None:
+        ref = sp.SRef(0, 0, "cell", sp.GeomGroup(), 1, 0, False)
+        group = sp.GeomGroup()
+        group.add(ref)
+
+        group.poly_to_circle(include_refs=include_refs)
+
+        assert group.group == [ref]
+
+    @pytest.mark.parametrize(("vcount", "converts"), [(10, True), (100, False)])
+    def test_poly_to_circle_recurses_into_arrays_and_forwards_options(
+        self, vcount: int, converts: bool
+    ) -> None:
+        source = sp.Circle(0, 0, 2, 5).to_polygon(npts=64)
+        original = source.group[0]
+        array = sp.ARef(0, 0, "array", source, 2, 2, 5, 0, 0, 5, 1, 0, False)
+        nested = sp.GeomGroup()
+        nested.add(array)
+        ref = sp.SRef(0, 0, "outer", nested, 1, 0, False)
+        other = sp.Circle(10, 0, 1, 8)
+        group = sp.GeomGroup()
+        group.add(ref)
+        group.add(other)
+
+        group.poly_to_circle(thresh=0.98, vcount=vcount, include_refs=True)
+
+        assert group.group == [ref, other]
+        assert nested.group == [array]
+        assert len(source.group) == 1
+        if converts:
+            assert isinstance(source.group[0], sp.Circle)
+        else:
+            assert source.group[0] is original
 
     def test_keep_refs_only_removes_non_refs(
         self, geomgroup_obj: sp.GeomGroup, circle_obj: sp.Circle

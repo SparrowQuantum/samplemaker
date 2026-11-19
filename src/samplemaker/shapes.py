@@ -996,10 +996,12 @@ class GeomGroup:
                     polys.add(primitive)
                 else:
                     polys += circle_geom
-            elif include_refs and isinstance(primitive, SRef):
-                primitive.group.poly_to_circle(thresh, vcount)
-            # None of the above, just keep
-            polys.add(primitive)
+            elif isinstance(primitive, SRef):
+                if include_refs:
+                    primitive.group.poly_to_circle(thresh, vcount)
+            else:
+                # Keep all other primitives as-is
+                polys.add(primitive)
 
         self.group[:] = [g for g in self.group if isinstance(g, SRef)]
         self.group = self.group + polys.group
