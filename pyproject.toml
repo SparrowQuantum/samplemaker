@@ -101,4 +101,8 @@ environment = { BOOST_ROOT = "C:/vcpkg/installed/x64-windows" }
 before-all = ["vcpkg install boost-polygon:x64-windows"]
 
 [dependency-groups]
-dev = ["pytest==9.0.2", "pytest-cov==7.1.0", "ruff==0.15.1"]
+dev = [
+    "pytest==9.0.2",
+    "pytest-cov==7.1.0",
+    "ruff==0.17.4",
+]
