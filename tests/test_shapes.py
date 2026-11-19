@@ -350,6 +350,12 @@ class TestPoly:
     def test_area(self, poly_obj: sp.Poly) -> None:
         assert poly_obj.area() == pytest.approx(6.0)
 
+    def test_tiny_area(self) -> None:
+        xpts = (0.0, 1e-4, 1e-4, 0.0)
+        ypts = (0.0, 0.0, 1e-4, 1e-4)
+        tiny_poly = sp.Poly(xpts, ypts, layer=0)
+        assert tiny_poly.area() == pytest.approx(1e-8)
+
     def test_perimeter(self, poly_obj: sp.Poly) -> None:
         assert poly_obj.perimeter() == pytest.approx(10.0)
 
@@ -857,12 +863,7 @@ class TestSRef:
         assert outer_ref.perimeter() == pytest.approx(60)
         assert containing_group.get_area() == pytest.approx(216)
 
-    @pytest.mark.xfail(
-        strict=True,
-        raises=AssertionError,
-        reason="reference area magnifies the rounded source group area",
-    )
-    def test_area_magnifies_small_geometry_before_rounding(self) -> None:
+    def test_small_objects_correctly_magnify_area(self) -> None:
         source = sp.GeomGroup()
         source.add(sp.Circle(0, 0, 0.0004, 1))
         ref = sp.SRef(0, 0, "small", source, 1000, 0, False)

@@ -892,7 +892,7 @@ class GeomGroup:
         area = 0
         for primitive in self.group:
             area += primitive.area()
-        return float(round(area * 1e6)) / 1e6
+        return float(area)
 
     def path_to_poly(self) -> None:
         """Convert all path objects in the current group to polygons.
@@ -1881,7 +1881,7 @@ class Poly(GeomPrimitive):
         for i in range(n):
             area += x[j] * y[i] - x[i] * y[j]
             j = i
-        return float(round(1e6 * abs(area / 2.0))) / 1.0e6
+        return abs(area / 2.0)
 
     def centroid(self) -> tuple[float, float]:  # noqa: D102
         cx = 0
