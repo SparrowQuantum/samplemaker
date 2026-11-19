@@ -857,6 +857,18 @@ class TestSRef:
         assert outer_ref.perimeter() == pytest.approx(60)
         assert containing_group.get_area() == pytest.approx(216)
 
+    @pytest.mark.xfail(
+        strict=True,
+        raises=AssertionError,
+        reason="reference area magnifies the rounded source group area",
+    )
+    def test_area_magnifies_small_geometry_before_rounding(self) -> None:
+        source = sp.GeomGroup()
+        source.add(sp.Circle(0, 0, 0.0004, 1))
+        ref = sp.SRef(0, 0, "small", source, 1000, 0, False)
+
+        assert ref.area() == pytest.approx(np.pi * 0.4**2)
+
     def test_empty_reference_geometry(self) -> None:
         ref = sp.SRef(1, 2, "empty", sp.GeomGroup(), 3, 45, True)
 
@@ -877,6 +889,21 @@ class TestSRef:
         original = source.group[0]
         assert isinstance(original, sp.Poly)
         assert original.data == pytest.approx([0, 1, 2, 1, 2, 4, 0, 4, 0, 1])
+
+    @pytest.mark.xfail(
+        strict=True,
+        raises=AssertionError,
+        reason="path width is scaled once per vertex when placing the reference",
+    )
+    def test_to_polygon_scales_path_width_once(self) -> None:
+        source = sp.GeomGroup()
+        source.add(sp.Path([0, 10], [0, 0], width=1, layer=1))
+        ref = sp.SRef(0, 0, "path", source, 2, 0, False)
+
+        polygon = ref.to_polygon()
+
+        assert polygon.bounding_box().height == pytest.approx(2)
+        assert polygon.get_area() == pytest.approx(40)
 
     def test_to_polygon_flattens_nested_references_and_converts_shapes(self) -> None:
         source = sp.GeomGroup()
