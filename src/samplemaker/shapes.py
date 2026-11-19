@@ -1788,7 +1788,7 @@ class Poly(GeomPrimitive):
         rdata = np.array([xvals, yvals], dtype="float64")
         self.data = np.transpose(rdata).reshape(-1)
         self.data = np.append(self.data, self.data[0:2])
-        self.Npts = math.floor(self.data.size / 2)
+        self.npts = math.floor(self.data.size / 2)
 
     def set_data(self, data: np.ndarray) -> None:
         """Set polygon coordinates from interleaved coordinate data.
@@ -1804,7 +1804,7 @@ class Poly(GeomPrimitive):
 
         """
         self.data = data
-        self.Npts = math.floor(self.data.size / 2)
+        self.npts = math.floor(self.data.size / 2)
 
     def int_data(self) -> np.ndarray:
         """Get polygon data scaled to integer nanometer units.
@@ -1831,7 +1831,7 @@ class Poly(GeomPrimitive):
 
         """
         self.data = idata.astype("float64") / 1000
-        self.Npts = math.floor(self.data.size / 2)
+        self.npts = math.floor(self.data.size / 2)
 
     def translate(self, dx: float, dy: float) -> None:  # noqa: D102
         self.data[0::2] += dx
@@ -1978,7 +1978,7 @@ class Poly(GeomPrimitive):
         y = self.data[1::2]
         xf = []
         yf = []
-        n = int(self.Npts)
+        n = int(self.npts)
         ndisc = 0
         j = n - 1
         k = n - 2
@@ -2044,7 +2044,7 @@ class Poly(GeomPrimitive):
 
         """
         g = GeomGroup()
-        if self.Npts < vcount:
+        if self.npts < vcount:
             return g
         # Attempt to perform a conversion, return empty group if failed
         # Check circularity
@@ -2110,7 +2110,7 @@ class Poly(GeomPrimitive):
 
         """
         c = False
-        n = self.Npts
+        n = self.npts
         xpts = self.data[0::2]
         ypts = self.data[1::2]
         bpx = xpts[0]
@@ -2209,17 +2209,17 @@ class Path(GeomPrimitive):
         self.xpts = list(xpts)
         self.ypts = list(ypts)
         self.width = width
-        self.Npts = len(self.xpts)
+        self.npts = len(self.xpts)
 
     def translate(self, dx: float, dy: float) -> None:  # noqa: D102
-        for i in range(self.Npts):
+        for i in range(self.npts):
             self.xpts[i] = self.xpts[i] + dx
             self.ypts[i] = self.ypts[i] + dy
 
     def rotate_translate(self, dx: float, dy: float, rot: float) -> None:  # noqa: D102
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
-        for i in range(self.Npts):
+        for i in range(self.npts):
             x = self.xpts[i]
             y = self.ypts[i]
             self.xpts[i] = cost * (x) - sint * (y) + dx
@@ -2228,14 +2228,14 @@ class Path(GeomPrimitive):
     def rotate(self, x0: float, y0: float, rot: float) -> None:  # noqa: D102
         cost = math.cos(rot / 180 * math.pi)
         sint = math.sin(rot / 180 * math.pi)
-        for i in range(self.Npts):
+        for i in range(self.npts):
             x = self.xpts[i]
             y = self.ypts[i]
             self.xpts[i] = cost * (x - x0) - sint * (y - y0) + x0
             self.ypts[i] = sint * (x - x0) + cost * (y - y0) + y0
 
     def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:  # noqa: D102
-        for i in range(self.Npts):
+        for i in range(self.npts):
             x = self.xpts[i]
             y = self.ypts[i]
             self.xpts[i] = scale_x * (x - x0) + x0
@@ -2243,11 +2243,11 @@ class Path(GeomPrimitive):
         self.width *= scale_x
 
     def mirror_x(self, x0: float) -> None:  # noqa: D102
-        for i in range(self.Npts):
+        for i in range(self.npts):
             self.xpts[i] = 2 * x0 - self.xpts[i]
 
     def mirror_y(self, y0: float) -> None:  # noqa: D102
-        for i in range(self.Npts):
+        for i in range(self.npts):
             self.ypts[i] = 2 * y0 - self.ypts[i]
 
     def bounding_box(self) -> Box:  # noqa: D102
@@ -2269,7 +2269,7 @@ class Path(GeomPrimitive):
         x = self.xpts
         y = self.ypts
         plen = 0.0
-        for i in range(1, self.Npts):
+        for i in range(1, self.npts):
             plen += np.sqrt((x[i] - x[i - 1]) ** 2 + (y[i] - y[i - 1]) ** 2)
         return plen
 
@@ -2339,7 +2339,7 @@ class Path(GeomPrimitive):
         ypts1 = []
         xpts2 = []
         ypts2 = []
-        for j in range(1, self.Npts - 1):
+        for j in range(1, self.npts - 1):
             ang1 = math.atan2(y[j] - y[j - 1], x[j] - x[j - 1])
             ang2 = math.atan2(y[j + 1] - y[j], x[j + 1] - x[j])
             d = (x[j + 1] - x[j - 1]) * (y[j] - y[j - 1]) - (y[j + 1] - y[j - 1]) * (
@@ -2369,7 +2369,7 @@ class Path(GeomPrimitive):
                 a0 = math.pi / 2 - (ang1 + ang2) / 2
                 xpts1.append(x[j] + wx * math.cos(a0))
                 ypts1.append(y[j] - wx * math.sin(a0))
-            if j == self.Npts - 2:
+            if j == self.npts - 2:
                 xpts1.append(x[j + 1] + w / 2 * math.cos(ang2 - math.pi / 2))
                 ypts1.append(y[j + 1] + w / 2 * math.sin(ang2 - math.pi / 2))
                 xpts2.append(x[j + 1] + w / 2 * math.cos(ang2 + math.pi / 2))
@@ -2393,9 +2393,9 @@ class Path(GeomPrimitive):
         x = self.xpts
         y = self.ypts
         w = self.width
-        if self.Npts == 1:
+        if self.npts == 1:
             xpts, ypts = self._get_1pt_poly_coords(x, y, w)
-        elif self.Npts == 2:
+        elif self.npts == 2:
             xpts, ypts = self._get_2pt_poly_coords(x, y, w)
         else:
             xpts, ypts = self._get_npt_poly_coords(x, y, w)

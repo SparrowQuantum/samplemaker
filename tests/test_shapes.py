@@ -318,7 +318,7 @@ class TestPoly:
         # [x0, y0, x1, y1, x2, y2, x3, y3, ..., x0, y0]
         assert isinstance(poly_obj.data, np.ndarray)
         assert len(poly_obj.data) == 2 * (len(poly_pts[0]) + 1)
-        assert poly_obj.Npts == len(poly_pts[0]) + 1
+        assert poly_obj.npts == len(poly_pts[0]) + 1
         assert poly_obj.layer == 2
 
         reshaped_data = poly_obj.data.reshape((-1, 2))
@@ -431,7 +431,7 @@ class TestPoly:
         poly.set_int_data(int_data)
 
         assert poly.int_data() == pytest.approx(int_data)
-        assert poly.Npts == len(expected_xpts)
+        assert poly.npts == len(expected_xpts)
 
         reshaped_data = poly.data.reshape((-1, 2))
         resh_xpts, resh_ypts = reshaped_data[:, 0], reshaped_data[:, 1]
@@ -495,7 +495,7 @@ class TestPath:
         assert path_obj.ypts == list(ypts)
         assert path_obj.width == path_width
         assert path_obj.layer == 2
-        assert path_obj.Npts == len(xpts)
+        assert path_obj.npts == len(xpts)
 
     def test_bounding_box(self, path_obj: sp.Path, poly_pts: tuple[_TF, _TF]) -> None:
         bb = path_obj.bounding_box()
@@ -1282,7 +1282,7 @@ class TestCircle:
         poly = g.group[0]
         assert isinstance(poly, sp.Poly)
         assert poly.layer == circle_obj.layer
-        assert poly.Npts == 13
+        assert poly.npts == 13
 
 
 class TestEllipse:
@@ -1409,7 +1409,7 @@ class TestRing:
 
         assert isinstance(poly, sp.Poly)
         assert poly.layer == ring_obj.layer
-        assert poly.Npts == 27
+        assert poly.npts == 27
 
 
 class TestArc:
@@ -1552,7 +1552,7 @@ class TestGeomGroup:
 
         assert poly_copy is not poly_obj
         assert poly_copy.layer == placed_poly.layer
-        assert poly_copy.Npts == placed_poly.Npts
+        assert poly_copy.npts == placed_poly.npts
         assert poly_copy.data == pytest.approx(placed_poly.data)
 
     def test_get_sref_list(self, circle_obj: sp.Circle, sref_obj: sp.SRef) -> None:
@@ -1823,8 +1823,8 @@ class TestGeomGroup:
         circle_poly, ellipse_poly = group.group[:2]
         assert isinstance(circle_poly, sp.Poly)
         assert isinstance(ellipse_poly, sp.Poly)
-        assert circle_poly.Npts == 9
-        assert ellipse_poly.Npts == 7
+        assert circle_poly.npts == 9
+        assert ellipse_poly.npts == 7
         assert [shape.layer for shape in group.group] == [1, 2, 3, 3, 3, 3, 3, 3]
 
     def test_poly_to_circle_converts_round_poly_and_keeps_non_round(self) -> None:
@@ -2052,7 +2052,7 @@ class TestGeomGroup:
         assert len(g.group) == 1
         res_poly = g.group[0]
         assert isinstance(res_poly, sp.Poly)
-        assert res_poly.Npts == 9
+        assert res_poly.npts == 9
         assert res_poly.layer == layer
         assert res_poly.perimeter() == pytest.approx(10.0)
         assert res_poly.centroid() == pytest.approx((1.5, 1.0))
@@ -2072,7 +2072,7 @@ class TestGeomGroup:
         assert len(out.group) == 1
         res_poly = out.group[0]
         assert isinstance(res_poly, sp.Poly)
-        assert res_poly.Npts == 5
+        assert res_poly.npts == 5
         assert res_poly.layer == layer_a
         assert res_poly.perimeter() == pytest.approx(6.0)
         assert res_poly.centroid() == pytest.approx((0.5, 1.0))
@@ -2092,7 +2092,7 @@ class TestGeomGroup:
         assert len(out.group) == 2
         for res_poly in out.group:
             assert isinstance(res_poly, sp.Poly)
-            assert res_poly.Npts == 5
+            assert res_poly.npts == 5
             assert res_poly.layer == layer_a
             assert res_poly.perimeter() == pytest.approx(6.0)
 
@@ -2111,7 +2111,7 @@ class TestGeomGroup:
         assert len(out.group) == 1
         res_poly = out.group[0]
         assert isinstance(res_poly, sp.Poly)
-        assert res_poly.Npts == 5
+        assert res_poly.npts == 5
         assert res_poly.layer == layer_a
         assert res_poly.perimeter() == pytest.approx(6.0)
         assert res_poly.centroid() == pytest.approx((1.5, 1.0))
@@ -2241,8 +2241,8 @@ class TestGeomGroup:
         g = sp.GeomGroup()
         g.add(poly)
 
-        before_npts = poly.Npts
+        before_npts = poly.npts
         ndisc = g.poly_filter(keep_str)
 
         assert ndisc >= 1
-        assert g.group[0].Npts == before_npts - ndisc + 1
+        assert g.group[0].npts == before_npts - ndisc + 1

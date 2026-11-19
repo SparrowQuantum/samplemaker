@@ -196,7 +196,7 @@ class GDSWriter:
     def __large_polygons(self, gg: smsh.GeomGroup) -> smsh.GeomGroup:
         group = []
         for geom in gg.group:
-            if isinstance(geom, smsh.Poly) and geom.Npts > 8000:
+            if isinstance(geom, smsh.Poly) and geom.npts > 8000:
                 newgrp = smsh.GeomGroup()
                 newgrp.add(geom)
                 newgrp.trapezoids(geom.layer)
