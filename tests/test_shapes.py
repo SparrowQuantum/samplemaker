@@ -181,10 +181,48 @@ def ring_obj() -> sp.Ring:
     return sp.Ring(x0=1.0, y0=2.0, rx=3.0, ry=2.0, layer=4, rot=0.0, w=1.0)
 
 
+@pytest.fixture(
+    params=[
+        {
+            "x0": 1.0,
+            "y0": 2.0,
+            "rx": 3.0,
+            "ry": 2.0,
+            "layer": 4,
+            "rot": 0.0,
+            "w": 1.0,
+            "a1": 0.0,
+            "a2": 180.0,
+        },
+        {
+            "x0": 0.0,
+            "y0": 0.0,
+            "rx": 1.0,
+            "ry": 1.0,
+            "layer": 2,
+            "rot": 0.0,
+            "w": 0.5,
+            "a1": 45.0,
+            "a2": 135.0,
+        },
+    ]
+)
+def arc_params(request: pytest.FixtureRequest) -> dict[str, float]:
+    return request.param
+
+
 @pytest.fixture
-def arc_obj() -> sp.Arc:
+def arc_obj(arc_params: dict[str, float]) -> sp.Arc:
     return sp.Arc(
-        x0=1.0, y0=2.0, rx=3.0, ry=2.0, layer=4, rot=0.0, w=1.0, a1=0.0, a2=180.0
+        x0=arc_params["x0"],
+        y0=arc_params["y0"],
+        rx=arc_params["rx"],
+        ry=arc_params["ry"],
+        layer=int(arc_params["layer"]),
+        rot=arc_params["rot"],
+        w=arc_params["w"],
+        a1=arc_params["a1"],
+        a2=arc_params["a2"],
     )
 
 
@@ -1413,16 +1451,16 @@ class TestRing:
 
 
 class TestArc:
-    def test_init_arc(self, arc_obj: sp.Arc) -> None:
-        assert arc_obj.x0 == 1.0
-        assert arc_obj.y0 == 2.0
-        assert arc_obj.r == 3.0
-        assert arc_obj.r1 == 2.0
-        assert arc_obj.w == 1.0
-        assert arc_obj.rot == 0.0
-        assert arc_obj.a1 == 0.0
-        assert arc_obj.a2 == 180.0
-        assert arc_obj.layer == 4
+    def test_init_arc(self, arc_params: dict[str, float], arc_obj: sp.Arc) -> None:
+        assert arc_obj.x0 == arc_params["x0"]
+        assert arc_obj.y0 == arc_params["y0"]
+        assert arc_obj.r == arc_params["rx"]
+        assert arc_obj.r1 == arc_params["ry"]
+        assert arc_obj.w == arc_params["w"]
+        assert arc_obj.rot == arc_params["rot"]
+        assert arc_obj.a1 == arc_params["a1"]
+        assert arc_obj.a2 == arc_params["a2"]
+        assert arc_obj.layer == int(arc_params["layer"])
 
     def test_bounding_box(self, arc_obj: sp.Arc) -> None:
         bb = arc_obj.bounding_box()
@@ -1465,6 +1503,24 @@ class TestArc:
         for poly in g.group:
             poly_ypts = poly.data[1::2]
             assert np.all(poly_ypts >= arc_obj.y0)
+
+    def test_mirror_x(self, arc_obj: sp.Arc) -> None:
+        original_a1 = arc_obj.a1
+        original_a2 = arc_obj.a2
+        original_rot = arc_obj.rot
+        arc_obj.mirror_x(0.0)
+        assert arc_obj.a1 == -original_a1
+        assert arc_obj.a2 == -original_a2
+        assert arc_obj.rot == 180 - original_rot
+
+    def test_mirror_y(self, arc_obj: sp.Arc) -> None:
+        original_a1 = arc_obj.a1
+        original_a2 = arc_obj.a2
+        original_rot = arc_obj.rot
+        arc_obj.mirror_y(0.0)
+        assert arc_obj.a1 == -original_a1
+        assert arc_obj.a2 == -original_a2
+        assert arc_obj.rot == -original_rot
 
 
 class TestGeomGroup:

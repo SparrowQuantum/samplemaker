@@ -3277,6 +3277,17 @@ class Arc(Ring):
         g = self.to_polygon(12)
         return g.bounding_box()
 
+    def mirror_x(self, x0: float) -> None:  # noqa: D102
+        super().mirror_x(x0)
+        # 180 degree rotation handled in self.rot, omit from a1 and a2.
+        self.a1 = -self.a1
+        self.a2 = -self.a2
+
+    def mirror_y(self, y0: float) -> None:  # noqa: D102
+        super().mirror_y(y0)
+        self.a1 = -self.a1
+        self.a2 = -self.a2
+
     def area(self) -> float:
         """Compute arc area from parent ring area and angular span.
 
