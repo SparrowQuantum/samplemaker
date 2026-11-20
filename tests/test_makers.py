@@ -24,7 +24,7 @@ def test_make_poly() -> None:
 
     poly = poly_geom.group[0]
     assert isinstance(poly, sp.Poly)
-    assert poly.Npts == 5
+    assert poly.npts == 5
     assert poly.layer == 1
 
     poly_xpts = poly.data[0::2]
@@ -64,7 +64,7 @@ def test_make_path() -> None:
     assert path.ypts == pytest.approx(ypts)
     assert path.width == width
     assert path.layer == 1
-    assert path.Npts == 3
+    assert path.npts == 3
 
 
 def test_make_path_nondefault_layer() -> None:
@@ -309,7 +309,7 @@ def test_make_circle_to_poly() -> None:
     poly = circle_geom.group[0]
     assert isinstance(poly, sp.Poly)
     assert poly.layer == 4
-    assert poly.Npts == 11
+    assert poly.npts == 11
 
 
 def test_make_ellipse() -> None:
@@ -342,7 +342,7 @@ def test_make_ellipse_to_poly() -> None:
     poly = ellipse_geom.group[0]
     assert isinstance(poly, sp.Poly)
     assert poly.layer == 7
-    assert poly.Npts == 13
+    assert poly.npts == 13
 
 
 def test_make_ring() -> None:
@@ -377,7 +377,7 @@ def test_make_ring_to_poly() -> None:
     poly = ring_geom.group[0]
     assert isinstance(poly, sp.Poly)
     assert poly.layer == 9
-    assert poly.Npts == 35
+    assert poly.npts == 35
 
 
 def test_make_arc() -> None:
@@ -517,4 +517,4 @@ def test_make_tapered_path(
     poly = tapered_geom.group[0]
     assert isinstance(poly, sp.Poly)
     assert poly.layer == 17
-    assert poly.Npts >= 5
+    assert poly.npts >= 5
