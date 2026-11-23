@@ -3088,11 +3088,11 @@ class Ellipse(Circle):
             Group containing one polygon approximation.
 
         """
-        xc = np.array([0.0] * npts)
-        yc = np.array([0.0] * npts)
-        for i in range(npts):
-            xc[i] = math.cos(i * 2 * math.pi / npts)
-            yc[i] = math.sin(i * 2 * math.pi / npts)
+        if npts < 3:
+            msg = f"Number of polygon vertices must be at least 3. Got {npts}."
+            raise ValueError(msg)
+        xc = np.cos(np.arange(npts) * 2 * np.pi / npts)
+        yc = np.sin(np.arange(npts) * 2 * np.pi / npts)
         g = GeomGroup()
         g.add(Poly(self.r * xc + self.x0, self.r1 * yc + self.y0, self.layer))
         g.rotate(self.x0, self.y0, self.rot)
