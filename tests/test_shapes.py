@@ -962,6 +962,16 @@ class TestSRef:
         assert outer_ref.perimeter() == pytest.approx(60)
         assert containing_group.get_area() == pytest.approx(216)
 
+    @pytest.mark.parametrize("mag", [-2, -1, -0.5])
+    def test_negative_magnification_affects_area_and_perimeter(
+        self, mag: float
+    ) -> None:
+        group = sp.Box(0, 0, 2, 3).to_rect()
+        ref = sp.SRef(0, 0, "neg", group, mag, 0, False)
+
+        assert ref.area() == pytest.approx(6 * abs(mag) ** 2)
+        assert ref.perimeter() == pytest.approx(10 * abs(mag))
+
     def test_small_objects_correctly_magnify_area(self) -> None:
         source = sp.GeomGroup()
         source.add(sp.Circle(0, 0, 0.0004, 1))

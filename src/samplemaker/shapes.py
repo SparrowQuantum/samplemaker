@@ -2760,7 +2760,7 @@ class SRef(GeomPrimitive):
 
         """
         group_perimeter = sum(shape.perimeter() for shape in self.group.group)
-        return group_perimeter * self.mag
+        return group_perimeter * abs(self.mag)
 
     def bounding_box(self) -> Box:
         """Compute transformed bounding box of referenced geometry.
