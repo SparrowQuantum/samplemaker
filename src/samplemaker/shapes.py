@@ -3298,7 +3298,8 @@ class Arc(Ring):
 
         """
         ra = super().area()
-        return ra * (math.radians(self.a2) - math.radians(self.a1)) / 2 / np.pi
+        span = math.radians(self.a2) - math.radians(self.a1)
+        return ra * abs(span) / 2 / np.pi
 
     def centroid(self) -> tuple[float, float]:
         """Get the centroid of the arc.

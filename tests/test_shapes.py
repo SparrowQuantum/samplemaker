@@ -1496,6 +1496,28 @@ class TestArc:
         )
         assert arc_obj.area() == pytest.approx(expected)
 
+    def test_mirror_preserves_area(self, arc_obj: sp.Arc) -> None:
+        original_area = arc_obj.area()
+        orig_geom = sp.GeomGroup()
+        orig_geom.add(arc_obj)
+        sref_obj = sp.SRef(
+            x0=0.0,
+            y0=0.0,
+            cellname="dummy",
+            group=orig_geom.copy(),
+            mag=1.0,
+            angle=0.0,
+            mirror=True,
+        )
+        arc_obj.mirror_x(0.0)
+        mirror_x_area = arc_obj.area()
+        arc_obj.mirror_y(0.0)
+        mirror_y_area = arc_obj.area()
+
+        assert sref_obj.area() == pytest.approx(original_area)
+        assert mirror_x_area == pytest.approx(original_area)
+        assert mirror_y_area == pytest.approx(original_area)
+
     def test_centroid(self, arc_obj: sp.Arc) -> None:
         poly = arc_obj.to_polygon(12).group[0]
 
