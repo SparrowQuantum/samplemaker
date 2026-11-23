@@ -2456,6 +2456,8 @@ class Text(GeomPrimitive):
         self.height = height
         self.width = width
         self.angle = angle
+        self._mirror_x = False
+        self._mirror_y = False
 
     def translate(self, dx: float, dy: float) -> None:  # noqa: D102
         self.x0 += dx
@@ -2468,7 +2470,7 @@ class Text(GeomPrimitive):
         yv = self.y0
         self.x0 = cost * xv - sint * yv + dx
         self.y0 = sint * xv + cost * yv + dy
-        self.angle += rot
+        self.angle += -rot if self._mirror_x != self._mirror_y else rot
 
     def rotate(self, x0: float, y0: float, rot: float) -> None:  # noqa: D102
         cost = math.cos(rot / 180 * math.pi)
@@ -2477,7 +2479,7 @@ class Text(GeomPrimitive):
         yv = self.y0 - y0
         self.x0 = cost * xv - sint * yv + x0
         self.y0 = sint * xv + cost * yv + y0
-        self.angle += rot
+        self.angle += -rot if self._mirror_x != self._mirror_y else rot
 
     def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:
         """Scale text anchor and glyph dimensions.
@@ -2517,7 +2519,7 @@ class Text(GeomPrimitive):
 
         """
         self.x0 = 2 * x0 - self.x0
-        self.angle = 180 - self.angle
+        self._mirror_x = not self._mirror_x
 
     def mirror_y(self, y0: float) -> None:
         """Mirror text with respect to a horizontal axis.
@@ -2533,7 +2535,7 @@ class Text(GeomPrimitive):
 
         """
         self.y0 = 2 * y0 - self.y0
-        self.angle = -self.angle
+        self._mirror_y = not self._mirror_y
 
     def bounding_box(self) -> Box:
         """Return a degenerate bounding box at text anchor.
@@ -2608,6 +2610,10 @@ class Text(GeomPrimitive):
         # offset contains the length of the text
         g.translate(-self.posu * offset / 2, (self.posv - 2) * self.height / 2)
         g.rotate(0, 0, self.angle)
+        if self._mirror_x:
+            g.mirror_x(0)
+        if self._mirror_y:
+            g.mirror_y(0)
         g.translate(self.x0, self.y0)
         return g
 

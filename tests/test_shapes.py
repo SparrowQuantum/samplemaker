@@ -749,17 +749,69 @@ class TestText:
         assert text_obj.height == pytest.approx(30.0)
         assert text_obj.width == pytest.approx(2.0)
 
-    def test_mirror_x(self, text_obj: sp.Text) -> None:
-        text_obj.mirror_x(1.0)
-        assert text_obj.x0 == pytest.approx(1.0)
-        assert text_obj.y0 == pytest.approx(2.0)
-        assert text_obj.angle == pytest.approx(180.0)
+    @pytest.mark.parametrize(
+        ("mirrors", "rotation", "alignment", "post_rotation"),
+        [
+            (("x",), 0.0, (0, 0), ""),
+            (("y",), 0.0, (2, 2), ""),
+            (("x",), 37.0, (1, 1), ""),
+            (("y",), -31.0, (2, 0), ""),
+            (("x", "y"), 23.0, (0, 2), ""),
+            (("x", "x"), 37.0, (1, 1), ""),
+            (("y", "y"), -31.0, (1, 1), ""),
+            (("x",), 37.0, (1, 1), "rotate"),
+            (("y",), -31.0, (1, 1), "rotate_translate"),
+            (("x", "y"), 23.0, (0, 2), "rotate"),
+        ],
+    )
+    def test_mirror_polygon(
+        self,
+        text_obj: sp.Text,
+        mirrors: tuple[str, ...],
+        rotation: float,
+        alignment: tuple[int, int],
+        post_rotation: str,
+    ) -> None:
+        text_obj.text = "FL"
+        text_obj.angle = rotation
+        text_obj.posu, text_obj.posv = alignment
+        expected = text_obj.to_polygon()
+        assert expected.group
 
-    def test_mirror_y(self, text_obj: sp.Text) -> None:
-        text_obj.mirror_y(1.0)
-        assert text_obj.x0 == pytest.approx(1.0)
-        assert text_obj.y0 == pytest.approx(0.0)
-        assert text_obj.angle == pytest.approx(0.0)
+        for axis in mirrors:
+            if axis == "x":
+                text_obj.mirror_x(-2.0)
+                expected.mirror_x(-2.0)
+            else:
+                text_obj.mirror_y(4.0)
+                expected.mirror_y(4.0)
+
+        if post_rotation == "rotate":
+            text_obj.rotate(3.0, -1.0, 25.0)
+            expected.rotate(3.0, -1.0, 25.0)
+        elif post_rotation == "rotate_translate":
+            text_obj.rotate_translate(3.0, -1.0, 25.0)
+            expected.rotate_translate(3.0, -1.0, 25.0)
+
+        actual = text_obj.to_polygon()
+        assert len(actual.group) == len(expected.group)
+        for actual_poly, expected_poly in zip(
+            actual.group, expected.group, strict=True
+        ):
+            assert isinstance(actual_poly, sp.Poly)
+            assert isinstance(expected_poly, sp.Poly)
+            assert actual_poly.layer == expected_poly.layer == text_obj.layer
+            np.testing.assert_array_equal(actual_poly.data[:2], actual_poly.data[-2:])
+            actual_points = actual_poly.data[:-2].reshape(-1, 2)
+            expected_points = expected_poly.data[:-2].reshape(-1, 2)
+            assert actual_points.shape == expected_points.shape
+            assert any(
+                np.allclose(
+                    actual_points, np.roll(points, shift, axis=0), rtol=0, atol=1e-10
+                )
+                for points in (expected_points, expected_points[::-1])
+                for shift in range(len(points))
+            )
 
     def test_bounding_box(self, text_obj: sp.Text) -> None:
         bb = text_obj.bounding_box()
@@ -784,9 +836,9 @@ class TestText:
         assert text_obj.perimeter() == 0
 
     def test_to_polygon(self, text_obj: sp.Text) -> None:
-        # Text cannot be converted to a polygon, so we return an empty geometry group.
         g = text_obj.to_polygon()
         assert isinstance(g, sp.GeomGroup)
+        assert g.group
         assert all(isinstance(p, sp.Poly) for p in g.group)
 
 
