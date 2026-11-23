@@ -1,6 +1,8 @@
 """Unit tests for the samplemaker.layout module."""
 
 import os
+import subprocess
+import sys
 from collections.abc import Generator
 from pathlib import Path
 
@@ -625,6 +627,140 @@ class TestMask:
 
         with pytest.raises(ValueError, match="does not exist"):
             themask.get_cell("MISSING")
+
+    def test_fingerprint_tracks_reachable_cells_without_mutation(self) -> None:
+        mask = smlay.Mask("test_fingerprint")
+        leaf = make_rect(0, 0, 2, 3)
+        child = make_sref(1, 2, "LEAF", leaf)
+        main = make_sref(4, 5, "CHILD", child)
+        mask.add_cell("LEAF", leaf)
+        mask.add_cell("CHILD", child)
+        mask.add_cell("UNUSED", make_rect(0, 0, 1, 1))
+        mask.add_to_main_cell(main)
+        _DevicePool["unused"] = "UNUSED"
+        original_cells = LayoutPool.copy()
+
+        payload = mask.to_dict()
+        original = mask.fingerprint()
+        cells = payload["cells"]
+        assert isinstance(cells, dict)
+        assert list(cells) == ["CELL00", "CHILD", "LEAF"]
+        assert LayoutPool == original_cells
+        assert _DevicePool["unused"] == "UNUSED"
+
+        mask.name = "different_filename"
+        mask.cache = True
+        mask.writefields.append((10, 0, 0, 1, 0))
+        LayoutPool["UNUSED"].translate(5, 6)
+        assert mask.fingerprint() == original
+
+        leaf.translate(1, 0)
+        assert mask.fingerprint() != original
+        leaf.translate(-1, 0)
+        assert mask.fingerprint() == original
+        main.translate(1, 0)
+        assert mask.fingerprint() != original
+
+    def test_fingerprint_is_independent_of_pool_and_element_order(self) -> None:
+        mask = smlay.Mask("order")
+        first = make_rect(0, 0, 2, 3)
+        second = make_rect(5, 0, 2, 3)
+        mask.add_cell("FIRST", first)
+        mask.add_cell("SECOND", second)
+        main = make_sref(0, 0, "FIRST", first) + make_sref(0, 0, "SECOND", second)
+        mask.add_to_main_cell(main)
+        original = mask.fingerprint()
+
+        main.group.reverse()
+        reordered = list(LayoutPool.items())[::-1]
+        LayoutPool.clear()
+        LayoutPool.update(reordered)
+
+        assert mask.fingerprint() == original
+
+    def test_fingerprint_accepts_equivalent_detached_reference_group(self) -> None:
+        mask = smlay.Mask("detached")
+        child = make_rect(0, 0, 2, 3)
+        mask.add_cell("CHILD", child)
+        mask.add_to_main_cell(make_sref(0, 0, "CHILD", child.copy()))
+        original = mask.fingerprint()
+
+        child.translate(1, 0)
+        with pytest.raises(ValueError, match=r"CHILD.*does not match"):
+            mask.fingerprint()
+        child.translate(-1, 0)
+        assert mask.fingerprint() == original
+
+    def test_fingerprint_tracks_array_reference(self) -> None:
+        mask = smlay.Mask("array")
+        child = make_rect(0, 0, 2, 3)
+        mask.add_cell("CHILD", child)
+        array = ARef(0, 0, "CHILD", child, 2, 3, 4, 1, 2, 5, 1, 0, False)
+        main = GeomGroup()
+        main.add(array)
+        mask.add_to_main_cell(main)
+        original = mask.fingerprint()
+
+        array.ncols += 1
+        assert mask.fingerprint() != original
+        array.ncols -= 1
+        assert mask.fingerprint() == original
+        array.by += 1
+        assert mask.fingerprint() != original
+
+    def test_fingerprint_rejects_missing_cells_and_cycles(self) -> None:
+        mask = smlay.Mask("invalid")
+        with pytest.raises(ValueError, match=r"CELL00.*does not exist"):
+            mask.fingerprint()
+
+        mask.add_to_main_cell(make_sref(0, 0, "MISSING", GeomGroup()))
+        with pytest.raises(ValueError, match=r"MISSING.*does not exist"):
+            mask.fingerprint()
+
+        cyclic = GeomGroup()
+        cyclic.add(SRef(0, 0, "CELL00", cyclic, 1, 0, False))
+        mask.add_cell("CELL00", cyclic)
+        with pytest.raises(ValueError, match="cyclic"):
+            mask.fingerprint()
+
+    def test_fingerprint_matches_before_and_after_export(self, tmp_path: Path) -> None:
+        mask = smlay.Mask(str(tmp_path / "layout"))
+        child = make_rect(0, 0, 2, 3)
+        mask.add_cell("CHILD", child)
+        mask.add_cell("UNUSED", make_rect(0, 0, 1, 1))
+        mask.add_to_main_cell(make_sref(0, 0, "CHILD", child))
+        original = mask.fingerprint()
+
+        mask.export_gds()
+
+        assert (tmp_path / "layout.gds").is_file()
+        assert "UNUSED" not in LayoutPool
+        assert mask.fingerprint() == original
+
+    def test_fingerprint_is_stable_across_processes(self) -> None:
+        mask = smlay.Mask("first")
+        mask.add_to_main_cell(make_rect(0, 0, 2, 3))
+        expected = mask.fingerprint()
+        assert expected == (
+            "6854fad726fc497e5a1ace680d085fd2e036265f9d924488f46f7c8c4edb247e"
+        )
+        code = (
+            "from samplemaker.layout import Mask; "
+            "from samplemaker.makers import make_rect; "
+            "mask = Mask('second'); mask.add_to_main_cell(make_rect(0, 0, 2, 3)); "
+            "print(mask.fingerprint())"
+        )
+        for seed in ("1", "2"):
+            env = os.environ.copy()
+            env["PYTHONHASHSEED"] = seed
+            result = subprocess.run(  # noqa: S603
+                [sys.executable, "-c", code],
+                capture_output=True,
+                check=True,
+                env=env,
+                text=True,
+            )
+            assert result.stdout.strip() == expected
 
     def test_add_markers_add_writefield_and_writefield_grid(self) -> None:
         mask1 = smlay.Mask("test_wf")

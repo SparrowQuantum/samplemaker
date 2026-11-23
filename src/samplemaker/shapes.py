@@ -112,6 +112,10 @@ def _dump_json(value: object) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
 
+def _fingerprint(value: object) -> str:
+    return hashlib.sha256(_dump_json(value).encode("utf-8")).hexdigest()
+
+
 class GeomPrimitive(ABC):
     """Abstract base class for all geometry primitives."""
 
@@ -1553,7 +1557,7 @@ class GeomGroup:
         They do not establish physical equivalence between differently represented
         geometry. The versioned representation is included in the hash input.
         """
-        return hashlib.sha256(_dump_json(self.to_dict()).encode("utf-8")).hexdigest()
+        return _fingerprint(self.to_dict())
 
 
 class Dot(GeomPrimitive):
