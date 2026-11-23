@@ -1,17 +1,22 @@
 """Unit tests for the samplemaker.gdswriter module."""
 
 # Used automatically by pytest to reset state before each test:
+import math
 from collections.abc import Generator
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 import samplemaker.makers as sm
+import samplemaker.shapes as sp
 from samplemaker import LayoutPool
 from samplemaker.baselib.devices import CrossMark
 from samplemaker.devices import Device
+from samplemaker.gdsreader import GDSReader
 from samplemaker.gdswriter import GDSWriter
-from samplemaker.shapes import GeomGroup
+from samplemaker.shapes import GeomGroup, Poly
+from samplemaker.shapes import Path as GeomPath
 
 
 @pytest.fixture
@@ -131,13 +136,33 @@ def test_layoutpool(layout_pool: dict[str, GeomGroup]) -> None:
     assert srefs == {"BASELIB_CMARK_0001", "SUBCELL"}
 
 
-def test_init_populates_circle_lookup_tables(gds_writer: GDSWriter) -> None:
-    assert gds_writer.circleres == 12
-    assert gds_writer.arcres == 32
-    assert gds_writer.xc.shape == (12,)
-    assert gds_writer.yc.shape == (12,)
-    assert gds_writer.xc[0] == pytest.approx(1.0)
-    assert gds_writer.yc[0] == pytest.approx(0.0)
+def test_init_populates_standard_attributes(gds_writer: GDSWriter) -> None:
+    assert gds_writer._circleres == 12
+    assert gds_writer._arcres == 32
+    assert gds_writer.fid is None
+    assert gds_writer.xc.shape == (gds_writer.circleres,)
+    assert gds_writer.yc.shape == (gds_writer.circleres,)
+
+
+def test_circleres_setter_samples_circles(gds_writer: GDSWriter) -> None:
+    # Default case
+    expected_xc = np.array([math.cos(i * 2 * math.pi / 12) for i in range(12)])
+    expected_yc = np.array([math.sin(i * 2 * math.pi / 12) for i in range(12)])
+    np.testing.assert_allclose(gds_writer.xc, expected_xc)
+    np.testing.assert_allclose(gds_writer.yc, expected_yc)
+
+    gds_writer.circleres = 16
+    expected_xc = np.array([math.cos(i * 2 * math.pi / 16) for i in range(16)])
+    expected_yc = np.array([math.sin(i * 2 * math.pi / 16) for i in range(16)])
+    np.testing.assert_allclose(gds_writer.xc, expected_xc)
+    np.testing.assert_allclose(gds_writer.yc, expected_yc)
+
+
+def test_circleres_arcres_setters_reject_invalid_values(gds_writer: GDSWriter) -> None:
+    with pytest.raises(ValueError, match=r"circleres must be at least 3. Got 2."):
+        gds_writer.circleres = 2
+    with pytest.raises(ValueError, match=r"arcres must be at least 3. Got 2."):
+        gds_writer.arcres = 2
 
 
 def test_open_library_and_close_library_write_padded_gds(
@@ -180,6 +205,96 @@ def test_write_structure_supports_all_written_shape_types(
     data = output_file.read_bytes()
     for cellname in layout_pool:
         assert cellname.encode() in data
+
+
+@pytest.mark.parametrize("array", [False, True])
+@pytest.mark.parametrize(("sx", "sy"), [(-2.0, 2.0), (2.0, -2.0), (-2.0, -2.0)])
+def test_write_negatively_scaled_reference(
+    gds_writer: GDSWriter, tmp_path: Path, array: bool, sx: float, sy: float
+) -> None:
+    source = sp.Box(0, 1, 2, 3).to_rect()
+    if array:
+        ref: sp.SRef = sp.ARef(1, 2, "SUB", source, 2, 2, 4, 1, -2, 5, 1, 30, True)
+    else:
+        ref = sp.SRef(1, 2, "SUB", source, 1, 30, True)
+    ref.scale(-3, 4, sx, sy)
+    expected = ref.to_polygon()
+    top = GeomGroup()
+    top.add(ref)
+
+    output_file = tmp_path / "scaled_ref.gds"
+    gds_writer.open_library(str(output_file))
+    gds_writer.write_structure("TOP", top)
+    gds_writer.close_library()
+
+    reader = GDSReader()
+    reader.quick_read(str(output_file))
+    decoded = reader.get_cell("TOP").group[0]
+    assert isinstance(decoded, sp.ARef if array else sp.SRef)
+    decoded.group = source
+    actual = decoded.to_polygon()
+    assert len(actual.group) == len(expected.group)
+    for actual_poly, expected_poly in zip(actual.group, expected.group, strict=True):
+        assert isinstance(actual_poly, Poly)
+        assert isinstance(expected_poly, Poly)
+        np.testing.assert_allclose(actual_poly.data, expected_poly.data, atol=1e-10)
+
+
+@pytest.mark.parametrize("npts", [7999, 8000, 8001, 9000])
+def test_write_structure_preserves_large_polygon_geometry(
+    gds_writer: GDSWriter, tmp_path: Path, npts: int
+) -> None:
+    bottom_x = np.linspace(0.0, 16.0, npts - 5)
+    polygon = Poly(
+        np.concatenate((bottom_x, [16.0, 6.0, 6.0, 0.0])) + 0.0004,
+        np.concatenate((np.zeros_like(bottom_x), [2.0, 2.0, 7.0, 7.0])) + 0.0004,
+        layer=7,
+    )
+    assert polygon.npts == npts
+    small_polygon = Poly([20, 22, 22, 20], [1, 1, 3, 3], layer=8)
+    path = GeomPath([24.0, 25.0], [1.0, 3.0], width=0.5, layer=9)
+    group = GeomGroup()
+    for geom in (polygon, small_polygon, path):
+        group.add(geom)
+
+    output_file = tmp_path / "large_polygon.gds"
+    gds_writer.open_library(str(output_file))
+    gds_writer.write_structure("TOP", group)
+    gds_writer.close_library()
+
+    reader = GDSReader()
+    reader.quick_read(str(output_file))
+    result = reader.get_cell("TOP")
+
+    large_output = result.select_layer(7)
+    if npts <= 8000:
+        assert len(large_output.group) == 1
+    else:
+        assert len(large_output.group) > 1
+    for geom in large_output.group:
+        assert isinstance(geom, Poly)
+        assert geom.npts <= 8000
+    assert large_output.get_area() == pytest.approx(62.0)
+
+    expected = GeomGroup()
+    expected.add(Poly([0, 16, 16, 6, 6, 0], [0, 0, 2, 2, 7, 7], layer=7))
+    expected.boolean_xor(large_output, layer_a=7, layer_b=7)
+    assert not expected.group
+
+    if npts <= 8000:
+        unsplit = large_output.group[0]
+        assert isinstance(unsplit, Poly)
+        np.testing.assert_array_equal(unsplit.int_data(), polygon.int_data())
+    small_output = result.select_layer(8).group
+    assert len(small_output) == 1
+    assert isinstance(small_output[0], Poly)
+    np.testing.assert_array_equal(small_output[0].int_data(), small_polygon.int_data())
+    path_output = result.select_layer(9).group
+    assert len(path_output) == 1
+    assert isinstance(path_output[0], GeomPath)
+    assert path_output[0].xpts == pytest.approx(path.xpts)
+    assert path_output[0].ypts == pytest.approx(path.ypts)
+    assert path_output[0].width == pytest.approx(path.width)
 
 
 def test_write_structure_calls_open_write_close_in_order(
