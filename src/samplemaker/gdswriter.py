@@ -118,11 +118,23 @@ class GDSWriter:
         self.__write_data(struct.pack(f">{data.size}i", *data))
         self.__write_data(struct.pack(">2H", 4, 0x1100))
 
+    def __write_circle(self, circ: smsh.Circle) -> None:
+        """Write polygon with pre-sampled points for the circle."""
+        if not isinstance(circ, smsh.Circle):
+            msg = "Input is not a Circle instance."
+            raise TypeError(msg)
+        if circ.layer < 0:
+            return
+        xpts = circ.r * self.xc + circ.x0
+        ypts = circ.r * self.yc + circ.y0
+        self.__write_polygon(smsh.Poly(xpts, ypts, circ.layer))
+
     def __write_geom_primitive(self, geom: smsh.GeomPrimitive) -> None:
         if isinstance(geom, smsh.Ellipse):
             g = geom.to_polygon(self.arcres)
         elif isinstance(geom, smsh.Circle):
-            g = geom.to_polygon(self.circleres)
+            self.__write_circle(geom)
+            return
         else:
             g = geom.to_polygon()
         for poly in g.group:
