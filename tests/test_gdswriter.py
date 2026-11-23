@@ -12,8 +12,10 @@ import samplemaker.makers as sm
 from samplemaker import LayoutPool
 from samplemaker.baselib.devices import CrossMark
 from samplemaker.devices import Device
+from samplemaker.gdsreader import GDSReader
 from samplemaker.gdswriter import GDSWriter
-from samplemaker.shapes import GeomGroup
+from samplemaker.shapes import GeomGroup, Poly
+from samplemaker.shapes import Path as GeomPath
 
 
 @pytest.fixture
@@ -202,6 +204,63 @@ def test_write_structure_supports_all_written_shape_types(
     data = output_file.read_bytes()
     for cellname in layout_pool:
         assert cellname.encode() in data
+
+
+@pytest.mark.parametrize("npts", [7999, 8000, 8001, 9000])
+def test_write_structure_preserves_large_polygon_geometry(
+    gds_writer: GDSWriter, tmp_path: Path, npts: int
+) -> None:
+    bottom_x = np.linspace(0.0, 16.0, npts - 5)
+    polygon = Poly(
+        np.concatenate((bottom_x, [16.0, 6.0, 6.0, 0.0])) + 0.0004,
+        np.concatenate((np.zeros_like(bottom_x), [2.0, 2.0, 7.0, 7.0])) + 0.0004,
+        layer=7,
+    )
+    assert polygon.npts == npts
+    small_polygon = Poly([20, 22, 22, 20], [1, 1, 3, 3], layer=8)
+    path = GeomPath([24.0, 25.0], [1.0, 3.0], width=0.5, layer=9)
+    group = GeomGroup()
+    for geom in (polygon, small_polygon, path):
+        group.add(geom)
+
+    output_file = tmp_path / "large_polygon.gds"
+    gds_writer.open_library(str(output_file))
+    gds_writer.write_structure("TOP", group)
+    gds_writer.close_library()
+
+    reader = GDSReader()
+    reader.quick_read(str(output_file))
+    result = reader.get_cell("TOP")
+
+    large_output = result.select_layer(7)
+    if npts <= 8000:
+        assert len(large_output.group) == 1
+    else:
+        assert len(large_output.group) > 1
+    for geom in large_output.group:
+        assert isinstance(geom, Poly)
+        assert geom.npts <= 8000
+    assert large_output.get_area() == pytest.approx(62.0)
+
+    expected = GeomGroup()
+    expected.add(Poly([0, 16, 16, 6, 6, 0], [0, 0, 2, 2, 7, 7], layer=7))
+    expected.boolean_xor(large_output, layer_a=7, layer_b=7)
+    assert not expected.group
+
+    if npts <= 8000:
+        unsplit = large_output.group[0]
+        assert isinstance(unsplit, Poly)
+        np.testing.assert_array_equal(unsplit.int_data(), polygon.int_data())
+    small_output = result.select_layer(8).group
+    assert len(small_output) == 1
+    assert isinstance(small_output[0], Poly)
+    np.testing.assert_array_equal(small_output[0].int_data(), small_polygon.int_data())
+    path_output = result.select_layer(9).group
+    assert len(path_output) == 1
+    assert isinstance(path_output[0], GeomPath)
+    assert path_output[0].xpts == pytest.approx(path.xpts)
+    assert path_output[0].ypts == pytest.approx(path.ypts)
+    assert path_output[0].width == pytest.approx(path.width)
 
 
 def test_write_structure_calls_open_write_close_in_order(
