@@ -1389,13 +1389,33 @@ class TestEllipse:
 
         assert ellipse_obj.perimeter() == pytest.approx(expected)
 
-    def test_to_polygon(self, ellipse_obj: sp.Ellipse) -> None:
-        g = ellipse_obj.to_polygon(npts=16)
+    @pytest.mark.parametrize(("npts", "rotation"), [(16, 0.0), (16, 30.0), (7, -45.0)])
+    def test_to_polygon(
+        self, ellipse_obj: sp.Ellipse, npts: int, rotation: float
+    ) -> None:
+        ellipse_obj.rot = rotation
+        g = ellipse_obj.to_polygon(npts=npts)
 
         assert isinstance(g, sp.GeomGroup)
         assert len(g.group) == 1
-        assert isinstance(g.group[0], sp.Poly)
-        assert g.group[0].layer == ellipse_obj.layer
+        poly = g.group[0]
+        assert isinstance(poly, sp.Poly)
+        assert poly.layer == ellipse_obj.layer
+        assert poly.npts == npts + 1
+
+        points = poly.data.reshape(-1, 2)
+        angles = np.arange(npts) * (2 * np.pi / npts)
+        local_x = ellipse_obj.r * np.cos(angles)
+        local_y = ellipse_obj.r1 * np.sin(angles)
+        theta = np.deg2rad(rotation)
+        expected = np.column_stack(
+            (
+                ellipse_obj.x0 + local_x * np.cos(theta) - local_y * np.sin(theta),
+                ellipse_obj.y0 + local_x * np.sin(theta) + local_y * np.cos(theta),
+            )
+        )
+        np.testing.assert_allclose(points[:-1], expected, rtol=0, atol=1e-12)
+        np.testing.assert_array_equal(points[-1], points[0])
 
 
 class TestRing:
