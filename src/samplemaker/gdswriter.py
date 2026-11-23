@@ -36,12 +36,36 @@ class GDSWriter:
         """
         self.circleres = circleres
         self.arcres = arcres
-        self.xc = np.array([0.0] * circleres)
-        self.yc = np.array([0.0] * circleres)
         self.fid: BufferedWriter | None = None
-        for i in range(circleres):
-            self.xc[i] = math.cos(i * 2 * math.pi / circleres)
-            self.yc[i] = math.sin(i * 2 * math.pi / circleres)
+
+    @property
+    def circleres(self) -> int:
+        """Get the number of points used for circles."""
+        return self._circleres
+
+    @circleres.setter
+    def circleres(self, value: int) -> None:
+        if value < 3:
+            msg = f"circleres must be at least 3. Got {value}."
+            raise ValueError(msg)
+        circleres = int(value)
+        ix = np.arange(circleres)
+        iy = np.arange(circleres)
+        self.xc = np.cos(ix * 2 * math.pi / circleres)
+        self.yc = np.sin(iy * 2 * math.pi / circleres)
+        self._circleres = circleres
+
+    @property
+    def arcres(self) -> int:
+        """Get the number of points used for round elements (ellipses, rings, arcs)."""
+        return self._arcres
+
+    @arcres.setter
+    def arcres(self, value: int) -> None:
+        if value < 3:
+            msg = f"arcres must be at least 3. Got {value}."
+            raise ValueError(msg)
+        self._arcres = int(value)
 
     def __write_string(self, text: str, tag: int) -> None:
         text_len = len(text)

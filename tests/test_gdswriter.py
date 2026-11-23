@@ -1,9 +1,11 @@
 """Unit tests for the samplemaker.gdswriter module."""
 
 # Used automatically by pytest to reset state before each test:
+import math
 from collections.abc import Generator
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 import samplemaker.makers as sm
@@ -131,13 +133,33 @@ def test_layoutpool(layout_pool: dict[str, GeomGroup]) -> None:
     assert srefs == {"BASELIB_CMARK_0001", "SUBCELL"}
 
 
-def test_init_populates_circle_lookup_tables(gds_writer: GDSWriter) -> None:
-    assert gds_writer.circleres == 12
-    assert gds_writer.arcres == 32
-    assert gds_writer.xc.shape == (12,)
-    assert gds_writer.yc.shape == (12,)
-    assert gds_writer.xc[0] == pytest.approx(1.0)
-    assert gds_writer.yc[0] == pytest.approx(0.0)
+def test_init_populates_standard_attributes(gds_writer: GDSWriter) -> None:
+    assert gds_writer._circleres == 12
+    assert gds_writer._arcres == 32
+    assert gds_writer.fid is None
+    assert gds_writer.xc.shape == (gds_writer.circleres,)
+    assert gds_writer.yc.shape == (gds_writer.circleres,)
+
+
+def test_circleres_setter_samples_circles(gds_writer: GDSWriter) -> None:
+    # Default case
+    expected_xc = np.array([math.cos(i * 2 * math.pi / 12) for i in range(12)])
+    expected_yc = np.array([math.sin(i * 2 * math.pi / 12) for i in range(12)])
+    np.testing.assert_allclose(gds_writer.xc, expected_xc)
+    np.testing.assert_allclose(gds_writer.yc, expected_yc)
+
+    gds_writer.circleres = 16
+    expected_xc = np.array([math.cos(i * 2 * math.pi / 16) for i in range(16)])
+    expected_yc = np.array([math.sin(i * 2 * math.pi / 16) for i in range(16)])
+    np.testing.assert_allclose(gds_writer.xc, expected_xc)
+    np.testing.assert_allclose(gds_writer.yc, expected_yc)
+
+
+def test_circleres_arcres_setters_reject_invalid_values(gds_writer: GDSWriter) -> None:
+    with pytest.raises(ValueError, match=r"circleres must be at least 3. Got 2."):
+        gds_writer.circleres = 2
+    with pytest.raises(ValueError, match=r"arcres must be at least 3. Got 2."):
+        gds_writer.arcres = 2
 
 
 def test_open_library_and_close_library_write_padded_gds(
