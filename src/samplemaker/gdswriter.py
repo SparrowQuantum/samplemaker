@@ -91,11 +91,22 @@ class GDSWriter:
             raise ValueError(msg)
         self.fid.write(data)
 
+    def __write_large_polygon(self, poly: smsh.Poly) -> None:
+        # Break large polygons into trapezoids for writing
+        g = smsh.GeomGroup()
+        g.add(poly)
+        g.trapezoids(poly.layer)
+        for tpoly in g.group:
+            self.__write_polygon(cast("smsh.Poly", tpoly))
+
     def __write_polygon(self, poly: smsh.Poly) -> None:
         if not isinstance(poly, smsh.Poly):
             msg = "Input is not a Poly instance."
             raise TypeError(msg)
         if poly.layer < 0:
+            return
+        if poly.npts > 8000:
+            self.__write_large_polygon(poly)
             return
         pdata = poly.int_data()
         buf = np.array(
@@ -229,19 +240,6 @@ class GDSWriter:
         )
         self.__write_data(struct.pack(">2H", 4, 0x1100))
 
-    def __large_polygons(self, gg: smsh.GeomGroup) -> smsh.GeomGroup:
-        group = []
-        for geom in gg.group:
-            if isinstance(geom, smsh.Poly) and geom.npts > 8000:
-                newgrp = smsh.GeomGroup()
-                newgrp.add(geom)
-                newgrp.trapezoids(geom.layer)
-                group += newgrp.group
-                continue
-            group += [geom]
-        gg.group = group
-        return gg
-
     def open_library(self, filename: str) -> None:
         """Open a new GDS file for writing.
 
@@ -357,7 +355,6 @@ class GDSWriter:
         None
 
         """
-        geom_group = self.__large_polygons(geom_group)
         for geom in geom_group.group:
             if isinstance(geom, smsh.Poly):
                 self.__write_polygon(geom)
