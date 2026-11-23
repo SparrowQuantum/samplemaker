@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 
 import samplemaker.makers as sm
+import samplemaker.shapes as sp
 from samplemaker import LayoutPool
 from samplemaker.baselib.devices import CrossMark
 from samplemaker.devices import Device
@@ -204,6 +205,39 @@ def test_write_structure_supports_all_written_shape_types(
     data = output_file.read_bytes()
     for cellname in layout_pool:
         assert cellname.encode() in data
+
+
+@pytest.mark.parametrize("array", [False, True])
+@pytest.mark.parametrize(("sx", "sy"), [(-2.0, 2.0), (2.0, -2.0), (-2.0, -2.0)])
+def test_write_negatively_scaled_reference(
+    gds_writer: GDSWriter, tmp_path: Path, array: bool, sx: float, sy: float
+) -> None:
+    source = sp.Box(0, 1, 2, 3).to_rect()
+    if array:
+        ref: sp.SRef = sp.ARef(1, 2, "SUB", source, 2, 2, 4, 1, -2, 5, 1, 30, True)
+    else:
+        ref = sp.SRef(1, 2, "SUB", source, 1, 30, True)
+    ref.scale(-3, 4, sx, sy)
+    expected = ref.to_polygon()
+    top = GeomGroup()
+    top.add(ref)
+
+    output_file = tmp_path / "scaled_ref.gds"
+    gds_writer.open_library(str(output_file))
+    gds_writer.write_structure("TOP", top)
+    gds_writer.close_library()
+
+    reader = GDSReader()
+    reader.quick_read(str(output_file))
+    decoded = reader.get_cell("TOP").group[0]
+    assert isinstance(decoded, sp.ARef if array else sp.SRef)
+    decoded.group = source
+    actual = decoded.to_polygon()
+    assert len(actual.group) == len(expected.group)
+    for actual_poly, expected_poly in zip(actual.group, expected.group, strict=True):
+        assert isinstance(actual_poly, Poly)
+        assert isinstance(expected_poly, Poly)
+        np.testing.assert_allclose(actual_poly.data, expected_poly.data, atol=1e-10)
 
 
 @pytest.mark.parametrize("npts", [7999, 8000, 8001, 9000])

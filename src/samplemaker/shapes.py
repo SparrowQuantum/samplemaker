@@ -175,6 +175,13 @@ class GeomPrimitive(ABC):
         scale_y : float
             The scaling factor in the y-direction.
 
+        Notes
+        -----
+        Negative factors reflect the geometry across the corresponding coordinate
+        axis through the scaling center. Some primitives cannot represent arbitrary
+        nonuniform scaling: circles and references use the magnitude of `scale_x`
+        for their radius or magnification, and paths use it for their width.
+
         Returns
         -------
         None
@@ -2240,7 +2247,7 @@ class Path(GeomPrimitive):
             y = self.ypts[i]
             self.xpts[i] = scale_x * (x - x0) + x0
             self.ypts[i] = scale_y * (y - y0) + y0
-        self.width *= scale_x
+        self.width *= abs(scale_x)
 
     def mirror_x(self, x0: float) -> None:  # noqa: D102
         for i in range(self.npts):
@@ -2482,7 +2489,7 @@ class Text(GeomPrimitive):
         self.angle += -rot if self._mirror_x != self._mirror_y else rot
 
     def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:
-        """Scale text anchor and glyph dimensions.
+        """Scale text anchor and glyph dimensions, reflecting for negative factors.
 
         Parameters
         ----------
@@ -2502,8 +2509,12 @@ class Text(GeomPrimitive):
         """
         self.x0 = scale_x * (self.x0 - x0) + x0
         self.y0 = scale_y * (self.y0 - y0) + y0
-        self.height *= scale_y
-        self.width *= scale_x
+        self.height *= abs(scale_y)
+        self.width *= abs(scale_x)
+        if scale_x < 0:
+            self._mirror_x = not self._mirror_x
+        if scale_y < 0:
+            self._mirror_y = not self._mirror_y
 
     def mirror_x(self, x0: float) -> None:
         """Mirror text with respect to a vertical axis.
@@ -2700,7 +2711,11 @@ class SRef(GeomPrimitive):
     def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:  # noqa: D102
         self.x0 = scale_x * (self.x0 - x0) + x0
         self.y0 = scale_y * (self.y0 - y0) + y0
-        self.mag *= scale_x
+        self.mag *= abs(scale_x)
+        if scale_x < 0:
+            self.mirror_x(self.x0)
+        if scale_y < 0:
+            self.mirror_y(self.y0)
 
     def mirror_x(self, x0: float) -> None:  # noqa: D102
         self.x0 = 2 * x0 - self.x0
@@ -2711,7 +2726,7 @@ class SRef(GeomPrimitive):
     def mirror_y(self, y0: float) -> None:  # noqa: D102
         self.y0 = 2 * y0 - self.y0
         self.mirror = not self.mirror
-        self.angle = -self.angle
+        self.angle = -self.angle % 360
 
     def to_polygon(self) -> GeomGroup:
         """Convert the reference to a polygon representation.
@@ -2871,6 +2886,14 @@ class ARef(SRef):
         self.bx = bx
         self.by = by
 
+    def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:
+        """Scale the reference and both array lattice vectors."""
+        super().scale(x0, y0, scale_x, scale_y)
+        self.ax *= scale_x
+        self.ay *= scale_y
+        self.bx *= scale_x
+        self.by *= scale_y
+
     def bounding_box(self) -> Box:
         """Compute bounding box of all array instances.
 
@@ -2969,7 +2992,7 @@ class Circle(GeomPrimitive):
     def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:  # noqa: D102
         self.x0 = scale_x * (self.x0 - x0) + x0
         self.y0 = scale_y * (self.y0 - y0) + y0
-        self.r = scale_x * self.r
+        self.r *= abs(scale_x)
 
     def mirror_x(self, x0: float) -> None:  # noqa: D102
         self.x0 = 2 * x0 - self.x0
@@ -3038,7 +3061,11 @@ class Ellipse(Circle):
 
     def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:  # noqa: D102
         super().scale(x0, y0, scale_x, scale_y)
-        self.r1 *= scale_y
+        self.r1 *= abs(scale_y)
+        if scale_x < 0:
+            self.mirror_x(self.x0)
+        if scale_y < 0:
+            self.mirror_y(self.y0)
 
     def mirror_x(self, x0: float) -> None:
         """Mirror ellipse with respect to a vertical axis.
@@ -3142,7 +3169,7 @@ class Ring(Ellipse):
         self.w = w
 
     def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:
-        """Scale ring center, radii, and width.
+        """Scale ring center, radii, and width, reflecting for negative factors.
 
         Parameters
         ----------
@@ -3161,7 +3188,7 @@ class Ring(Ellipse):
 
         """
         super().scale(x0, y0, scale_x, scale_y)
-        self.w *= scale_x
+        self.w *= abs(scale_x)
 
     def bounding_box(self) -> Box:
         """Compute ring bounding box from polygon approximation.
