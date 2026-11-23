@@ -260,6 +260,60 @@ def test_dot_primitive_geometry() -> None:
     assert dot.to_polygon().group == []
 
 
+@pytest.mark.parametrize(
+    ("sx", "sy"),
+    [
+        (-1.0, 1.0),
+        (1.0, -1.0),
+        (-2.0, 2.0),
+        (2.0, -2.0),
+        (-2.0, -2.0),
+        (-2.0, 3.0),
+        (4.0, -3.0),
+    ],
+)
+def test_dot_negative_scale(sx: float, sy: float) -> None:
+    dot = sp.Dot(1.0, 2.0)
+
+    dot.scale(-3.0, 4.0, sx, sy)
+
+    assert (dot.x, dot.y) == pytest.approx((-3.0 + 4.0 * sx, 4.0 - 2.0 * sy))
+
+
+_NEGATIVE_SCALES = [(-1.0, 1.0), (1.0, -1.0), (-2.0, 2.0), (2.0, -2.0), (-2.0, -2.0)]
+_NEGATIVE_X_DIMENSION = pytest.mark.xfail(
+    reason="Negative x scaling produces negative dimensions",
+    strict=True,
+    raises=AssertionError,
+)
+_REFERENCE_REFLECTION = pytest.mark.xfail(
+    reason="Reference scaling does not reflect placed geometry",
+    strict=True,
+    raises=AssertionError,
+)
+
+
+def _assert_negative_scale_geometry(
+    primitive: sp.GeomPrimitive, sx: float, sy: float
+) -> None:
+    expected = primitive.to_polygon().copy()
+    assert expected.group
+    expected.scale(-3.0, 4.0, sx, sy)
+    original_area = primitive.area()
+    original_perimeter = primitive.perimeter()
+
+    primitive.scale(-3.0, 4.0, sx, sy)
+    actual = primitive.to_polygon()
+
+    assert actual.group
+    for layer in expected.get_layer_list() | actual.get_layer_list():
+        difference = expected.select_layer(layer).copy()
+        difference.boolean_xor(actual, layer, layer)
+        assert difference.get_area() == pytest.approx(0.0, abs=1e-9)
+    assert primitive.area() == pytest.approx(original_area * abs(sx * sy))
+    assert primitive.perimeter() == pytest.approx(original_perimeter * abs(sx))
+
+
 def test_geomprimitive_cannot_be_instantiated() -> None:
     with pytest.raises(TypeError, match="abstract"):
         sp.GeomPrimitive()
@@ -441,6 +495,23 @@ class TestPoly:
         assert poly_obj.area() == pytest.approx(36.0)
         assert poly_obj.perimeter() == pytest.approx(24.0)
 
+    @pytest.mark.parametrize(("sx", "sy"), _NEGATIVE_SCALES)
+    def test_negative_scale(self, poly_obj: sp.Poly, sx: float, sy: float) -> None:
+        _assert_negative_scale_geometry(poly_obj, sx, sy)
+
+    @pytest.mark.parametrize(("sx", "sy"), [(-2.0, 3.0), (4.0, -3.0), (-2.0, -3.0)])
+    def test_negative_anisotropic_scale(
+        self, poly_obj: sp.Poly, sx: float, sy: float
+    ) -> None:
+        original = poly_obj.data.reshape(-1, 2).copy()
+
+        poly_obj.scale(-3.0, 4.0, sx, sy)
+
+        expected = (original - [-3.0, 4.0]) * [sx, sy] + [-3.0, 4.0]
+        np.testing.assert_allclose(
+            poly_obj.data.reshape(-1, 2), expected, rtol=0, atol=1e-12
+        )
+
     def test_mirror_x(self, poly_obj: sp.Poly) -> None:
         poly_obj.mirror_x(1.5)
         bb = poly_obj.bounding_box()
@@ -596,6 +667,20 @@ class TestPath:
 
         assert path.width == pytest.approx(1.5 * scale_x)
 
+    @pytest.mark.parametrize(
+        ("sx", "sy"),
+        [
+            pytest.param(-1.0, 1.0, marks=_NEGATIVE_X_DIMENSION),
+            (1.0, -1.0),
+            pytest.param(-2.0, 2.0, marks=_NEGATIVE_X_DIMENSION),
+            (2.0, -2.0),
+            pytest.param(-2.0, -2.0, marks=_NEGATIVE_X_DIMENSION),
+        ],
+    )
+    def test_negative_scale(self, path_obj: sp.Path, sx: float, sy: float) -> None:
+        _assert_negative_scale_geometry(path_obj, sx, sy)
+        assert path_obj.width > 0
+
     def test_mirror_x(self, path_obj: sp.Path, poly_pts: tuple[_TF, _TF]) -> None:
         xpts, ypts = poly_pts
         path_obj.mirror_x(1.5)
@@ -749,6 +834,17 @@ class TestText:
         assert text_obj.height == pytest.approx(30.0)
         assert text_obj.width == pytest.approx(2.0)
 
+    @pytest.mark.xfail(
+        reason="Text scaling does not preserve mirrored glyph geometry",
+        strict=True,
+        raises=AssertionError,
+    )
+    @pytest.mark.parametrize(("sx", "sy"), _NEGATIVE_SCALES)
+    def test_negative_scale(self, text_obj: sp.Text, sx: float, sy: float) -> None:
+        text_obj.text = "FL"
+        text_obj.angle = 30.0
+        _assert_negative_scale_geometry(text_obj, sx, sy)
+
     @pytest.mark.parametrize(
         ("mirrors", "rotation", "alignment", "post_rotation"),
         [
@@ -899,6 +995,21 @@ class TestSRef:
         assert sref_obj.x0 == pytest.approx(expected_x0)
         assert sref_obj.y0 == pytest.approx(expected_y0)
         assert sref_obj.mag == pytest.approx(sref_kwargs.mag * sx)
+
+    @pytest.mark.parametrize(
+        ("sx", "sy"),
+        [
+            pytest.param(-1.0, 1.0, marks=_REFERENCE_REFLECTION),
+            pytest.param(1.0, -1.0, marks=_REFERENCE_REFLECTION),
+            pytest.param(-2.0, 2.0, marks=_REFERENCE_REFLECTION),
+            pytest.param(2.0, -2.0, marks=_REFERENCE_REFLECTION),
+            (-2.0, -2.0),
+        ],
+    )
+    def test_negative_scale(self, sref_obj: sp.SRef, sx: float, sy: float) -> None:
+        sref_obj.angle = 30.0
+        sref_obj.mirror = True
+        _assert_negative_scale_geometry(sref_obj, sx, sy)
 
     @pytest.mark.parametrize("xc", [0.0, 1.0, 2.0])
     def test_mirror_x(
@@ -1164,6 +1275,17 @@ class TestAref:
         assert aref_obj.y0 == pytest.approx(aref_kwargs.y0 * sy)
         assert aref_obj.mag == pytest.approx(aref_kwargs.mag * sx)
 
+    @pytest.mark.xfail(
+        reason="Array scaling does not transform its lattice",
+        strict=True,
+        raises=AssertionError,
+    )
+    @pytest.mark.parametrize(("sx", "sy"), _NEGATIVE_SCALES)
+    def test_negative_scale(self, aref_obj: sp.ARef, sx: float, sy: float) -> None:
+        aref_obj.angle = 30.0
+        aref_obj.mirror = True
+        _assert_negative_scale_geometry(aref_obj, sx, sy)
+
     @pytest.mark.parametrize("xc", [0.0, 1.0, 2.0])
     def test_mirror_x(
         self, aref_obj: sp.ARef, aref_kwargs: ARefKwargs, xc: float
@@ -1343,6 +1465,20 @@ class TestCircle:
         assert circle_obj.y0 == pytest.approx(6.0)
         assert circle_obj.r == pytest.approx(6.0)
 
+    @pytest.mark.parametrize(
+        ("sx", "sy"),
+        [
+            pytest.param(-1.0, 1.0, marks=_NEGATIVE_X_DIMENSION),
+            (1.0, -1.0),
+            pytest.param(-2.0, 2.0, marks=_NEGATIVE_X_DIMENSION),
+            (2.0, -2.0),
+            pytest.param(-2.0, -2.0, marks=_NEGATIVE_X_DIMENSION),
+        ],
+    )
+    def test_negative_scale(self, circle_obj: sp.Circle, sx: float, sy: float) -> None:
+        _assert_negative_scale_geometry(circle_obj, sx, sy)
+        assert circle_obj.r > 0
+
     def test_mirror_x(self, circle_obj: sp.Circle) -> None:
         circle_obj.mirror_x(0.0)
 
@@ -1415,6 +1551,20 @@ class TestEllipse:
         assert ellipse_obj.y0 == pytest.approx(6.0)
         assert ellipse_obj.r == pytest.approx(6.0)
         assert ellipse_obj.r1 == pytest.approx(6.0)
+
+    @pytest.mark.xfail(
+        reason="Negative radii or incorrect reflected geometry",
+        strict=True,
+        raises=AssertionError,
+    )
+    @pytest.mark.parametrize(("sx", "sy"), _NEGATIVE_SCALES)
+    def test_negative_scale(
+        self, ellipse_obj: sp.Ellipse, sx: float, sy: float
+    ) -> None:
+        ellipse_obj.rot = 30.0
+        _assert_negative_scale_geometry(ellipse_obj, sx, sy)
+        assert ellipse_obj.r > 0
+        assert ellipse_obj.r1 > 0
 
     def test_mirror_x(self, ellipse_obj: sp.Ellipse) -> None:
         ellipse_obj.rot = 30.0
@@ -1499,6 +1649,19 @@ class TestRing:
         assert ring_obj.r1 == pytest.approx(6.0)
         assert ring_obj.w == pytest.approx(2.0)
 
+    @pytest.mark.xfail(
+        reason="Negative radii or incorrect reflected geometry",
+        strict=True,
+        raises=AssertionError,
+    )
+    @pytest.mark.parametrize(("sx", "sy"), _NEGATIVE_SCALES)
+    def test_negative_scale(self, ring_obj: sp.Ring, sx: float, sy: float) -> None:
+        ring_obj.rot = 30.0
+        _assert_negative_scale_geometry(ring_obj, sx, sy)
+        assert ring_obj.r > 0
+        assert ring_obj.r1 > 0
+        assert ring_obj.w > 0
+
     def test_bounding_box(self, ring_obj: sp.Ring) -> None:
         bb = ring_obj.bounding_box()
 
@@ -1543,6 +1706,19 @@ class TestArc:
         assert arc_obj.a1 == arc_params["a1"]
         assert arc_obj.a2 == arc_params["a2"]
         assert arc_obj.layer == int(arc_params["layer"])
+
+    @pytest.mark.xfail(
+        reason="Negative radii or incorrect reflected geometry",
+        strict=True,
+        raises=AssertionError,
+    )
+    @pytest.mark.parametrize(("sx", "sy"), _NEGATIVE_SCALES)
+    def test_negative_scale(self, sx: float, sy: float) -> None:
+        arc = sp.Arc(1, 2, 3, 2, 4, 30, 1, 25, 140)
+        _assert_negative_scale_geometry(arc, sx, sy)
+        assert arc.r > 0
+        assert arc.r1 > 0
+        assert arc.w > 0
 
     def test_bounding_box(self, arc_obj: sp.Arc) -> None:
         bb = arc_obj.bounding_box()
