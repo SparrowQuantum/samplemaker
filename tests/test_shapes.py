@@ -1,5 +1,8 @@
 """Unit tests for shapes module."""
 
+import os
+import subprocess
+import sys
 from dataclasses import dataclass
 
 import numpy as np
@@ -307,6 +310,69 @@ def _assert_negative_scale_geometry(
 def test_geomprimitive_cannot_be_instantiated() -> None:
     with pytest.raises(TypeError, match="abstract"):
         sp.GeomPrimitive()
+
+
+@pytest.mark.parametrize(
+    ("primitive", "changes"),
+    [
+        (sp.Dot(1, 2), {"x": 3, "y": 3}),
+        (
+            sp.Poly([0, 1, 0], [0, 0, 1], 2),
+            {"data": np.array([0, 0, 2, 0, 0, 1, 0, 0]), "npts": 3},
+        ),
+        (
+            sp.Path([0, 1], [0, 1], 0.5, 2),
+            {"xpts": [0, 2], "ypts": [0, 2], "width": 0.7, "npts": 3},
+        ),
+        (
+            sp.Text(1, 2, "A", 0, 0, 3, 0.5, 0, 2),
+            {
+                "x0": 3,
+                "y0": 3,
+                "text": "B",
+                "posu": 1,
+                "posv": 1,
+                "height": 4,
+                "width": 1,
+                "angle": 30,
+                "_mirror_x": True,
+                "_mirror_y": True,
+            },
+        ),
+        (sp.Circle(1, 2, 3, 4), {"x0": 3, "y0": 3, "r": 4}),
+        (sp.Ellipse(1, 2, 3, 2, 4, 30), {"r1": 1, "rot": 40}),
+        (sp.Ring(1, 2, 3, 2, 4, 30, 0.5), {"w": 1}),
+        (sp.Arc(1, 2, 3, 2, 4, 30, 0.5, 10, 90), {"a1": 20, "a2": 100}),
+        (
+            sp.SRef(1, 2, "cell", sp.GeomGroup(), 1, 30, False),
+            {
+                "x0": 3,
+                "y0": 3,
+                "cellname": "other",
+                "mag": 2,
+                "angle": 40,
+                "mirror": True,
+            },
+        ),
+        (
+            sp.ARef(1, 2, "cell", sp.GeomGroup(), 2, 3, 4, 1, 2, 5, 1, 30, False),
+            {"ncols": 3, "nrows": 4, "ax": 5, "ay": 2, "bx": 3, "by": 6},
+        ),
+    ],
+)
+def test_primitive_dump_tracks_geometry(
+    primitive: sp.GeomPrimitive, changes: dict[str, object]
+) -> None:
+    group = sp.GeomGroup()
+    group.add(primitive)
+    original = group.fingerprint()
+    assert primitive.to_dict()["type"] == type(primitive).__name__
+
+    for attribute, value in {**changes, "layer": primitive.layer + 1}.items():
+        old_value = getattr(primitive, attribute)
+        setattr(primitive, attribute, value)
+        assert group.fingerprint() != original, attribute
+        setattr(primitive, attribute, old_value)
 
 
 class TestBox:
@@ -1780,6 +1846,146 @@ class TestGeomGroup:
         g = sp.GeomGroup()
         assert len(g.group) == 0
 
+    def test_circle_fingerprint_payload(self, circle_obj: sp.Circle) -> None:
+        group = sp.GeomGroup()
+        group.add(circle_obj)
+
+        assert group.to_dict() == {
+            "version": 1,
+            "elements": [
+                {
+                    "type": "Circle",
+                    "layer": 4,
+                    "x0": "0x1.0000000000000p+0",
+                    "y0": "0x1.0000000000000p+1",
+                    "r": "0x1.8000000000000p+1",
+                }
+            ],
+        }
+        assert group.fingerprint() == (
+            "2d110f25a11678958b01d9c765b2afe6e67d20d268179312f0e442a4b549958e"
+        )
+
+    def test_fingerprint_ignores_group_order_but_preserves_duplicates(self) -> None:
+        circle = sp.Circle(1, 2, 3, 4)
+        path = sp.Path([0, 1], [1, 2], 0.5, 3)
+        first = sp.GeomGroup()
+        first.add(circle)
+        first.add(path)
+        second = sp.GeomGroup()
+        second.add(path)
+        second.add(circle)
+
+        assert first.to_dict() == second.to_dict()
+        assert first.fingerprint() == second.fingerprint()
+        second.add(circle)
+        assert first.fingerprint() != second.fingerprint()
+
+    def test_fingerprint_tracks_nested_references_and_shared_groups(self) -> None:
+        source = sp.GeomGroup()
+        circle = sp.Circle(1, 2, 3, 4)
+        source.add(circle)
+        ref = sp.SRef(0, 0, "source", source, 1, 0, False)
+        array = sp.ARef(0, 0, "source", source, 2, 3, 4, 1, 2, 5, 1, 0, False)
+        root = sp.GeomGroup()
+        root.add(ref)
+        root.add(array)
+        original = root.fingerprint()
+
+        assert ref.to_dict()["group"] == source.to_dict()
+        assert array.to_dict()["group"] == source.to_dict()
+        circle.layer = 5
+        assert root.fingerprint() != original
+        circle.layer = 4
+        assert root.fingerprint() == original
+        array.ax += 1
+        assert root.fingerprint() != original
+
+    def test_fingerprint_distinguishes_hierarchy_and_text_mirroring(self) -> None:
+        text = sp.Text(1, 2, "A", 0, 0, 3, 0.5, 0, 4)
+        source = sp.GeomGroup()
+        source.add(text)
+        root = sp.GeomGroup()
+        root.add(sp.SRef(0, 0, "cell", source, 1, 0, False))
+        assert root.fingerprint() != source.fingerprint()
+
+        original = root.fingerprint()
+        text.mirror_x(text.x0)
+        assert root.fingerprint() != original
+
+    def test_fingerprint_rejects_cycles(self) -> None:
+        group = sp.GeomGroup()
+        nested = sp.GeomGroup()
+        ref = sp.SRef(0, 0, "nested", nested, 1, 0, False)
+        nested.add(sp.SRef(0, 0, "cycle", group, 1, 0, False))
+        group.add(ref)
+
+        with pytest.raises(ValueError, match="cyclic"):
+            group.fingerprint()
+        with pytest.raises(ValueError, match="cyclic"):
+            ref.to_dict()
+
+    @pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf")])
+    def test_fingerprint_rejects_nonfinite_values(self, value: float) -> None:
+        group = sp.GeomGroup()
+        group.add(sp.Circle(value, 0, 1, 1))
+
+        with pytest.raises(ValueError, match="finite"):
+            group.fingerprint()
+
+    def test_fingerprint_normalizes_signed_zero(self) -> None:
+        first = sp.GeomGroup()
+        second = sp.GeomGroup()
+        first.add(sp.Circle(0.0, -0.0, 1, 1))
+        second.add(sp.Circle(-0.0, 0.0, 1, 1))
+
+        assert first.fingerprint() == second.fingerprint()
+
+    def test_fingerprint_requires_custom_subclass_dump(self) -> None:
+        class CustomCircle(sp.Circle):
+            pass
+
+        group = sp.GeomGroup()
+        group.add(CustomCircle(1, 2, 3, 4))
+
+        with pytest.raises(TypeError, match="must implement to_dict"):
+            group.fingerprint()
+
+    def test_fingerprint_accepts_custom_subclass_dump(self) -> None:
+        class CustomCircle(sp.Circle):
+            def to_dict(
+                self, *, _seen: frozenset[int] = frozenset()
+            ) -> dict[str, object]:
+                return {**super().to_dict(_seen=_seen), "type": "CustomCircle"}
+
+        group = sp.GeomGroup()
+        group.add(CustomCircle(1, 2, 3, 4))
+        regular = sp.GeomGroup()
+        regular.add(sp.Circle(1, 2, 3, 4))
+
+        assert group.fingerprint() != regular.fingerprint()
+
+    def test_fingerprint_is_stable_across_processes(self) -> None:
+        code = (
+            "from samplemaker.shapes import GeomGroup, Circle; "
+            "g = GeomGroup(); g.add(Circle(1, 2, 3, 4)); print(g.fingerprint())"
+        )
+        outputs = []
+        for seed in ("1", "2"):
+            env = os.environ.copy()
+            env["PYTHONHASHSEED"] = seed
+            result = subprocess.run(  # noqa: S603
+                [sys.executable, "-c", code],
+                capture_output=True,
+                check=True,
+                env=env,
+                text=True,
+            )
+            outputs.append(result.stdout.strip())
+
+        digest = "2d110f25a11678958b01d9c765b2afe6e67d20d268179312f0e442a4b549958e"
+        assert outputs == [digest] * 2
+
     def test_add_to_geomgroup(self, circle_obj: sp.Circle) -> None:
         g = sp.GeomGroup()
         g.add(circle_obj)
@@ -1969,6 +2175,9 @@ class TestGeomGroup:
         assert set(info["LayerList"]) == {51, 52}
         assert info["TotalCount"]["NCircle"] == 1
         assert info["TotalCount"]["NEllipse"] == 1
+        assert "Fingerprint" in info
+        assert isinstance(info["Fingerprint"], str)
+        assert len(info["Fingerprint"]) == 64
 
     def test_bounding_box_combines_shapes(
         self, circle_obj: sp.Circle, ellipse_obj: sp.Ellipse

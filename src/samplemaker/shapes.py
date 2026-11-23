@@ -67,6 +67,8 @@ to save memory and computation time. For example
 
 """
 
+import hashlib
+import json
 import math
 import pathlib
 from abc import ABC, abstractmethod
@@ -91,6 +93,25 @@ _STENCIL_FONT_PATH = (
 )
 
 
+def _dump_float(value: float) -> str:
+    value = float(value)
+    if not math.isfinite(value):
+        msg = "Geometry fingerprints require finite numbers."
+        raise ValueError(msg)
+    return (0.0 if value == 0 else value).hex()
+
+
+def _dump_int(value: int) -> int:
+    if not isinstance(value, (int, np.integer)) or isinstance(value, bool):
+        msg = "Geometry integer fields must be integers."
+        raise TypeError(msg)
+    return int(value)
+
+
+def _dump_json(value: object) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
 class GeomPrimitive(ABC):
     """Abstract base class for all geometry primitives."""
 
@@ -104,6 +125,15 @@ class GeomPrimitive(ABC):
 
         """
         self.layer: int = layer
+
+    @abstractmethod
+    def to_dict(self, *, _seen: frozenset[int] = frozenset()) -> dict[str, object]:
+        """Return a deterministic, JSON-serializable representation of the element.
+
+        Floating-point geometry values are represented as hexadecimal strings.
+        Reference implementations pass `_seen` to nested groups for cycle detection.
+        Custom primitives must implement their own representation.
+        """
 
     @abstractmethod
     def translate(self, dx: float, dy: float) -> None:
@@ -626,6 +656,7 @@ class GeomGroup:
         cnt = self.__entity_count(True)
         cnt = {k: v for k, v in cnt.items() if v != 0}
         stat["TotalCount"] = cnt
+        stat["Fingerprint"] = self.fingerprint()
         return stat
 
     def bounding_box(self) -> "Box":
@@ -1495,6 +1526,35 @@ class GeomGroup:
                 ndisc += g.three_point_filter(keep_str)
         return ndisc
 
+    def to_dict(self, *, _seen: frozenset[int] = frozenset()) -> dict[str, object]:
+        """Return a versioned, order-independent structural representation.
+
+        References include their nested groups. Cyclic references and non-finite
+        geometry values raise ValueError. Polygon vertex order, primitive type,
+        hierarchy, layers, and duplicate elements are significant.
+        """
+        if id(self) in _seen:
+            msg = "Cannot dump cyclic geometry references."
+            raise ValueError(msg)
+        seen = _seen | {id(self)}
+        elements = []
+        for geom in self.group:
+            if "to_dict" not in type(geom).__dict__:
+                msg = f"{type(geom).__name__} must implement to_dict()."
+                raise TypeError(msg)
+            elements.append(geom.to_dict(_seen=seen))
+        elements.sort(key=_dump_json)
+        return {"version": 1, "elements": elements}
+
+    def fingerprint(self) -> str:
+        """Return the SHA-256 hex digest of the canonical structural representation.
+
+        Fingerprints use exact finite float values, not a geometric tolerance.
+        They do not establish physical equivalence between differently represented
+        geometry. The versioned representation is included in the hash input.
+        """
+        return hashlib.sha256(_dump_json(self.to_dict()).encode("utf-8")).hexdigest()
+
 
 class Dot(GeomPrimitive):
     """Point helper class used for geometric transformations."""
@@ -1513,6 +1573,15 @@ class Dot(GeomPrimitive):
         super().__init__()
         self.x = x
         self.y = y
+
+    def to_dict(self, *, _seen: frozenset[int] = frozenset()) -> dict[str, object]:
+        """Return the point's structural representation."""
+        return {
+            "type": "Dot",
+            "layer": _dump_int(self.layer),
+            "x": _dump_float(self.x),
+            "y": _dump_float(self.y),
+        }
 
     def translate(self, dx: float, dy: float) -> None:  # noqa: D102
         self.x += dx
@@ -1771,6 +1840,15 @@ class Poly(GeomPrimitive):
         """
         super().__init__(layer)
         self.set_points(xpts, ypts)
+
+    def to_dict(self, *, _seen: frozenset[int] = frozenset()) -> dict[str, object]:
+        """Return the polygon's structural representation."""
+        return {
+            "type": "Poly",
+            "layer": _dump_int(self.layer),
+            "npts": _dump_int(self.npts),
+            "data": [_dump_float(value) for value in self.data],
+        }
 
     def set_points(self, xpts: ArrayLike, ypts: ArrayLike) -> None:
         """Set polygon points from x and y coordinate arrays.
@@ -2218,6 +2296,17 @@ class Path(GeomPrimitive):
         self.width = width
         self.npts = len(self.xpts)
 
+    def to_dict(self, *, _seen: frozenset[int] = frozenset()) -> dict[str, object]:
+        """Return the path's structural representation."""
+        return {
+            "type": "Path",
+            "layer": _dump_int(self.layer),
+            "npts": _dump_int(self.npts),
+            "xpts": [_dump_float(value) for value in self.xpts],
+            "ypts": [_dump_float(value) for value in self.ypts],
+            "width": _dump_float(self.width),
+        }
+
     def translate(self, dx: float, dy: float) -> None:  # noqa: D102
         for i in range(self.npts):
             self.xpts[i] = self.xpts[i] + dx
@@ -2466,6 +2555,23 @@ class Text(GeomPrimitive):
         self._mirror_x = False
         self._mirror_y = False
 
+    def to_dict(self, *, _seen: frozenset[int] = frozenset()) -> dict[str, object]:
+        """Return the text's structural representation."""
+        return {
+            "type": "Text",
+            "layer": _dump_int(self.layer),
+            "x0": _dump_float(self.x0),
+            "y0": _dump_float(self.y0),
+            "text": self.text,
+            "posu": _dump_int(self.posu),
+            "posv": _dump_int(self.posv),
+            "height": _dump_float(self.height),
+            "width": _dump_float(self.width),
+            "angle": _dump_float(self.angle),
+            "mirror_x": self._mirror_x,
+            "mirror_y": self._mirror_y,
+        }
+
     def translate(self, dx: float, dy: float) -> None:  # noqa: D102
         self.x0 += dx
         self.y0 += dy
@@ -2684,6 +2790,20 @@ class SRef(GeomPrimitive):
         self.cellname = cellname
         self.group = group
 
+    def to_dict(self, *, _seen: frozenset[int] = frozenset()) -> dict[str, object]:
+        """Return the reference and its recursively represented group."""
+        return {
+            "type": "SRef",
+            "layer": _dump_int(self.layer),
+            "x0": _dump_float(self.x0),
+            "y0": _dump_float(self.y0),
+            "cellname": self.cellname,
+            "mag": _dump_float(self.mag),
+            "angle": _dump_float(self.angle),
+            "mirror": bool(self.mirror),
+            "group": self.group.to_dict(_seen=_seen),
+        }
+
     def translate(self, dx: float, dy: float) -> None:  # noqa: D102
         self.x0 += dx
         self.y0 += dy
@@ -2886,6 +3006,19 @@ class ARef(SRef):
         self.bx = bx
         self.by = by
 
+    def to_dict(self, *, _seen: frozenset[int] = frozenset()) -> dict[str, object]:
+        """Return the array reference, lattice, and referenced group."""
+        return {
+            **super().to_dict(_seen=_seen),
+            "type": "ARef",
+            "ncols": _dump_int(self.ncols),
+            "nrows": _dump_int(self.nrows),
+            "ax": _dump_float(self.ax),
+            "ay": _dump_float(self.ay),
+            "bx": _dump_float(self.bx),
+            "by": _dump_float(self.by),
+        }
+
     def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:
         """Scale the reference and both array lattice vectors."""
         super().scale(x0, y0, scale_x, scale_y)
@@ -2969,6 +3102,16 @@ class Circle(GeomPrimitive):
         self.y0 = y0
         self.r = r
 
+    def to_dict(self, *, _seen: frozenset[int] = frozenset()) -> dict[str, object]:
+        """Return the circle's structural representation."""
+        return {
+            "type": "Circle",
+            "layer": _dump_int(self.layer),
+            "x0": _dump_float(self.x0),
+            "y0": _dump_float(self.y0),
+            "r": _dump_float(self.r),
+        }
+
     def translate(self, dx: float, dy: float) -> None:  # noqa: D102
         self.x0 += dx
         self.y0 += dy
@@ -3050,6 +3193,15 @@ class Ellipse(Circle):
         super().__init__(x0, y0, rx, layer)
         self.r1 = ry
         self.rot = rot
+
+    def to_dict(self, *, _seen: frozenset[int] = frozenset()) -> dict[str, object]:
+        """Return the ellipse's structural representation."""
+        return {
+            **super().to_dict(_seen=_seen),
+            "type": "Ellipse",
+            "r1": _dump_float(self.r1),
+            "rot": _dump_float(self.rot),
+        }
 
     def rotate_translate(self, dx: float, dy: float, rot: float) -> None:  # noqa: D102
         super().rotate_translate(dx, dy, rot)
@@ -3167,6 +3319,14 @@ class Ring(Ellipse):
         """
         super().__init__(x0, y0, rx, ry, layer, rot)
         self.w = w
+
+    def to_dict(self, *, _seen: frozenset[int] = frozenset()) -> dict[str, object]:
+        """Return the ring's structural representation."""
+        return {
+            **super().to_dict(_seen=_seen),
+            "type": "Ring",
+            "w": _dump_float(self.w),
+        }
 
     def scale(self, x0: float, y0: float, scale_x: float, scale_y: float) -> None:
         """Scale ring center, radii, and width, reflecting for negative factors.
@@ -3297,6 +3457,15 @@ class Arc(Ring):
         super().__init__(x0, y0, rx, ry, layer, rot, w)
         self.a1 = a1
         self.a2 = a2
+
+    def to_dict(self, *, _seen: frozenset[int] = frozenset()) -> dict[str, object]:
+        """Return the arc's structural representation."""
+        return {
+            **super().to_dict(_seen=_seen),
+            "type": "Arc",
+            "a1": _dump_float(self.a1),
+            "a2": _dump_float(self.a2),
+        }
 
     def bounding_box(self) -> Box:
         """Compute arc bounding box from polygon approximation.
