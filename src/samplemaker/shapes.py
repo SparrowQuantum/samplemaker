@@ -92,8 +92,16 @@ _STENCIL_FONT_PATH = (
     pathlib.Path(__file__).parent / "resources" / _STENCIL_FONT_FILENAME
 )
 
+_INT_TYPES = (int, np.integer)
+_FLOAT_TYPES = (*_INT_TYPES, float, np.floating)
+_BOOL_TYPES = (bool, np.bool)
+
 
 def _dump_float(value: float) -> str:
+    # isscalar doesn't catch strings that can be interpreted as scalars
+    if not isinstance(value, _FLOAT_TYPES) or isinstance(value, _BOOL_TYPES):
+        msg = "Geometry float fields must be scalar values."
+        raise TypeError(msg)
     value = float(value)
     if not math.isfinite(value):
         msg = "Geometry fingerprints require finite numbers."
@@ -102,7 +110,7 @@ def _dump_float(value: float) -> str:
 
 
 def _dump_int(value: int) -> int:
-    if not isinstance(value, (int, np.integer)) or isinstance(value, bool):
+    if not isinstance(value, _INT_TYPES) or isinstance(value, _BOOL_TYPES):
         msg = "Geometry integer fields must be integers."
         raise TypeError(msg)
     return int(value)
