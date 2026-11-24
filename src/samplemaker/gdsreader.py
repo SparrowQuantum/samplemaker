@@ -187,7 +187,7 @@ class GDSReader:
                         smsh.GeomGroup(),
                         cur_strans_mag,
                         cur_strans_angle,
-                        cur_strans_mir,
+                        bool(cur_strans_mir),
                     )
                     gg.add(r1)
                 if cur_el == 11:  # Make a AREF
@@ -212,7 +212,7 @@ class GDSReader:
                         by,
                         cur_strans_mag,
                         cur_strans_angle,
-                        cur_strans_mir,
+                        bool(cur_strans_mir),
                     )
                     gg.add(a1)
                 if cur_el == 12:  # Make text
