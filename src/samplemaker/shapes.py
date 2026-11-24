@@ -94,7 +94,7 @@ _STENCIL_FONT_PATH = (
 
 _INT_TYPES = (int, np.integer)
 _FLOAT_TYPES = (*_INT_TYPES, float, np.floating)
-_BOOL_TYPES = (bool, np.bool)
+_BOOL_TYPES = (bool, np.bool_)
 
 
 def _dump_float(value: float) -> str:
@@ -2601,7 +2601,7 @@ class Text(GeomPrimitive):
         super().__init__(layer)
         self.x0 = x0
         self.y0 = y0
-        self.text = text
+        self.text = str(text)
         self.posu = posu
         self.posv = posv
         self.height = height
@@ -2617,7 +2617,7 @@ class Text(GeomPrimitive):
             "layer": _dump_int(self.layer),
             "x0": _dump_float(self.x0),
             "y0": _dump_float(self.y0),
-            "text": self.text,
+            "text": str(self.text),
             "posu": _dump_int(self.posu),
             "posv": _dump_int(self.posv),
             "height": _dump_float(self.height),
@@ -2765,7 +2765,7 @@ class Text(GeomPrimitive):
         """
         offset = 0
         g = GeomGroup()
-        for c in self.text:
+        for c in str(self.text):
             if c == " ":
                 offset += self.height
             if c in _glyphs:
@@ -2841,18 +2841,24 @@ class SRef(GeomPrimitive):
         self.y0 = y0
         self.mag = mag
         self.angle = angle
+        if not isinstance(mirror, _BOOL_TYPES):
+            msg = f"mirror must be a boolean, got {type(mirror)}"
+            raise TypeError(msg)
         self.mirror = mirror
-        self.cellname = cellname
+        self.cellname = str(cellname)
         self.group = group
 
     def to_dict(self, *, _seen: frozenset[int] = frozenset()) -> dict[str, object]:
         """Return the reference and its target group or graph reference."""
+        if not isinstance(self.mirror, _BOOL_TYPES):
+            msg = f"mirror must be a boolean, got {type(self.mirror)}"
+            raise TypeError(msg)
         return {
             "type": "SRef",
             "layer": _dump_int(self.layer),
             "x0": _dump_float(self.x0),
             "y0": _dump_float(self.y0),
-            "cellname": self.cellname,
+            "cellname": str(self.cellname),
             "mag": _dump_float(self.mag),
             "angle": _dump_float(self.angle),
             "mirror": bool(self.mirror),
@@ -2961,8 +2967,9 @@ class SRef(GeomPrimitive):
             Bounding box after magnification, rotation, and mirror.
 
         """
-        if self.cellname in _BoundingBoxPool:
-            bb = _BoundingBoxPool[self.cellname]
+        cellname = str(self.cellname)
+        if cellname in _BoundingBoxPool:
+            bb = _BoundingBoxPool[cellname]
         else:
             bb = self.group.bounding_box()
         p = bb.to_poly()
