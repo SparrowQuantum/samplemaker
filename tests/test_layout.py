@@ -1,5 +1,6 @@
 """Unit tests for the samplemaker.layout module."""
 
+import json
 import os
 import subprocess
 import sys
@@ -19,7 +20,7 @@ from samplemaker import (
 )
 from samplemaker.baselib.devices import CrossMark
 from samplemaker.makers import make_rect, make_sref
-from samplemaker.shapes import ARef, Box, GeomGroup, Poly, SRef, Text
+from samplemaker.shapes import ARef, Box, Circle, GeomGroup, Poly, SRef, Text
 from tests import dummy as dm
 from tests.fakes import FakeGDSReader, FakeGDSWriter
 
@@ -691,6 +692,38 @@ class TestMask:
         child.translate(-1, 0)
         assert mask.fingerprint() == original
 
+    def test_graph_serialization_scales_with_shared_cells(self) -> None:
+        calls = 0
+
+        class CountingCircle(Circle):
+            def to_dict(
+                self, *, _seen: frozenset[int] = frozenset()
+            ) -> dict[str, object]:
+                nonlocal calls
+                calls += 1
+                return super().to_dict(_seen=_seen)
+
+        mask = smlay.Mask("shared")
+        child = GeomGroup()
+        child.add(CountingCircle(0, 0, 1, 1))
+        for index in range(15):
+            name = f"CHILD{index}"
+            mask.add_cell(name, child)
+            parent = GeomGroup()
+            parent.add(SRef(0, 0, name, child, 1, 0, False))
+            parent.add(SRef(1, 0, name, child, 1, 0, False))
+            child = parent
+        mask.add_to_main_cell(child)
+
+        graph = mask.to_dict()
+        groups = graph["groups"]
+        assert isinstance(groups, dict)
+        assert len(groups) == 16
+        assert len(json.dumps(graph)) < 18000
+        assert calls == 1
+        mask.fingerprint()
+        assert calls == 2
+
     def test_fingerprint_tracks_array_reference(self) -> None:
         mask = smlay.Mask("array")
         child = make_rect(0, 0, 2, 3)
@@ -742,7 +775,7 @@ class TestMask:
         mask.add_to_main_cell(make_rect(0, 0, 2, 3))
         expected = mask.fingerprint()
         assert expected == (
-            "6854fad726fc497e5a1ace680d085fd2e036265f9d924488f46f7c8c4edb247e"
+            "a02b3873772333024bda1a381acf6d104a87b1c574b51987b11a12d0d865f9a6"
         )
         code = (
             "from samplemaker.layout import Mask; "

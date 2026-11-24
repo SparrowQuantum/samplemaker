@@ -1,5 +1,6 @@
 """Unit tests for shapes module."""
 
+import json
 import os
 import subprocess
 import sys
@@ -315,7 +316,10 @@ def test_geomprimitive_cannot_be_instantiated() -> None:
 @pytest.mark.parametrize(
     ("primitive", "changes"),
     [
-        (sp.Dot(1, 2), {"x": 3, "y": 3}),
+        (
+            sp.Dot(1, 2),
+            {"x": 3, "y": 3},
+        ),
         (
             sp.Poly([0, 1, 0], [0, 0, 1], 2),
             {"data": np.array([0, 0, 2, 0, 0, 1, 0, 0]), "npts": 3},
@@ -339,10 +343,22 @@ def test_geomprimitive_cannot_be_instantiated() -> None:
                 "_mirror_y": True,
             },
         ),
-        (sp.Circle(1, 2, 3, 4), {"x0": 3, "y0": 3, "r": 4}),
-        (sp.Ellipse(1, 2, 3, 2, 4, 30), {"r1": 1, "rot": 40}),
-        (sp.Ring(1, 2, 3, 2, 4, 30, 0.5), {"w": 1}),
-        (sp.Arc(1, 2, 3, 2, 4, 30, 0.5, 10, 90), {"a1": 20, "a2": 100}),
+        (
+            sp.Circle(1, 2, 3, 4),
+            {"x0": 3, "y0": 3, "r": 4},
+        ),
+        (
+            sp.Ellipse(1, 2, 3, 2, 4, 30),
+            {"r1": 1, "rot": 40},
+        ),
+        (
+            sp.Ring(1, 2, 3, 2, 4, 30, 0.5),
+            {"w": 1},
+        ),
+        (
+            sp.Arc(1, 2, 3, 2, 4, 30, 0.5, 10, 90),
+            {"a1": 20, "a2": 100},
+        ),
         (
             sp.SRef(1, 2, "cell", sp.GeomGroup(), 1, 30, False),
             {
@@ -1850,20 +1866,26 @@ class TestGeomGroup:
         group = sp.GeomGroup()
         group.add(circle_obj)
 
+        digest = "c0f387abd8d7186f716e89f5d75bd2d9587dc352024e1f6cf5301d53bd7da169"
         assert group.to_dict() == {
             "version": 1,
-            "elements": [
-                {
-                    "type": "Circle",
-                    "layer": 4,
-                    "x0": "0x1.0000000000000p+0",
-                    "y0": "0x1.0000000000000p+1",
-                    "r": "0x1.8000000000000p+1",
+            "root": digest,
+            "groups": {
+                digest: {
+                    "elements": [
+                        {
+                            "type": "Circle",
+                            "layer": 4,
+                            "x0": "0x1.0000000000000p+0",
+                            "y0": "0x1.0000000000000p+1",
+                            "r": "0x1.8000000000000p+1",
+                        }
+                    ]
                 }
-            ],
+            },
         }
         assert group.fingerprint() == (
-            "2d110f25a11678958b01d9c765b2afe6e67d20d268179312f0e442a4b549958e"
+            "caab13f6b241035a7e33a62987637ce4571639105dddd7966e76adfe4ddbfee9"
         )
 
     def test_fingerprint_ignores_group_order_but_preserves_duplicates(self) -> None:
@@ -1900,6 +1922,66 @@ class TestGeomGroup:
         assert root.fingerprint() == original
         array.ax += 1
         assert root.fingerprint() != original
+
+    def test_graph_serialization_scales_with_shared_groups(self) -> None:
+        calls = 0
+
+        class CountingCircle(sp.Circle):
+            def to_dict(
+                self, *, _seen: frozenset[int] = frozenset()
+            ) -> dict[str, object]:
+                nonlocal calls
+                calls += 1
+                return super().to_dict(_seen=_seen)
+
+        root = sp.GeomGroup()
+        root.add(CountingCircle(0, 0, 1, 1))
+        for _ in range(15):
+            parent = sp.GeomGroup()
+            parent.add(sp.SRef(0, 0, "child", root, 1, 0, False))
+            parent.add(sp.SRef(1, 0, "child", root, 1, 0, False))
+            root = parent
+
+        graph = root.to_dict()
+        groups = graph["groups"]
+        assert isinstance(groups, dict)
+        assert len(groups) == 16
+        assert len(json.dumps(graph)) < 15000
+        assert calls == 1
+        root.fingerprint()
+        assert calls == 2
+
+    def test_graph_serialization_ignores_object_sharing(self) -> None:
+        child = sp.GeomGroup()
+        child.add(sp.Circle(1, 2, 3, 4))
+        shared = sp.GeomGroup()
+        shared.add(sp.SRef(0, 0, "child", child, 1, 0, False))
+        shared.add(sp.SRef(1, 0, "child", child, 1, 0, False))
+        copied = sp.GeomGroup()
+        copied.add(sp.SRef(1, 0, "child", child.copy(), 1, 0, False))
+        copied.add(sp.SRef(0, 0, "child", child.copy(), 1, 0, False))
+
+        assert shared.to_dict() == copied.to_dict()
+        assert shared.fingerprint() == copied.fingerprint()
+
+    def test_graph_serialization_accepts_custom_reference_dump(self) -> None:
+        class CustomRef(sp.SRef):
+            def to_dict(
+                self, *, _seen: frozenset[int] = frozenset()
+            ) -> dict[str, object]:
+                return {**super().to_dict(_seen=_seen), "type": "CustomRef"}
+
+        child = sp.GeomGroup()
+        child.add(sp.Circle(1, 2, 3, 4))
+        root = sp.GeomGroup()
+        root.add(CustomRef(0, 0, "child", child, 1, 0, False))
+        graph = root.to_dict()
+        groups = graph["groups"]
+        assert isinstance(groups, dict)
+        root_payload = groups[graph["root"]]
+        assert root_payload["elements"][0]["type"] == "CustomRef"
+        assert root_payload["elements"][0]["group"] == {"$ref": child.to_dict()["root"]}
+        assert len(groups) == 2
 
     def test_fingerprint_distinguishes_hierarchy_and_text_mirroring(self) -> None:
         text = sp.Text(1, 2, "A", 0, 0, 3, 0.5, 0, 4)
@@ -1983,8 +2065,34 @@ class TestGeomGroup:
             )
             outputs.append(result.stdout.strip())
 
-        digest = "2d110f25a11678958b01d9c765b2afe6e67d20d268179312f0e442a4b549958e"
+        digest = "caab13f6b241035a7e33a62987637ce4571639105dddd7966e76adfe4ddbfee9"
         assert outputs == [digest] * 2
+
+    def test_graph_fingerprint_is_stable_across_processes(self) -> None:
+        child = sp.GeomGroup()
+        child.add(sp.Circle(1, 2, 3, 4))
+        root = sp.GeomGroup()
+        root.add(sp.SRef(1, 0, "child", child, 1, 0, False))
+        root.add(sp.SRef(0, 0, "child", child, 1, 0, False))
+        code = (
+            "from samplemaker.shapes import GeomGroup, Circle, SRef; "
+            "child = GeomGroup(); child.add(Circle(1, 2, 3, 4)); "
+            "root = GeomGroup(); "
+            "root.add(SRef(0, 0, 'child', child, 1, 0, False)); "
+            "root.add(SRef(1, 0, 'child', child, 1, 0, False)); "
+            "print(root.fingerprint())"
+        )
+        for seed in ("1", "2"):
+            env = os.environ.copy()
+            env["PYTHONHASHSEED"] = seed
+            result = subprocess.run(  # noqa: S603
+                [sys.executable, "-c", code],
+                capture_output=True,
+                check=True,
+                env=env,
+                text=True,
+            )
+            assert result.stdout.strip() == root.fingerprint()
 
     def test_add_to_geomgroup(self, circle_obj: sp.Circle) -> None:
         g = sp.GeomGroup()

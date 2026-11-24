@@ -108,7 +108,7 @@ from samplemaker.devices import Device, DevicePort, IncompatiblePortError
 from samplemaker.gdsreader import GDSReader
 from samplemaker.gdswriter import GDSWriter
 from samplemaker.makers import make_aref, make_circle, make_path, make_text
-from samplemaker.shapes import Box, GeomGroup, SRef, _fingerprint
+from samplemaker.shapes import Box, GeomGroup, SRef, _DumpContext, _fingerprint
 
 TAB_POS_TYPE: TypeAlias = list[list[tuple[float, float]]]
 TAB_POS_INPUT_TYPE: TypeAlias = Sequence[Sequence[Sequence[float]]]
@@ -980,9 +980,10 @@ class Mask:
     def to_dict(self) -> dict[str, object]:
         """Return a versioned representation of the cells selected for export.
 
-        Cell names and reference structure are significant. Unreferenced cells,
-        cache files, and the mask's output filename are excluded. Embedded reference
-        groups must match their named cells in the layout pool.
+        Cell names and reference structure are significant. Cells identify groups
+        by content digest, and the groups table contains each distinct group once.
+        Unreferenced cells, cache files, and the mask's output filename are excluded.
+        Embedded reference groups must match their named cells in the layout pool.
 
         Raises
         ------
@@ -992,21 +993,21 @@ class Mask:
             or contains non-finite values.
 
         """
-        cells: dict[str, dict[str, object]] = {}
+        context = _DumpContext()
+        cells: dict[str, str] = {}
         pending = [self.mainsymbol]
         while pending:
             cellname = pending.pop()
             if cellname in cells:
                 continue
             cell = self.get_cell(cellname)
-            cells[cellname] = cell.to_dict()
+            cells[cellname] = context.group_digest(cell, frozenset())
             for geom in cell.group:
                 if isinstance(geom, SRef):
                     target = self.get_cell(geom.cellname)
-                    if (
-                        geom.group is not target
-                        and geom.group.to_dict() != target.to_dict()
-                    ):
+                    if geom.group is not target and context.group_digest(
+                        geom.group, frozenset()
+                    ) != context.group_digest(target, frozenset()):
                         msg = (
                             f"Reference to cell {geom.cellname!r} in {cellname!r} "
                             "does not match the layout pool."
@@ -1017,6 +1018,7 @@ class Mask:
             "version": 1,
             "mainsymbol": self.mainsymbol,
             "cells": {name: cells[name] for name in sorted(cells)},
+            "groups": context.sorted_groups(),
         }
 
     def fingerprint(self) -> str:

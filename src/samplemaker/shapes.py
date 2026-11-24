@@ -124,6 +124,55 @@ def _fingerprint(value: object) -> str:
     return hashlib.sha256(_dump_json(value).encode("utf-8")).hexdigest()
 
 
+class _DumpPath(frozenset[int]):
+    """Carry the graph context through the existing primitive dump protocol."""
+
+    context: "_DumpContext"
+
+    def __new__(cls, seen: frozenset[int], context: "_DumpContext") -> Self:
+        path = super().__new__(cls, seen)
+        path.context = context
+        return path
+
+
+def _element_to_dict(geom: "GeomPrimitive", _seen: frozenset[int]) -> dict[str, object]:
+    if "to_dict" not in type(geom).__dict__:
+        # Ensure explicit implementation of to_dict() in the subclass, not just
+        # the base class implementation.
+        msg = f"{type(geom).__name__} must implement to_dict()."
+        raise TypeError(msg)
+    return geom.to_dict(_seen=_seen)
+
+
+class _DumpContext:
+    def __init__(self) -> None:
+        self.memo: dict[int, tuple[GeomGroup, str]] = {}
+        self.groups: dict[str, dict[str, object]] = {}
+
+    def group_digest(self, group: "GeomGroup", seen: frozenset[int]) -> str:
+        identity = id(group)
+        if identity in seen:
+            msg = "Cannot dump cyclic geometry references."
+            raise ValueError(msg)
+        if identity in self.memo:
+            return self.memo[identity][1]
+
+        path = _DumpPath(seen | {identity}, self)
+        elements = [_element_to_dict(geom, _seen=path) for geom in group.group]
+        elements.sort(key=_dump_json)
+        payload: dict[str, object] = {"elements": elements}
+        digest = _fingerprint(payload)
+        if digest in self.groups and self.groups[digest] != payload:
+            msg = "Geometry group digest collision."
+            raise ValueError(msg)
+        self.groups[digest] = payload
+        self.memo[identity] = (group, digest)
+        return digest
+
+    def sorted_groups(self) -> dict[str, dict[str, object]]:
+        return {digest: self.groups[digest] for digest in sorted(self.groups)}
+
+
 class GeomPrimitive(ABC):
     """Abstract base class for all geometry primitives."""
 
@@ -1539,24 +1588,18 @@ class GeomGroup:
         return ndisc
 
     def to_dict(self, *, _seen: frozenset[int] = frozenset()) -> dict[str, object]:
-        """Return a versioned, order-independent structural representation.
+        """Return a versioned, order-independent structural graph.
 
-        References include their nested groups. Cyclic references and non-finite
-        geometry values raise ValueError. Polygon vertex order, primitive type,
-        hierarchy, layers, and duplicate elements are significant.
+        The root and each reference identify a group by its content digest;
+        the groups table contains each distinct group once. Cyclic references and
+        non-finite geometry values raise ValueError. Polygon vertex order, primitive
+        type, hierarchy, layers, and duplicate elements are significant.
         """
-        if id(self) in _seen:
-            msg = "Cannot dump cyclic geometry references."
-            raise ValueError(msg)
-        seen = _seen | {id(self)}
-        elements = []
-        for geom in self.group:
-            if "to_dict" not in type(geom).__dict__:
-                msg = f"{type(geom).__name__} must implement to_dict()."
-                raise TypeError(msg)
-            elements.append(geom.to_dict(_seen=seen))
-        elements.sort(key=_dump_json)
-        return {"version": 1, "elements": elements}
+        if isinstance(_seen, _DumpPath):
+            return {"$ref": _seen.context.group_digest(self, _seen)}
+        context = _DumpContext()
+        root = context.group_digest(self, _seen)
+        return {"version": 1, "root": root, "groups": context.sorted_groups()}
 
     def fingerprint(self) -> str:
         """Return the SHA-256 hex digest of the canonical structural representation.
@@ -2803,7 +2846,7 @@ class SRef(GeomPrimitive):
         self.group = group
 
     def to_dict(self, *, _seen: frozenset[int] = frozenset()) -> dict[str, object]:
-        """Return the reference and its recursively represented group."""
+        """Return the reference and its target group or graph reference."""
         return {
             "type": "SRef",
             "layer": _dump_int(self.layer),
