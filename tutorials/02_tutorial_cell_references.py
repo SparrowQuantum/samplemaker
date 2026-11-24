@@ -62,6 +62,9 @@ geom += sm.make_sref(150, 0, "FLATCELL", flat_geom)
 # Let's add all to main cell
 themask.add_to_main_cell(geom)
 
+# Mask.fingerprint() also tracks changes inside referenced cells. For automated
+# validation and dict snapshots, see 13_tutorial_geometry_validation.py.
+
 # Export to GDS
 themask.export_gds()
 
