@@ -108,7 +108,7 @@ from samplemaker.devices import Device, DevicePort, IncompatiblePortError
 from samplemaker.gdsreader import GDSReader
 from samplemaker.gdswriter import GDSWriter
 from samplemaker.makers import make_aref, make_circle, make_path, make_text
-from samplemaker.shapes import Box, GeomGroup, SRef
+from samplemaker.shapes import Box, GeomGroup, SRef, _DumpContext, _fingerprint
 
 TAB_POS_TYPE: TypeAlias = list[list[tuple[float, float]]]
 TAB_POS_INPUT_TYPE: TypeAlias = Sequence[Sequence[Sequence[float]]]
@@ -976,6 +976,57 @@ class Mask:
             raise ValueError(msg)
 
         return LayoutPool[cellname]
+
+    def to_dict(self) -> dict[str, object]:
+        """Return a versioned representation of the cells selected for export.
+
+        Cell names and reference structure are significant. Cells identify groups
+        by content digest, and the groups table contains each distinct group once.
+        Unreferenced cells, cache files, and the mask's output filename are excluded.
+        Embedded reference groups must match their named cells in the layout pool.
+
+        Raises
+        ------
+        ValueError
+            If the main cell or a referenced cell is missing, if an embedded
+            reference group differs from its named cell, or if geometry is cyclic
+            or contains non-finite values.
+
+        """
+        context = _DumpContext()
+        cells: dict[str, str] = {}
+        pending = [self.mainsymbol]
+        while pending:
+            cellname = pending.pop()
+            if cellname in cells:
+                continue
+            cell = self.get_cell(cellname)
+            cells[cellname] = context.group_digest(cell, frozenset())
+            for geom in cell.group:
+                if isinstance(geom, SRef):
+                    target = self.get_cell(geom.cellname)
+                    if geom.group is not target and context.group_digest(
+                        geom.group, frozenset()
+                    ) != context.group_digest(target, frozenset()):
+                        msg = (
+                            f"Reference to cell {geom.cellname!r} in {cellname!r} "
+                            "does not match the layout pool."
+                        )
+                        raise ValueError(msg)
+                    pending.append(geom.cellname)
+        return {
+            "version": 1,
+            "mainsymbol": self.mainsymbol,
+            "cells": {name: cells[name] for name in sorted(cells)},
+            "groups": context.sorted_groups(),
+        }
+
+    def fingerprint(self) -> str:
+        """Return a SHA-256 fingerprint of the current export-selected pool geometry.
+
+        This fingerprints the in-memory layout, not the exported GDS or cached bytes.
+        """
+        return _fingerprint(self.to_dict())
 
     def _export_cache(self) -> None:
         print("Storing objects in cache file...")

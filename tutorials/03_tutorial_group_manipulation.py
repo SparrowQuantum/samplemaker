@@ -65,6 +65,9 @@ out1.poly_outlining(0.3, 1)
 out1.translate(40, 0)
 g += out1
 
+# To check this result automatically after future changes, see
+# 13_tutorial_geometry_validation.py for fingerprint baselines and dict snapshots.
+
 # Let's add all to main cell
 themask.add_to_main_cell(g)
 
