@@ -46,9 +46,13 @@
           ];
 
           nativeCheckInputs = [
+            pyPkgs.mypy
             pyPkgs.pytestCheckHook
           ];
-          enabledTestPaths = [ "tests/" ];
+          enabledTestPaths = ["tests/"];
+          postCheck = ''
+            mypy
+          '';
 
           # scikit-build-core invokes cmake internally; skip Nix's cmake configure hook
           dontUseCmakeConfigure = true;
