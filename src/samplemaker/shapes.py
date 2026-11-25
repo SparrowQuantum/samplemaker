@@ -75,7 +75,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Collection, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
-from typing import Self, cast
+from typing import Any, Self, cast
 
 import numpy as np
 from asteval import Interpreter
@@ -84,7 +84,7 @@ from numpy.typing import ArrayLike
 from samplemaker import _BoundingBoxPool
 from samplemaker.resources import boopy  # type: ignore[import]
 
-_glyphs = {}
+_glyphs: dict[str, tuple["GeomGroup", float]] = {}
 
 _STENCIL_FONT_FILENAME = "sm_stencil_font.txt"
 _STENCIL_FONT_ENCODING = "ISO-8859-1"
@@ -700,7 +700,7 @@ class GeomGroup:
             Contains information on the group geometry.
 
         """
-        stat = {}
+        stat: dict[str, Any] = {}
         bb = self.bounding_box()
         layer_list = self.get_layer_list()
         stat["BoundingBox"] = {
@@ -988,7 +988,7 @@ class GeomGroup:
             The total area of the group.
 
         """
-        area = 0
+        area = 0.0
         for primitive in self.group:
             area += primitive.area()
         return float(area)
@@ -2024,9 +2024,9 @@ class Poly(GeomPrimitive):
         return abs(area / 2.0)
 
     def centroid(self) -> tuple[float, float]:  # noqa: D102
-        cx = 0
-        cy = 0
-        area = 0
+        cx = 0.0
+        cy = 0.0
+        area = 0.0
         x = self.data[0::2]
         y = self.data[1::2]
         n = len(x)
@@ -2092,19 +2092,19 @@ class Poly(GeomPrimitive):
 
         """
         allowed_names = {
-            "A": "Three-point polygon unsigned area",
-            "As": "Three-point polygon signed area",
-            "P": "three point perimeter",
-            "S": "Shape index of the triangle (4*pi*A/(P**2))",
-            "x": "x-coordinate of query point",
-            "y": "y-coordinate of query point",
-            "xm": "x-coordinate of previous point",
-            "ym": "y-coordinate of previous point",
-            "xp": "x-coordinate of next point",
-            "yp": "y-coordinate of next point",
-            "dm": "distance between query point and previous point",
-            "dp": "distance between query point and next point",
-            "d0": "distance between previous and next point",
+            "A",
+            "As",
+            "P",
+            "S",
+            "x",
+            "y",
+            "xm",
+            "ym",
+            "xp",
+            "yp",
+            "dm",
+            "dp",
+            "d0",
         }
         code = compile(keep_str, "<string>", "eval")
         for name in code.co_names:
@@ -2118,7 +2118,7 @@ class Poly(GeomPrimitive):
         y = self.data[1::2]
         xf = []
         yf = []
-        n = int(self.npts)
+        n = int(self.npts) - 1
         ndisc = 0
         j = n - 1
         k = n - 2
@@ -2128,20 +2128,23 @@ class Poly(GeomPrimitive):
             d1 = np.sqrt((x[i] - x[j]) ** 2 + (y[i] - y[j]) ** 2)
             d2 = np.sqrt((x[j] - x[k]) ** 2 + (y[j] - y[k]) ** 2)
             d3 = np.sqrt((x[i] - x[k]) ** 2 + (y[i] - y[k]) ** 2)
-            allowed_names["A"] = abs(attr) / 2
-            allowed_names["As"] = attr / 2
-            allowed_names["P"] = d1 + d2 + d3
-            allowed_names["S"] = abs(attr) * 2 * np.pi / allowed_names["P"] ** 2
-            allowed_names["x"] = x[j]
-            allowed_names["y"] = y[j]
-            allowed_names["xm"] = x[k]
-            allowed_names["ym"] = y[k]
-            allowed_names["xp"] = x[i]
-            allowed_names["yp"] = y[i]
-            allowed_names["dm"] = d2
-            allowed_names["dp"] = d1
-            allowed_names["d0"] = d3
-            aeval.symtable.update(allowed_names)
+            p_val = d1 + d2 + d3
+            values: dict[str, float] = {
+                "A": abs(attr) / 2,
+                "As": attr / 2,
+                "P": p_val,
+                "S": abs(attr) * 2 * np.pi / p_val**2,
+                "x": x[j],
+                "y": y[j],
+                "xm": x[k],
+                "ym": y[k],
+                "xp": x[i],
+                "yp": y[i],
+                "dm": d2,
+                "dp": d1,
+                "d0": d3,
+            }
+            aeval.symtable.update(values)
             sel = aeval(keep_str)
             if sel:
                 xf += [x[j]]
@@ -2311,8 +2314,8 @@ class Poly(GeomPrimitive):
             c += nf * d
             normals.append([a, b, c])
 
-        xpts = []
-        ypts = []
+        xpts = np.empty(len(normals))
+        ypts = np.empty(len(normals))
         normals.append(normals[0])
         for i in range(len(normals) - 1):
             n1 = normals[i]
@@ -2320,8 +2323,8 @@ class Poly(GeomPrimitive):
             d = n2[1] * n1[0] - n2[0] * n1[1]
             x = -n1[2] * n2[1] + n2[2] * n1[1]
             y = +n1[2] * n2[0] - n2[2] * n1[0]
-            xpts.append(x / d)
-            ypts.append(y / d)
+            xpts[i] = x / d
+            ypts[i] = y / d
         self.set_points(xpts, ypts)
 
 
@@ -2763,7 +2766,7 @@ class Text(GeomPrimitive):
             Group containing path strokes for all supported glyphs.
 
         """
-        offset = 0
+        offset = 0.0
         g = GeomGroup()
         for c in str(self.text):
             if c == " ":
@@ -2773,7 +2776,9 @@ class Text(GeomPrimitive):
                 letter.set_layer(self.layer)
                 letter.scale(0, 0, self.height, self.height)
                 for p in letter.group:
-                    # Note there are only paths in the group
+                    if not isinstance(p, Path):
+                        msg = f"Expected Path instance, got {type(p)}"
+                        raise TypeError(msg)
                     p.width = self.width
                 letter.translate(offset, 0)
                 g += letter
@@ -3628,7 +3633,7 @@ class Arc(Ring):
 
 # Load fonts and store the glyphs
 # Maybe we should place this somewhere else
-caps = {}
+caps: dict[str, list[float]] = {}
 with _Path(_STENCIL_FONT_PATH).open(encoding=_STENCIL_FONT_ENCODING) as f:
     c = "a"
     for line in f:
@@ -3642,8 +3647,8 @@ with _Path(_STENCIL_FONT_PATH).open(encoding=_STENCIL_FONT_ENCODING) as f:
 
 for i, data in caps.items():
     gl = GeomGroup()
-    xpts = []
-    ypts = []
+    xpts: list[float] = []
+    ypts: list[float] = []
     x = None
     for j in range(0, len(data), 3):
         x = data[j] / 3.6
