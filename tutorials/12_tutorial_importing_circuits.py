@@ -19,7 +19,7 @@ netlist = smdev.NetList.import_circuit("circuit_file.txt", "bigger")
 
 # as before we just create a circuit device and set the netlist
 cir2 = smdev.Circuit.build()
-cir2.set_param("NETLIST", netlist)
+cir2.set_netlist(netlist)
 
 # And out
 geom = cir2.run()

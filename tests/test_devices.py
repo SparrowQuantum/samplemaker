@@ -1,5 +1,6 @@
 import math
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
@@ -221,6 +222,16 @@ class TestDevice:
         with pytest.raises(ValueError, match="Could not set parameter"):
             dummy_device.set_param("does_not_exist", 1)
 
+    def test_set_param_does_not_traverse_device_parameters(
+        self, dummy_device: smdev.Device
+    ) -> None:
+        dummy_device.addparameter("options", {"width": 1}, "Options")
+
+        with pytest.raises(ValueError, match="Could not set parameter"):
+            dummy_device.set_param("options::width", 2)
+
+        assert dummy_device._p["options"] == {"width": 1}
+
     def test_get_params_casts_and_clips(self, dummy_device: smdev.Device) -> None:
         dummy_device.set_param("width", "1234")
         dummy_device.set_param("height", -23)
@@ -388,6 +399,44 @@ class TestNetList:
 
 
 class TestCircuit:
+    def test_build_device_geometry_instantiates_before_run(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        dummy_device_list: dict[str, type[smdev.Device]],
+    ) -> None:
+        _ = dummy_device_list
+        entry = smdev.NetListEntry(
+            "TESTLIB_DUMMY_CONNECTOR",
+            12.0,
+            34.0,
+            "N",
+            {"io": "wire"},
+            {"length": 25.0},
+        )
+        circuit = smdev.Circuit.build()
+        circuit.use_references = False
+        circuit.set_netlist(smdev.NetList("single", [entry]))
+
+        original_run = dm.DummyConnectorDevice.run
+
+        def assert_initialized_before_run(device: smdev.Device) -> GeomGroup:
+            assert device._name == "TESTLIB_DUMMY_CONNECTOR"
+            assert device._p == {"length": 25.0}
+            assert device._x0 == pytest.approx(12.0)
+            assert device._y0 == pytest.approx(34.0)
+            assert device.angle() == pytest.approx(math.pi / 2)
+            assert device.use_references is False
+            return original_run(device)
+
+        monkeypatch.setattr(
+            dm.DummyConnectorDevice, "run", assert_initialized_before_run
+        )
+
+        geom, ports = circuit._build_device_geometry(entry, 1)
+
+        assert isinstance(geom, GeomGroup)
+        assert set(ports) == {"io"}
+
     def test_set_param_netlist_updates_hierarchical_parameters(
         self,
         dummy_device_list: dict[str, type[smdev.Device]],
@@ -395,10 +444,55 @@ class TestCircuit:
     ) -> None:
         _ = dummy_device_list
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", simple_netlist)
+        circuit.set_netlist(simple_netlist)
 
         assert "dev_TESTLIB_DUMMY_CONNECTOR_1" in circuit._p
         assert "dev_TESTLIB_DUMMY_CONNECTOR_2" in circuit._p
+
+    def test_set_param_updates_nested_circuit_parameters(
+        self, dummy_device_list: dict[str, type[smdev.Device]]
+    ) -> None:
+        child_entry = smdev.NetListEntry(
+            "TESTLIB_DUMMY_CONNECTOR", 0, 0, "E", {}, {"length": 10.0}
+        )
+        child = smdev.NetList("child", [child_entry])
+        outer_entry = smdev.NetListEntry("X", 0, 0, "E", {}, {"NETLIST": child})
+        circuit = smdev.Circuit.build()
+        circuit.set_netlist(smdev.NetList("outer", [outer_entry]))
+
+        circuit.set_param("dev_X_1::dev_TESTLIB_DUMMY_CONNECTOR_1::length", 25.0)
+
+        assert circuit._p["dev_X_1"]["dev_TESTLIB_DUMMY_CONNECTOR_1"]["length"] == 25.0
+
+    def test_set_param_updates_rendered_device(
+        self, simple_netlist: smdev.NetList
+    ) -> None:
+        circuit = smdev.Circuit.build()
+        circuit.use_references = False
+        circuit.set_netlist(simple_netlist)
+        circuit.set_param("dev_TESTLIB_DUMMY_CONNECTOR_1::length", 25.0)
+
+        geom, _ = circuit._build_device_geometry(simple_netlist.entry_list[0], 1)
+
+        assert geom.bounding_box().width == pytest.approx(25.0)
+        assert circuit._p["dev_TESTLIB_DUMMY_CONNECTOR_2"]["length"] == 10.0
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "missing::length",
+            "dev_TESTLIB_DUMMY_CONNECTOR_1::missing",
+            "dev_TESTLIB_DUMMY_CONNECTOR_1::length::extra",
+        ],
+    )
+    def test_set_param_rejects_invalid_hierarchical_paths(
+        self, simple_netlist: smdev.NetList, name: str
+    ) -> None:
+        circuit = smdev.Circuit.build()
+        circuit.set_netlist(simple_netlist)
+
+        with pytest.raises(ValueError, match="Could not set parameter"):
+            circuit.set_param(name, 25.0)
 
     def test_run_connects_two_compatible_ports(
         self,
@@ -407,7 +501,7 @@ class TestCircuit:
     ) -> None:
         _ = dummy_device_list
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", simple_netlist)
+        circuit.set_netlist(simple_netlist)
 
         g = circuit.run()
         assert isinstance(g, GeomGroup)
@@ -424,7 +518,7 @@ class TestCircuit:
         ]
         netlist = smdev.NetList("warn", netlist_entries)
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", netlist)
+        circuit.set_netlist(netlist)
 
         with pytest.warns(UserWarning, match="unconnected"):
             _ = circuit.run()
@@ -443,7 +537,7 @@ class TestCircuit:
         netlist.set_external_ports(["wire_out"])
 
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", netlist)
+        circuit.set_netlist(netlist)
         circuit.run()
 
         assert "wire_out" in circuit._ports
@@ -475,7 +569,7 @@ class TestCircuit:
         netlist.set_aligned_ports(["w1"])
 
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", netlist)
+        circuit.set_netlist(netlist)
         circuit.run()
 
         assert captured
@@ -509,7 +603,7 @@ class TestCircuit:
         netlist.set_aligned_ports(["w1"])
 
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", netlist)
+        circuit.set_netlist(netlist)
         circuit.run()
 
         assert captured
@@ -543,7 +637,7 @@ class TestCircuit:
         netlist.set_path("w1", [10.0, 0.0, 0.0])
 
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", netlist)
+        circuit.set_netlist(netlist)
         _ = circuit.run()
 
         # One call for the virtual point, one final call to the destination port.
@@ -581,7 +675,7 @@ class TestCircuit:
         netlist.set_path("w1", [10.0, 0.0, 0.0, 10.0, 5.0, 90])
 
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", netlist)
+        circuit.set_netlist(netlist)
         _ = circuit.run()
 
         assert len(captured) == 3
@@ -610,11 +704,26 @@ class TestCircuit:
         dev._seq = seq
 
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", simple_netlist)
+        circuit.set_netlist(simple_netlist)
         circuit.run()
 
         # Two devices in the netlist, so should be reset twice
         assert captured == [True, True]
+
+    def test_set_netlist_parameter_updates_netlist(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        simple_netlist: smdev.NetList,
+        dummy_device_list: dict[str, type[smdev.Device]],
+    ) -> None:
+        circuit = smdev.Circuit.build()
+        update_parameters = Mock()
+        monkeypatch.setattr(smdev.Circuit, "_update_parameters", update_parameters)
+
+        circuit.set_param("NETLIST", simple_netlist)
+        assert circuit._netlist == simple_netlist
+        assert "NETLIST" not in circuit._p
+        update_parameters.assert_called_once()
 
 
 class TestDeviceLibraryExports:
