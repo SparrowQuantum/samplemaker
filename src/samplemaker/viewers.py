@@ -6,6 +6,7 @@ viewers.
 """
 
 import warnings
+from typing import cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -49,9 +50,9 @@ def __get_geom_patches(grp: GeomGroup) -> list:
             warnings.warn(msg, stacklevel=3, category=UserWarning)
         elif isinstance(geom, smsh.Ring):
             gpl = geom.to_polygon()
-            g = gpl.group[0]
-            n = int(len(g.data) / 2)
-            xy = np.reshape(g.data, (n, 2))
+            poly = cast("smsh.Poly", gpl.group[0])
+            n = int(len(poly.data) / 2)
+            xy = np.reshape(poly.data, (n, 2))
             tmpp = Polygon(xy, closed=True)
             tmpp.set_facecolor(lcolor)
             patches.append(tmpp)
