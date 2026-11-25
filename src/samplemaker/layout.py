@@ -218,6 +218,9 @@ class MarkerSet(Marker):
         self.dev.use_references = True
         g = self.dev.run()
         sref = g.group[0]
+        if not isinstance(sref, SRef):
+            msg = f"Expected sref to be an instance of SRef. Got {type(sref)} instead."
+            raise TypeError(msg)
         if self.mset == 2:
             return make_aref(
                 self.x0,
