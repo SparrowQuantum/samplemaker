@@ -2,6 +2,7 @@
 
 import json
 import os
+import pickle
 import subprocess
 import sys
 from collections.abc import Generator
@@ -583,13 +584,21 @@ class TestDeviceTable:
         assert tab.pos_xy[1][0][1] > tab.pos_xy[0][0][1]
 
 
+class _TestPort(smdev.DevicePort):
+    pass
+
+
+class _TestBox(Box):
+    pass
+
+
 class TestMask:
     def test_mask_init_and_clear_reset_pools_and_basic_elements(self) -> None:
         LayoutPool["JUNK"] = GeomGroup()
-        _DevicePool["hash"] = "JUNK"
-        _DeviceLocalParamPool["hash"] = {}
+        _DevicePool[1234] = "JUNK"
+        _DeviceLocalParamPool[1234] = {}
         _DeviceCountPool["JUNK"] = 1
-        _BoundingBoxPool["JUNK"] = object()
+        _BoundingBoxPool["JUNK"] = _TestBox(2, 3, 4, 5)
 
         mask = smlay.Mask("test")
         assert mask.name == "test"
@@ -639,7 +648,7 @@ class TestMask:
         mask.add_cell("CHILD", child)
         mask.add_cell("UNUSED", make_rect(0, 0, 1, 1))
         mask.add_to_main_cell(main)
-        _DevicePool["unused"] = "UNUSED"
+        _DevicePool[1234] = "UNUSED"
         original_cells = LayoutPool.copy()
 
         payload = mask.to_dict()
@@ -648,7 +657,7 @@ class TestMask:
         assert isinstance(cells, dict)
         assert list(cells) == ["CELL00", "CHILD", "LEAF"]
         assert LayoutPool == original_cells
-        assert _DevicePool["unused"] == "UNUSED"
+        assert _DevicePool[1234] == "UNUSED"
 
         mask.name = "different_filename"
         mask.cache = True
@@ -876,18 +885,18 @@ class TestMask:
         main = make_sref(0, 0, "CHILD", LayoutPool["CHILD"])
         themask.add_to_main_cell(main)
 
-        _DevicePool["h_keep"] = "CHILD"
-        _DevicePool["h_drop"] = "UNREF"
-        _DeviceLocalParamPool["h_keep"] = {}
-        _DeviceLocalParamPool["h_drop"] = {}
+        _DevicePool[1234] = "CHILD"
+        _DevicePool[5678] = "UNREF"
+        _DeviceLocalParamPool[1234] = {}
+        _DeviceLocalParamPool[5678] = {}
 
         themask.export_gds()
 
         assert "UNREF" not in LayoutPool
         assert "CHILD" in LayoutPool
-        assert "h_drop" not in _DevicePool
-        assert "h_drop" not in _DeviceLocalParamPool
-        assert "h_keep" in _DevicePool
+        assert 5678 not in _DevicePool
+        assert 5678 not in _DeviceLocalParamPool
+        assert 1234 in _DevicePool
 
         writer = created_writers[0]
         assert writer.calls[0] == ("open_library", "test_export.gds")
@@ -973,11 +982,15 @@ class TestMask:
         themask = smlay.Mask(name)
         themask.add_to_main_cell(make_rect(0, 0, 5, 5))
         themask.add_cell("EXTRA", make_rect(0, 0, 1, 1))
-        _DevicePool["h_extra"] = "EXTRA"
-        _DeviceLocalParamPool["h_extra"] = {"param": 42}
+        _DevicePool[1234] = "EXTRA"
+        _DeviceLocalParamPool[1234] = {"param": 42}
         _DeviceCountPool["EXTRA"] = 1
         _BoundingBoxPool["EXTRA"] = Box(0, 0, 1, 1)
-        _DeviceLocalPortPool["h_extra"] = {"port": "dummy"}
+
+        dummy_port = _TestPort(0, 0, True, False)
+        dummy_port.name = "dummy"
+
+        _DeviceLocalPortPool[1234] = {"port": dummy_port}
 
         themask._export_cache()
         expected_filepath = tmp_cwd_dir / f"{name}.cache"
@@ -985,18 +998,19 @@ class TestMask:
 
         themask.clear()
         assert "EXTRA" not in LayoutPool
-        assert "h_extra" not in _DevicePool
-        assert "h_extra" not in _DeviceLocalParamPool
-        assert "h_extra" not in _DeviceLocalPortPool
+        assert 1234 not in _DevicePool
+        assert 1234 not in _DeviceLocalParamPool
+        assert 1234 not in _DeviceLocalPortPool
         assert "EXTRA" not in _DeviceCountPool
         assert "EXTRA" not in _BoundingBoxPool
 
         themask._import_cache()
         assert "EXTRA" in LayoutPool
         assert "_CIRCLE" in LayoutPool
-        assert _DevicePool["h_extra"] == "EXTRA"
-        assert _DeviceLocalParamPool["h_extra"] == {"param": 42}
-        assert _DeviceLocalPortPool["h_extra"] == {"port": "dummy"}
+        assert _DevicePool[1234] == "EXTRA"
+        assert _DeviceLocalParamPool[1234] == {"param": 42}
+        assert isinstance(_DeviceLocalPortPool[1234]["port"], _TestPort)
+        assert _DeviceLocalPortPool[1234]["port"].name == "dummy"
         assert _DeviceCountPool["EXTRA"] == 1
         assert isinstance(_BoundingBoxPool["EXTRA"], Box)
         bbox = _BoundingBoxPool["EXTRA"]
@@ -1006,3 +1020,72 @@ class TestMask:
         assert bbox.height == 1
 
         Path(expected_filepath).unlink()
+
+    @pytest.mark.parametrize(
+        "corruption", ["five-element", "invalid-pool", "pickle", "truncated", "empty"]
+    )
+    def test_invalid_cache_is_removed_without_importing_partial_data(
+        self, tmp_path: Path, corruption: str, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        cache_path = tmp_path / "outdated.cache"
+        stale = GeomGroup()
+        cached_layout = {"STALE": stale}
+        cached_counts = {"STALE": 1}
+        cached_params = {1234: {"param": 42}}
+        cached_devices = {1234: "STALE"}
+        cached_boxes = {"STALE": Box(0, 0, 1, 1)}
+        if corruption == "five-element":
+            data = (
+                cached_layout,
+                cached_counts,
+                cached_params,
+                cached_devices,
+                cached_boxes,
+            )
+            cache_path.write_bytes(pickle.dumps(data))
+        elif corruption == "invalid-pool":
+            data = (
+                cached_layout,
+                cached_counts,
+                cached_params,
+                {1234: {"port": _TestPort(0, 0, True, False)}},
+                cached_devices,
+                {"STALE": "not a box"},
+            )
+            cache_path.write_bytes(pickle.dumps(data))
+        elif corruption == "pickle":
+            cache_path.write_bytes(b"not a pickle")
+        elif corruption == "truncated":
+            cache_path.write_bytes(pickle.dumps(({}, {}, {}, {}, {}, {}))[:-1])
+        else:
+            cache_path.write_bytes(b"")
+
+        mask = smlay.Mask(str(tmp_path / "outdated"))
+        live = make_rect(0, 0, 2, 2)
+        mask.add_cell("LIVE", live)
+        _DeviceCountPool["LIVE"] = 1
+        _DeviceLocalParamPool[5678] = {"param": 7}
+        _DeviceLocalPortPool[5678] = {"port": _TestPort(0, 0, True, False)}
+        _DevicePool[5678] = "LIVE"
+        _BoundingBoxPool["LIVE"] = Box(0, 0, 2, 2)
+        original_boxes = _BoundingBoxPool.copy()
+
+        mask.set_cache(True)
+
+        assert mask.cache is True
+        assert not cache_path.exists()
+        assert "cache" in capsys.readouterr().out.lower()
+        assert LayoutPool["LIVE"] is live
+        assert "STALE" not in LayoutPool
+        assert _DeviceCountPool == {"LIVE": 1}
+        assert _DeviceLocalParamPool == {5678: {"param": 7}}
+        assert set(_DeviceLocalPortPool) == {5678}
+        assert _DevicePool == {5678: "LIVE"}
+        assert _BoundingBoxPool == original_boxes
+
+        mask._export_cache()
+        mask.clear()
+        mask.set_cache(True)
+        assert "LIVE" in LayoutPool
+        assert _DevicePool == {5678: "LIVE"}
+        assert set(_DeviceLocalPortPool) == {5678}

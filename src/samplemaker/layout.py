@@ -863,6 +863,71 @@ class DeviceTable:
         ]
 
 
+class _CacheValidationError(Exception):
+    """Exception raised when cache validation fails."""
+
+
+def _ensure_dict_str_keys(entry: object, entry_name: str) -> None:
+    if not isinstance(entry, dict):
+        msg = f"{entry_name} is not a dictionary."
+        raise _CacheValidationError(msg)
+    if not all(isinstance(k, str) for k in entry):
+        msg = f"{entry_name} contains non-string keys."
+        raise _CacheValidationError(msg)
+
+
+def _ensure_dict_int_keys(entry: object, entry_name: str) -> None:
+    if not isinstance(entry, dict):
+        msg = f"{entry_name} is not a dictionary."
+        raise _CacheValidationError(msg)
+    if not all(isinstance(k, int) for k in entry):
+        msg = f"{entry_name} contains non-integer keys."
+        raise _CacheValidationError(msg)
+
+
+def _validate_cache_data(cache_data: object) -> None:
+    if not isinstance(cache_data, tuple) or len(cache_data) != 6:
+        msg = "Cache data is corrupted or outdated."
+        raise _CacheValidationError(msg)
+
+    cached_layoutpool = cache_data[0]
+    _ensure_dict_str_keys(cached_layoutpool, "Cached layout pool")
+    if not all(isinstance(v, GeomGroup) for v in cached_layoutpool.values()):
+        msg = "Cached layout pool contains invalid entries."
+        raise _CacheValidationError(msg)
+
+    cached_devicecountpool = cache_data[1]
+    _ensure_dict_str_keys(cached_devicecountpool, "Cached device count pool")
+    if not all(isinstance(v, int) for v in cached_devicecountpool.values()):
+        msg = "Cached device count pool contains invalid entries."
+        raise _CacheValidationError(msg)
+
+    cached_devicelocalparampool = cache_data[2]
+    _ensure_dict_int_keys(cached_devicelocalparampool, "Cached device local param pool")
+    for v in cached_devicelocalparampool.values():
+        _ensure_dict_str_keys(v, "Cached device local param entry")
+
+    cached_devicelocalportpool = cache_data[3]
+    _ensure_dict_int_keys(cached_devicelocalportpool, "Cached device local port pool")
+    for v in cached_devicelocalportpool.values():
+        _ensure_dict_str_keys(v, "Cached device local port entry")
+        if not all(isinstance(vv, DevicePort) for vv in v.values()):
+            msg = "Cached device local port entry contains invalid entries."
+            raise _CacheValidationError(msg)
+
+    cached_devicepool = cache_data[4]
+    _ensure_dict_int_keys(cached_devicepool, "Cached device pool")
+    if not all(isinstance(v, str) for v in cached_devicepool.values()):
+        msg = "Cached device pool contains invalid entries."
+        raise _CacheValidationError(msg)
+
+    cached_boundingboxpool = cache_data[5]
+    _ensure_dict_str_keys(cached_boundingboxpool, "Cached bounding box pool")
+    if not all(isinstance(v, Box) for v in cached_boundingboxpool.values()):
+        msg = "Cached bounding box pool contains invalid entries."
+        raise _CacheValidationError(msg)
+
+
 class Mask:
     """Main class for managing mask layouts and exporting them to GDS files."""
 
@@ -1068,7 +1133,12 @@ class Mask:
         try:
             with _Path(self.name + ".cache").open("rb") as cachefile:
                 print("Loading cache data...")
-                data = pickle.load(cachefile)  # noqa: S301, to be replaced
+                try:
+                    data = pickle.load(cachefile)  # noqa: S301, to be replaced
+                except (pickle.UnpicklingError, EOFError) as e:
+                    msg = "Cache data could not be unpickled."
+                    raise _CacheValidationError(msg) from e
+                _validate_cache_data(data)
                 print("Done.")
                 for key in data[0]:
                     LayoutPool[key] = data[0][key]
@@ -1084,7 +1154,15 @@ class Mask:
                 for key in data[5]:
                     _BoundingBoxPool[key] = data[5][key]
         except OSError:
-            pass
+            print("Failed to load cache data.")
+        except _CacheValidationError as e:
+            print(f"Cache validation failed: {e}")
+            print("Attempting to remove cache file...")
+            try:
+                _Path(self.name + ".cache").unlink()
+                print("Cache file removed.")
+            except OSError:
+                print("Failed to remove cache file.")
 
     def __cleanup_cellref(self) -> None:
         # Remove useless references
