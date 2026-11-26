@@ -1340,6 +1340,7 @@ class Circuit(Device):
     def __init__(self) -> None:  # noqa: D107
         super().__init__()
         self._netlist: NetList | None = None
+        self._netlist_parameter_names: set[str] = set()
 
     def __flatdict(self, d: dict[str, Any], parent_str: str) -> dict[str, Any]:
         flatdict = {}
@@ -1381,11 +1382,11 @@ class Circuit(Device):
         """
         self._name = "X"
 
-    def _update_parameters(self) -> None:
-        if self._netlist is None:
-            return
-        netlist = self._netlist.entry_list
-        for i, nle in enumerate(netlist):
+    def _build_netlist_parameters(self, netlist: NetList | None) -> Device:
+        parameters = Device()
+        if netlist is None:
+            return parameters
+        for i, nle in enumerate(netlist.entry_list):
             if nle.devname not in _DeviceList:
                 msg = f"No device named {nle.devname} found."
                 raise ValueError(msg)
@@ -1393,14 +1394,18 @@ class Circuit(Device):
             dev = _DeviceList[nle.devname].build()
             for key, value in nle.params.items():
                 dev.set_param(key, value)
-            self.addparameter(
+            parameters.addparameter(
                 param_name=f"dev_{nle.devname}_{i + 1:d}",
                 default_value=dev._p,
                 param_description=f"Device parameters for {nle.devname}",
             )
+        return parameters
 
     def set_netlist(self, netlist: NetList | None) -> None:
         """Set the netlist for the circuit.
+
+        Replacing a netlist resets its instance parameters and clears generated ports.
+        If the new netlist cannot be configured, the existing circuit is unchanged.
 
         Parameters
         ----------
@@ -1415,8 +1420,20 @@ class Circuit(Device):
         if netlist is not None and not isinstance(netlist, NetList):
             msg = "NETLIST must be of type NetList or None."
             raise TypeError(msg)
+        parameters = self._build_netlist_parameters(netlist)
+        for name in self._netlist_parameter_names:
+            self._p.pop(name)
+            self._pdescr.pop(name)
+            self._ptype.pop(name)
+            self._prange.pop(name)
+        self._p.update(parameters._p)
+        self._pdescr.update(parameters._pdescr)
+        self._ptype.update(parameters._ptype)
+        self._prange.update(parameters._prange)
+        self._netlist_parameter_names = set(parameters._p)
         self._netlist = netlist
-        self._update_parameters()
+        self._localports = {}
+        self._ports.clear()
 
     def set_param(self, param_name: str, value: Any) -> None:  # noqa: ANN401
         """Set the value of a parameter.

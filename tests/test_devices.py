@@ -1,6 +1,5 @@
 import math
 from pathlib import Path
-from unittest.mock import Mock
 
 import pytest
 
@@ -400,6 +399,93 @@ class TestNetList:
 
 
 class TestCircuit:
+    def test_set_netlist_replaces_parameters_and_clears_ports(
+        self, dummy_device_list: dict[str, type[smdev.Device]]
+    ) -> None:
+        first_netlist_entries = [
+            smdev.NetListEntry("TESTLIB_DUMMY_CONNECTOR", 0, 0, "E", {"io": "old"}, {}),
+            smdev.NetListEntry("TESTLIB_DUMMY", 0, 0, "E", {}, {}),
+        ]
+        first = smdev.NetList("first", first_netlist_entries)
+        first.set_external_ports(["old"])
+        second_netlist_entries = [
+            smdev.NetListEntry("TESTLIB_DUMMY", 0, 0, "E", {}, {"width": 20})
+        ]
+        second = smdev.NetList("second", second_netlist_entries)
+        circuit = smdev.Circuit.build()
+        circuit.addparameter("custom", 7, "Custom parameter")
+        circuit.set_netlist(first)
+        circuit.run()
+        circuit.set_netlist(second)
+
+        assert circuit._netlist is second
+        assert set(circuit._p) == {"custom", "dev_TESTLIB_DUMMY_1"}
+        assert circuit._p["dev_TESTLIB_DUMMY_1"]["width"] == 20
+        for metadata in (circuit._pdescr, circuit._ptype, circuit._prange):
+            assert set(metadata) == {"custom", "dev_TESTLIB_DUMMY_1"}
+        assert circuit._ports == {}
+        assert circuit._localports == {}
+        assert circuit.run().bounding_box().width == pytest.approx(20)
+
+        circuit.set_netlist(None)
+        assert circuit._netlist is None
+        assert circuit._p == {"custom": 7}
+        assert circuit._ports == {}
+        assert circuit._localports == {}
+        for metadata in (circuit._pdescr, circuit._ptype, circuit._prange):
+            assert set(metadata) == {"custom"}
+        with pytest.raises(ValueError, match="NETLIST is not set"):
+            circuit.run()
+
+    def test_setting_same_netlist_resets_instance_parameters(
+        self, simple_netlist: smdev.NetList
+    ) -> None:
+        circuit = smdev.Circuit.build()
+        circuit.set_netlist(simple_netlist)
+        circuit.set_param("dev_TESTLIB_DUMMY_CONNECTOR_1::length", 25)
+
+        circuit.set_netlist(simple_netlist)
+
+        assert circuit._p["dev_TESTLIB_DUMMY_CONNECTOR_1"]["length"] == 10
+
+    @pytest.mark.parametrize("invalid", ["unknown_device", "unknown_parameter"])
+    def test_invalid_netlist_preserves_previous_circuit(
+        self, dummy_device_list: dict[str, type[smdev.Device]], invalid: str
+    ) -> None:
+        entry = smdev.NetListEntry(
+            "TESTLIB_DUMMY_CONNECTOR", 0, 0, "E", {"io": "port"}, {"length": 15}
+        )
+        valid = smdev.NetList("valid", [entry])
+        valid.set_external_ports(["port"])
+        bad_entry = (
+            smdev.NetListEntry("MISSING", 0, 0, "E", {}, {})
+            if invalid == "unknown_device"
+            else smdev.NetListEntry(
+                "TESTLIB_DUMMY_CONNECTOR", 0, 0, "E", {}, {"missing": 1}
+            )
+        )
+        changed_entry = smdev.NetListEntry(
+            "TESTLIB_DUMMY_CONNECTOR", 0, 0, "E", {}, {"length": 21}
+        )
+        invalid_netlist = smdev.NetList("invalid", [changed_entry, bad_entry])
+        circuit = smdev.Circuit.build()
+        circuit.set_netlist(valid)
+        circuit.run()
+
+        message = (
+            "No device named MISSING"
+            if invalid == "unknown_device"
+            else ("Could not set parameter 'missing'")
+        )
+        with pytest.raises(ValueError, match=message):
+            circuit.set_netlist(invalid_netlist)
+
+        assert circuit._netlist is valid
+        assert set(circuit._p) == {"dev_TESTLIB_DUMMY_CONNECTOR_1"}
+        assert circuit._p["dev_TESTLIB_DUMMY_CONNECTOR_1"]["length"] == 15
+        assert set(circuit._ports) == {"port"}
+        assert circuit.run().bounding_box().width == pytest.approx(15)
+
     def test_build_device_geometry_instantiates_before_run(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -964,18 +1050,18 @@ class TestCircuit:
 
     def test_set_netlist_parameter_updates_netlist(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         simple_netlist: smdev.NetList,
         dummy_device_list: dict[str, type[smdev.Device]],
     ) -> None:
         circuit = smdev.Circuit.build()
-        update_parameters = Mock()
-        monkeypatch.setattr(smdev.Circuit, "_update_parameters", update_parameters)
 
         circuit.set_param("NETLIST", simple_netlist)
         assert circuit._netlist == simple_netlist
         assert "NETLIST" not in circuit._p
-        update_parameters.assert_called_once()
+        assert set(circuit._p) == {
+            "dev_TESTLIB_DUMMY_CONNECTOR_1",
+            "dev_TESTLIB_DUMMY_CONNECTOR_2",
+        }
 
 
 class TestDeviceLibraryExports:
