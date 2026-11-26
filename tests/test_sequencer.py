@@ -4,6 +4,7 @@ import inspect
 from collections.abc import Callable
 from copy import deepcopy
 
+import numpy as np
 import pytest
 
 from samplemaker import devices as smdev
@@ -202,6 +203,13 @@ class TestDefaultCommandList:
         assert isinstance(res, GeomGroup)
         assert len(res.group) == 0
 
+    def test_center_rejects_non_numeric_coordinate(
+        self, default_command_list: _DCMD, sequencer_test_state: dict
+    ) -> None:
+        _, fun = default_command_list["CENTER"]
+        with pytest.raises(TypeError, match="CENTER x must be a real number"):
+            fun(["invalid", 0], sequencer_test_state, {})
+
     def test_store_command_has_correct_signature(
         self, default_command_list: _DCMD
     ) -> None:
@@ -350,6 +358,43 @@ class TestDefaultCommandList:
         with pytest.raises(ValueError, match=match):
             fun(args, sequencer_test_state.copy(), options)
 
+    def test_dev_command_rejects_invalid_device_options(
+        self,
+        dummy_device_list: dict[str, type[smdev.Device]],
+        default_command_list: _DCMD,
+    ) -> None:
+        _, fun = default_command_list["DEV"]
+        state = smseq.SequencerState().state
+        args = ["TESTLIB_TWO_PORT", "p1", "p2"]
+        with pytest.raises(TypeError, match="dictionary with string keys"):
+            fun(args, state, {"dev_TESTLIB_TWO_PORT": {1: "invalid"}})
+
+
+@pytest.mark.parametrize("value", [np.float32(1.5), np.float64(1.5), np.int64(2)])
+def test_require_number_accepts_numpy_scalars(value: object) -> None:
+    assert smseq.require_number(value, "value") == pytest.approx(value)
+
+
+def test_require_integer_accepts_numpy_integer_and_rejects_fraction() -> None:
+    assert smseq.require_integer(np.int64(4), "resolution") == 4
+    with pytest.raises(TypeError, match="resolution must be an integer"):
+        smseq.require_integer(2.5, "resolution")
+
+
+@pytest.mark.parametrize("value", [True, False, np.bool_(True), np.bool_(False)])
+@pytest.mark.parametrize(
+    ("validator", "message"),
+    [
+        (smseq.require_number, "value must be a real number"),
+        (smseq.require_integer, "value must be an integer"),
+    ],
+)
+def test_numeric_validators_reject_booleans(
+    value: object, validator: Callable[[object, str], float], message: str
+) -> None:
+    with pytest.raises(TypeError, match=message):
+        validator(value, "value")
+
 
 def test_default_options_configuration(
     dummy_device_list: dict[str, type[smdev.Device]],
@@ -468,6 +513,25 @@ class TestSequencer:
         seq = [["INVALID_CMD", 1, 2]]
         sequencer = FakeSequencer(seq)
         with pytest.raises(ValueError, match=r"Command INVALID_CMD does not exist."):
+            sequencer.run()
+
+    def test_run_rejects_non_string_command(self) -> None:
+        sequencer = FakeSequencer([[["invalid"]]])
+        with pytest.raises(ValueError, match="does not exist"):
+            sequencer.run()
+
+    def test_run_accepts_custom_state_values(self) -> None:
+        value = {"custom": [1, 2]}
+        sequencer = FakeSequencer([["STATE", "metadata", value]])
+
+        sequencer.run()
+
+        assert sequencer.state["metadata"] == value
+
+    def test_run_rejects_invalid_stored_coordinates(self) -> None:
+        sequencer = FakeSequencer([["STATE", "STORED", [["invalid", 0]]]])
+
+        with pytest.raises(TypeError, match="stored x must be a real number"):
             sequencer.run()
 
     def test_run_raises_for_wrong_number_of_arguments(self) -> None:

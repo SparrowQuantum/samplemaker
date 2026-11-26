@@ -9,13 +9,25 @@ self-explanatory.
 """
 
 import math
+from typing import TypedDict, cast
 
 import numpy as np
 
 import samplemaker.makers as sm
 from samplemaker.baselib.waveguides import BaseWaveguidePort, BaseWaveguideSequencer
 from samplemaker.devices import Device, register_devices_in_module
+from samplemaker.sequencer import require_number
 from samplemaker.shapes import GeomGroup
+
+
+class _CrossMarkParams(TypedDict):
+    length1: float
+    length2: float
+    width1: float
+    width2: float
+    layer: int
+    mark_number: int
+    square_size: float
 
 
 class CrossMark(Device):
@@ -94,7 +106,7 @@ class CrossMark(Device):
             The geometry of the cross mark.
 
         """
-        p = self.get_params()
+        p = cast("_CrossMarkParams", self.get_params())
         cross = sm.make_rect(0, 0, p["length1"], p["width1"], layer=1)
         cross += sm.make_rect(0, 0, p["width1"], p["length1"], layer=1)
         cross.boolean_union(1)
@@ -113,6 +125,14 @@ class CrossMark(Device):
 
         cross.set_layer(p["layer"])
         return cross
+
+
+class _DirectionalCouplerParams(TypedDict):
+    length: float
+    width: float
+    gap: float
+    input_dist: float
+    input_len: float
 
 
 class DirectionalCoupler(Device):
@@ -175,7 +195,7 @@ class DirectionalCoupler(Device):
             The geometry of the directional coupler.
 
         """
-        p = self.get_params()
+        p = cast("_DirectionalCouplerParams", self.get_params())
         # Draw the upper arm, then mirror
         off = p["input_dist"] / 2
         clen = (p["input_len"] - 1) / 2
@@ -194,14 +214,31 @@ class DirectionalCoupler(Device):
         # Add ports
         xp = ltot / 2
         yp = off + p["gap"] / 2 + p["width"] / 2
-        nw_port = BaseWaveguidePort(-xp, yp, "west", ss.options["defaultWidth"], "p1")
-        ne_port = BaseWaveguidePort(xp, yp, "east", ss.options["defaultWidth"], "p2")
-        sw_port = BaseWaveguidePort(-xp, -yp, "west", ss.options["defaultWidth"], "p3")
-        se_port = BaseWaveguidePort(xp, -yp, "east", ss.options["defaultWidth"], "p4")
+        default_width = require_number(
+            ss.options["defaultWidth"], "options['defaultWidth']"
+        )
+        nw_port = BaseWaveguidePort(-xp, yp, "west", default_width, "p1")
+        ne_port = BaseWaveguidePort(xp, yp, "east", default_width, "p2")
+        sw_port = BaseWaveguidePort(-xp, -yp, "west", default_width, "p3")
+        se_port = BaseWaveguidePort(xp, -yp, "east", default_width, "p4")
         for port in (nw_port, ne_port, sw_port, se_port):
             self.addlocalport(port)
 
         return dc
+
+
+class _FocusingGratingCouplerParams(TypedDict):
+    w0: float
+    pitch: float
+    ff: float
+    theta: float
+    lambda0: float
+    nr_Apo: int
+    ff_coef: float
+    order_start: int
+    order: int
+    diverg_angle: float
+    pre_split: bool
 
 
 class FocusingGratingCoupler(Device):
@@ -303,7 +340,7 @@ class FocusingGratingCoupler(Device):
 
         """
         # Grating first
-        p = self.get_params()
+        p = cast("_FocusingGratingCouplerParams", self.get_params())
         theta = math.radians(p["theta"])
         div_angle = p["diverg_angle"]
         q0 = p["order_start"]

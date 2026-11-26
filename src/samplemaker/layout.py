@@ -109,6 +109,7 @@ from samplemaker.devices import Device, DevicePort, IncompatiblePortError
 from samplemaker.gdsreader import GDSReader
 from samplemaker.gdswriter import GDSWriter
 from samplemaker.makers import make_aref, make_circle, make_path, make_text
+from samplemaker.sequencer import require_number
 from samplemaker.shapes import Box, GeomGroup, SRef, _DumpContext, _fingerprint
 
 _TablePositions: TypeAlias = list[list[tuple[float, float]]]
@@ -390,12 +391,14 @@ class DeviceTableAnnotations:
         for v in range(len(self.colvars)):
             pstr = "%C" + str(v)
             rval = coldict[self.colvars[v]][j]
+            rval = require_number(rval, f"coldict['{self.colvars[v]}'][{j}]")
             rval = round(rval * 1000) / 1000
             coltxt = coltxt.replace(pstr, str(rval))
             rowtxt = rowtxt.replace(pstr, str(rval))
         for v in range(len(self.rowvars)):
             pstr = "%R" + str(v)
             rval = rowdict[self.rowvars[v]][i]
+            rval = require_number(rval, f"rowdict['{self.rowvars[v]}'][{i}]")
             rval = round(rval * 1000) / 1000
             coltxt = coltxt.replace(pstr, str(rval))
             rowtxt = rowtxt.replace(pstr, str(rval))

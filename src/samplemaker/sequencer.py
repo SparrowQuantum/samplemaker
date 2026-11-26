@@ -55,7 +55,8 @@ with `samplemaker`.
 import math
 from collections.abc import Callable, MutableMapping, Sequence
 from copy import deepcopy
-from typing import TypeAlias
+from numbers import Integral, Real
+from typing import TypeAlias, TypeGuard
 
 from samplemaker.devices import _DeviceList
 from samplemaker.shapes import GeomGroup
@@ -72,12 +73,45 @@ _CMD_DICT_VAL_TYPE: TypeAlias = tuple[int, COMMAND_CALLABLE_TYPE]
 COMMANDS_DICT_TYPE: TypeAlias = dict[str, _CMD_DICT_VAL_TYPE]
 
 
+def require_number(value: object, name: str) -> float:
+    """Return a real number; reject booleans and non-numeric values."""
+    if not isinstance(value, bool):
+        if isinstance(value, (int, float)):
+            return value
+        if isinstance(value, Integral):
+            return int(value)
+        if isinstance(value, Real):
+            return float(value)
+    msg = f"{name} must be a real number."
+    raise TypeError(msg)
+
+
+def require_integer(value: object, name: str) -> int:
+    """Return an integer; reject booleans and non-integer values."""
+    if not isinstance(value, bool) and isinstance(value, Integral):
+        return int(value)
+    msg = f"{name} must be an integer."
+    raise TypeError(msg)
+
+
+def _is_parameter_dict(value: object) -> TypeGuard[dict[str, object]]:
+    return isinstance(value, dict) and all(isinstance(key, str) for key in value)
+
+
 def _change_state(
     args: ARGS_TYPE,
     state: STATE_TYPE,
     options: OPTIONS_TYPE,  # noqa: ARG001
 ) -> GeomGroup:
-    state[args[0]] = args[1]
+    if len(args) != 2:
+        msg = "Change state command requires exactly 2 arguments."
+        raise ValueError(msg)
+    key, value = args
+    if not isinstance(key, str):
+        msg = "Change state command requires the first argument to be a string."
+        raise TypeError(msg)
+
+    state[key] = value
     return GeomGroup()
 
 
@@ -86,8 +120,12 @@ def _center_state(
     state: STATE_TYPE,
     options: OPTIONS_TYPE,  # noqa: ARG001
 ) -> GeomGroup:
-    state["__XC__"] = -state["x"] + args[0]
-    state["__YC__"] = -state["y"] + args[1]
+    x = require_number(state["x"], "state['x']")
+    x_center = require_number(args[0], "CENTER x")
+    state["__XC__"] = x_center - x
+    y = require_number(state["y"], "state['y']")
+    y_center = require_number(args[1], "CENTER y")
+    state["__YC__"] = y_center - y
     return GeomGroup()
 
 
@@ -96,7 +134,11 @@ def _store_state(
     state: STATE_TYPE,
     options: OPTIONS_TYPE,  # noqa: ARG001
 ) -> GeomGroup:
-    state["STORED"] += [[state["x"], state["y"]]]
+    stored = state["STORED"]
+    if not isinstance(stored, list):
+        msg = "state['STORED'] must be a list."
+        raise TypeError(msg)
+    stored.append([state["x"], state["y"]])
     return GeomGroup()
 
 
@@ -122,15 +164,26 @@ def _insert_device(
     devname = args[0]
     inport = args[1]
     outport = args[2]
+    if (
+        not isinstance(devname, str)
+        or not isinstance(inport, str)
+        or not isinstance(outport, str)
+    ):
+        msg = "DEV requires device and port names to be strings."
+        raise TypeError(msg)
     if devname not in _DeviceList:
         msg = f"No device found with name {devname}."
         raise ValueError(msg)
 
     dev = _DeviceList[devname].build()
-    dev._p = options["dev_" + devname]
+    params = options["dev_" + devname]
+    if not _is_parameter_dict(params):
+        msg = f"Options for device {devname} must be a dictionary with string keys."
+        raise TypeError(msg)
+    dev._p = params
     if hasattr(dev, "_seq"):
-        dev._seq.state = deepcopy(state)
-        dev._seq.options = deepcopy(options)
+        dev._seq.state = deepcopy(state)  # pyright: ignore[reportAttributeAccessIssue]
+        dev._seq.options = deepcopy(options)  # pyright: ignore[reportAttributeAccessIssue]
 
     g = dev.run()
     if inport not in dev._ports or outport not in dev._ports:
@@ -148,15 +201,22 @@ def _insert_device(
     xdo = p2.x0
     ydo = p2.y0
     ado = math.degrees(p2.angle())
-    g.rotate(xd, yd, -ad + state["a"])
-    g.translate(state["x"] - xd, state["y"] - yd)
-    state["x"] += (xdo - xd) * math.cos(math.radians(state["a"] - ad)) - (
-        ydo - yd
-    ) * math.sin(math.radians(state["a"] - ad))
-    state["y"] += (xdo - xd) * math.sin(math.radians(state["a"] - ad)) + (
-        ydo - yd
-    ) * math.cos(math.radians(state["a"] - ad))
-    state["a"] += ado
+    angle = require_number(state["a"], "state['a']")
+    x = require_number(state["x"], "state['x']")
+    y = require_number(state["y"], "state['y']")
+    g.rotate(xd, yd, -ad + angle)
+    g.translate(x - xd, y - yd)
+    state["x"] = (
+        x
+        + (xdo - xd) * math.cos(math.radians(angle - ad))
+        - (ydo - yd) * math.sin(math.radians(angle - ad))
+    )
+    state["y"] = (
+        y
+        + (xdo - xd) * math.sin(math.radians(angle - ad))
+        + (ydo - yd) * math.cos(math.radians(angle - ad))
+    )
+    state["a"] = angle + ado
 
     return g
 
@@ -186,18 +246,18 @@ def default_command_list() -> COMMANDS_DICT_TYPE:
     }
 
 
-def default_options() -> dict[str, dict[str, object] | bool]:
+def default_options() -> dict[str, object]:
     """Create default options for the sequencer.
 
     This returns the essential base options.
 
     Returns
     -------
-    dict[str, dict[str, object] | bool]
+    dict[str, object]
         Returns the default options for the sequencer.
 
     """
-    defopts: dict[str, dict[str, object] | bool] = {}
+    defopts: dict[str, object] = {}
     for dname in _DeviceList:
         dev = _DeviceList[dname]()
         dev.parameters()
@@ -341,7 +401,7 @@ class Sequencer:
 
             cmd = instr[0]
             args = instr[1:]
-            if cmd not in self.dic:
+            if not isinstance(cmd, str) or cmd not in self.dic:
                 msg = (
                     f"Command {cmd} does not exist. "
                     f"Available commands are {list(self.dic.keys())}"
@@ -360,12 +420,21 @@ class Sequencer:
             if self.debug_state:
                 print(f"self state {self.state}")
 
-        g.translate(self.state["__XC__"], self.state["__YC__"])
-        self.state["x"] += self.state["__XC__"]
-        self.state["y"] += self.state["__YC__"]
-        for coords in self.state["STORED"]:
-            coords[0] += self.state["__XC__"]
-            coords[1] += self.state["__YC__"]
+        xc = require_number(self.state["__XC__"], "state['__XC__']")
+        yc = require_number(self.state["__YC__"], "state['__YC__']")
+        g.translate(xc, yc)
+        self.state["x"] = require_number(self.state["x"], "state['x']") + xc
+        self.state["y"] = require_number(self.state["y"], "state['y']") + yc
+        stored = self.state["STORED"]
+        if not isinstance(stored, list):
+            msg = "state['STORED'] must be a list."
+            raise TypeError(msg)
+        for coords in stored:
+            if not isinstance(coords, list) or len(coords) < 2:
+                msg = "Stored coordinates must be lists of at least two numbers."
+                raise TypeError(msg)
+            coords[0] = require_number(coords[0], "stored x") + xc
+            coords[1] = require_number(coords[1], "stored y") + yc
         if self.debug_state:
             print(f"final state {self.state}")
 

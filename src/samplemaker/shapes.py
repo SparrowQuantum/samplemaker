@@ -691,7 +691,7 @@ class GeomGroup:
         msg += "Layers: " + str(self.get_layer_list()) + "\n"
         return msg
 
-    def info(self) -> dict:
+    def info(self) -> dict[str, object]:
         """Generate a dict of useful statistics on the group (element count, size).
 
         Returns

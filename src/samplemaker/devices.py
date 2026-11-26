@@ -188,7 +188,7 @@ import warnings
 from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
-from typing import NoReturn, Self, TypeAlias
+from typing import NoReturn, Self, TypeAlias, cast
 
 import numpy as np
 
@@ -828,7 +828,7 @@ class Device:
             for p, val in params.items():
                 try:
                     vmin, vmax = self._prange[p]
-                    clamped_param = min(max(val, vmin), vmax)
+                    clamped_param = min(max(val, vmin), vmax)  # type: ignore[call-overload]
                     params[p] = clamped_param
                 except TypeError:
                     pass
@@ -1460,6 +1460,9 @@ class Circuit(Device):
 
         """
         if param_name == "NETLIST":
+            if value is not None and not isinstance(value, NetList):
+                msg = "NETLIST must be of type NetList or None."
+                raise TypeError(msg)
             self.set_netlist(value)
             return
         if "::" not in param_name:
@@ -1495,14 +1498,25 @@ class Circuit(Device):
         dev = _DeviceList[nle.devname].build()
         dev.use_references = self.use_references
         if isinstance(dev, Circuit):
-            dev.set_netlist(nle.params.get("NETLIST"))
+            circuit_netlist = nle.params.get("NETLIST")
+            if not isinstance(circuit_netlist, NetList):
+                msg = f"NETLIST parameter for {nle.devname} is not a valid NetList."
+                raise TypeError(msg)
+            dev.set_netlist(circuit_netlist)
 
         # Force sequencer reset if has _seq subfield.
         # This keeps device behavior independent from prior sequencer state.
         if hasattr(dev, "_seq"):
-            dev._seq.reset()
+            dev._seq.reset()  # pyright: ignore[reportAttributeAccessIssue]
 
-        dev._p = self._p[f"dev_{nle.devname}_{instance_number:d}"]
+        dev_params = self._p[f"dev_{nle.devname}_{instance_number:d}"]
+        if not isinstance(dev_params, dict):
+            msg = (
+                f"Device parameters for {nle.devname} "
+                f"instance {instance_number} are not defined correctly."
+            )
+            raise TypeError(msg)
+        dev._p = cast("dict[str, object]", dev_params)
         dev.set_position(nle.x0, nle.y0)
         dev.set_angle(math.radians(nle.rot))
         return dev.run(), dev._ports

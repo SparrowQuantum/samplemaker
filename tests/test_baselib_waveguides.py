@@ -2,6 +2,7 @@
 
 import math
 
+import numpy as np
 import pytest
 
 import samplemaker.baselib.waveguides as smwvg
@@ -123,6 +124,44 @@ def test_base_waveguide_straight_zero_length() -> None:
     assert state["a"] == pytest.approx(0)
     assert state["w"] == pytest.approx(0.4)
     assert state["__OL__"] == pytest.approx(0)
+
+
+def test_base_waveguide_accepts_numpy_scalars_and_extra_options() -> None:
+    sequencer = smwvg.BaseWaveguideSequencer(
+        [["S", np.float32(2)], ["B", np.int64(90), np.float32(1)]]
+    )
+    sequencer.options["bendResolution"] = np.int64(12)
+    sequencer.options["wgLayer"] = np.int64(4)
+    sequencer.options["custom"] = {"unrelated": "value"}
+
+    geometry = sequencer.run()
+
+    assert geometry.get_layer_list() == {4}
+    assert sequencer.state["x"] == pytest.approx(3)
+    assert sequencer.state["y"] == pytest.approx(1)
+    assert sequencer.options["custom"] == {"unrelated": "value"}
+
+
+def test_base_waveguide_rejects_non_numeric_command_argument() -> None:
+    sequencer = smwvg.BaseWaveguideSequencer([["S", "invalid"]])
+
+    with pytest.raises(TypeError, match="S length must be a real number"):
+        sequencer.run()
+
+
+@pytest.mark.parametrize("value", [True, False, np.bool_(True), np.bool_(False)])
+def test_base_waveguide_rejects_boolean_length(value: object) -> None:
+    sequencer = smwvg.BaseWaveguideSequencer([["S", value]])
+    with pytest.raises(TypeError, match="S length must be a real number"):
+        sequencer.run()
+
+
+@pytest.mark.parametrize("value", [True, np.bool_(True)])
+def test_base_waveguide_rejects_boolean_layer(value: object) -> None:
+    sequencer = smwvg.BaseWaveguideSequencer([["S", 1]])
+    sequencer.options["wgLayer"] = value
+    with pytest.raises(TypeError, match="must be an integer"):
+        sequencer.run()
 
 
 def test_base_waveguide_bend_positive_angle() -> None:
