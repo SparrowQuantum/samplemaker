@@ -93,7 +93,7 @@ import pickle  # for caching
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
-from typing import Any, TypeAlias
+from typing import TypeAlias
 
 import numpy as np
 
@@ -347,8 +347,8 @@ class DeviceTableAnnotations:
         cols: int,
         x0: float,
         y0: float,
-        rowdict: Mapping[str, Sequence[Any] | np.ndarray],
-        coldict: Mapping[str, Sequence[Any] | np.ndarray],
+        rowdict: Mapping[str, Sequence[object] | np.ndarray],
+        coldict: Mapping[str, Sequence[object] | np.ndarray],
     ) -> GeomGroup:
         """Render the text for a given element in a table.
 
@@ -369,9 +369,9 @@ class DeviceTableAnnotations:
             X-Position of the item on the table.
         y0 : float
             Y-Position of the item on the table.
-        rowdict : Mapping[str, Sequence[Any]]
+        rowdict : Mapping[str, Sequence[object]]
             The dictionary associating the variables and values that change along rows.
-        coldict : Mapping[str, Sequence[Any]]
+        coldict : Mapping[str, Sequence[object]]
             The dictionary associating the variables and values that change along
             columns.
 
@@ -440,8 +440,8 @@ class DeviceTable:
         dev: Device,
         nrow: int,
         ncol: int,
-        rowvars: Mapping[str, Sequence[Any] | np.ndarray],
-        colvars: Mapping[str, Sequence[Any] | np.ndarray],
+        rowvars: Mapping[str, Sequence[object] | np.ndarray],
+        colvars: Mapping[str, Sequence[object] | np.ndarray],
     ) -> None:
         """Initialize the DeviceTable class.
 
@@ -903,7 +903,7 @@ class Mask:
         script multiple times). Additionally, the cache system re-uses the GDS bitstream
         from a previously generated GDS file.
 
-        Any changes made to the devices or instances are automatically detected
+        object changes made to the devices or instances are automatically detected
         and updated even if the cache is on.
 
         This option saves a lot of time when executing scripts while making minor

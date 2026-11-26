@@ -185,10 +185,10 @@ import inspect
 import math
 import sys
 import warnings
-from collections.abc import Callable, Hashable, Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
-from typing import Any, NoReturn, Self, TypeAlias
+from typing import NoReturn, Self, TypeAlias
 
 import numpy as np
 
@@ -506,11 +506,11 @@ class Device:
 
     def __init__(self) -> None:
         """Initialize a Device. Should never be called by the user."""
-        self._p: dict[str, Any] = {}
+        self._p: dict[str, object] = {}
         self._pdescr: dict[str, str] = {}
         self._ptype: dict[str, type] = {}
         self._prange: dict[str, tuple[float, float]] = {}
-        self._localp: dict[str, Hashable] = {}
+        self._localp: dict[str, object] = {}
         self._x0 = 0.0
         self._y0 = 0.0
         self._hv = True
@@ -521,7 +521,7 @@ class Device:
         self._description = "No description yet"
         self.use_references = True
 
-    def __flatdict(self, d: dict[str, Any], parent_str: str) -> dict[str, Any]:
+    def __flatdict(self, d: dict[str, object], parent_str: str) -> dict[str, object]:
         flatdict = {}
         for key, value in d.items():
             if isinstance(value, dict):
@@ -615,7 +615,7 @@ class Device:
     def addparameter(
         self,
         param_name: str,
-        default_value: Any,  # noqa: ANN401
+        default_value: object,
         param_description: str,
         param_type: type = float,
         param_range: tuple[float, float] = (0, np.inf),
@@ -658,7 +658,7 @@ class Device:
     def addlocalparameter(
         self,
         param_name: str,
-        default_value: Any,  # noqa: ANN401
+        default_value: object,
         param_description: str,
         param_type: type = float,
         param_range: tuple[float, float] = (0, np.inf),
@@ -669,7 +669,7 @@ class Device:
         ----------
         param_name : str
             The parameter name.
-        default_value : Any
+        default_value : object
             The value of the paramter.
         param_description : str
             Description of the parameter.
@@ -772,14 +772,14 @@ class Device:
             raise ValueError(msg)
         self._localports.pop(portname)
 
-    def set_param(self, param_name: str, value: Any) -> None:  # noqa: ANN401
+    def set_param(self, param_name: str, value: object) -> None:
         """Change a parameter. To be called after build().
 
         Parameters
         ----------
         param_name : str
             The parameter to be changed.
-        value : Any
+        value : object
             The new value of the parameter.
 
         Returns
@@ -802,7 +802,7 @@ class Device:
 
     def get_params(
         self, cast_types: bool = True, clip_in_range: bool = True
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Return the dictionary with all parameters.
 
         Should be called by geom() functions.
@@ -816,7 +816,7 @@ class Device:
 
         Returns
         -------
-        dict[str, Any]
+        dict[str, object]
             A dictionary with the parameter value map.
 
         """
@@ -1050,7 +1050,7 @@ class NetListEntry:
         y0: float,
         rot: str,
         portmap: dict[str, str],
-        params: dict[str, Any],
+        params: dict[str, object],
     ) -> None:
         """Initialize a netlist entry.
 
@@ -1069,7 +1069,7 @@ class NetListEntry:
             A dictionary that associates a port in the device to a wire. The keys of
             the dictionary are the port names defined in the device and the values are
             the wire names. Wires with the same name will be connected together.
-        params : dict[str, Any]
+        params : dict[str, object]
             A dictionary of parameters to be used when creating the device.
 
         """
@@ -1228,7 +1228,7 @@ class NetList:
         tokens: list[str], netlists: Mapping[str, "NetList"]
     ) -> NetListEntry:
         device_name = tokens[0]
-        params: dict[str, Any] = {}
+        params: dict[str, object] = {}
         cursor = 1
         if device_name == "X":
             params["NETLIST"] = netlists[tokens[cursor]]
@@ -1342,7 +1342,7 @@ class Circuit(Device):
         self._netlist: NetList | None = None
         self._netlist_parameter_names: set[str] = set()
 
-    def __flatdict(self, d: dict[str, Any], parent_str: str) -> dict[str, Any]:
+    def __flatdict(self, d: dict[str, object], parent_str: str) -> dict[str, object]:
         flatdict = {}
         for key, value in d.items():
             if isinstance(value, dict):
@@ -1435,7 +1435,7 @@ class Circuit(Device):
         self._localports = {}
         self._ports.clear()
 
-    def set_param(self, param_name: str, value: Any) -> None:  # noqa: ANN401
+    def set_param(self, param_name: str, value: object) -> None:
         """Set the value of a parameter.
 
         In a Circuit, you can refer to individual device parameters by using the
@@ -1451,7 +1451,7 @@ class Circuit(Device):
         ----------
         param_name : str
             The name of the parameter to be set.
-        value : Any
+        value : object
             The new value of the parameter.
 
         Returns

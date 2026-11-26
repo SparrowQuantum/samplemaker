@@ -75,7 +75,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Collection, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
-from typing import Any, Self, cast
+from typing import Self, cast
 
 import numpy as np
 from asteval import Interpreter
@@ -700,7 +700,7 @@ class GeomGroup:
             Contains information on the group geometry.
 
         """
-        stat: dict[str, Any] = {}
+        stat: dict[str, object] = {}
         bb = self.bounding_box()
         layer_list = self.get_layer_list()
         stat["BoundingBox"] = {
@@ -861,7 +861,7 @@ class GeomGroup:
             * "urx": upper-right x coordinate of the bounding box
             * "ury": upper-right y coordinate of the bounding box
 
-        Any Python logical expression can be used including mathematical operations
+        object Python logical expression can be used including mathematical operations
         between variables, for example the shape index lower than 0.2 can be queried as
         follows `sel = geom.select("12.566*A/P**2<=0.2")`.
 

@@ -2,7 +2,6 @@
 
 import math
 from copy import deepcopy
-from typing import Any
 
 import numpy as np
 
@@ -13,7 +12,7 @@ from samplemaker.devices import DevicePort
 # The following are routines for the connector
 def _connectable_facing(
     port1: DevicePort, port2: DevicePort, rad: float = 3
-) -> tuple[bool, list[list[Any]]]:
+) -> tuple[bool, list[list[object]]]:
     """Calculate if two ports are directly connectable and facing each other.
 
     This function returns true and a sequence if two ports are directly connectable and
@@ -32,7 +31,7 @@ def _connectable_facing(
     -------
     bool
         True if connection succeeded, False otherwise.
-    list[list[Any]]
+    list[list[object]]
         A sequence to perform the connection.
 
     """
@@ -86,7 +85,7 @@ def _connectable_facing(
 
 def _connectable_bend(
     port1: DevicePort, port2: DevicePort, rad: float = 3
-) -> tuple[bool, list[list[Any]]]:
+) -> tuple[bool, list[list[object]]]:
     """Calculate if two ports can be connected with a single bend.
 
     The function calculates the projected intersection of two straight paths and returns
@@ -105,7 +104,7 @@ def _connectable_bend(
     -------
     bool
         True if connection succeeded, False otherwise.
-    list[list[Any]]
+    list[list[object]]
         A sequence to perform the connection.
 
     """
@@ -141,7 +140,7 @@ def _connectable_bend(
 
 def _connect_step(
     port1: DevicePort, port2: DevicePort, rad: float = 3
-) -> tuple[bool, list[list[Any]]]:
+) -> tuple[bool, list[list[object]]]:
     """Perform a single connection step.
 
     Attempts at getting port1 closer to `port2` by bending left or right or going
@@ -160,7 +159,7 @@ def _connect_step(
     -------
     bool
         True if connection succeeded, False otherwise.
-    list[list[Any]]
+    list[list[object]]
         A sequence to perform the connection.
 
     """
@@ -224,7 +223,7 @@ def _connect_step(
 
 def connect_waveguide_ports(
     port1: DevicePort, port2: DevicePort, rad: float = 3
-) -> tuple[bool, list[list[Any]]]:
+) -> tuple[bool, list[list[object]]]:
     """Calculate a sequence of commands to connect two ports.
 
     Given a start port and an end port, the function attempts to connect the ports using
@@ -247,7 +246,7 @@ def connect_waveguide_ports(
     -------
     bool
         True if connection succeeded, False otherwise.
-    list[list[Any]]
+    list[list[object]]
         A sequence that realizes the connection.
 
     """

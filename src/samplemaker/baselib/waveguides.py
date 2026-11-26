@@ -6,9 +6,8 @@ This module can be used as template to develop different waveguide libraries.
 """
 
 import math
-from collections.abc import Hashable
 from copy import deepcopy
-from typing import Any, TypeAlias, cast
+from typing import TypeAlias, cast
 
 import numpy as np
 
@@ -23,7 +22,7 @@ from samplemaker.shapes import GeomGroup
 
 
 # Let's define some options for the BaseWaveguide sequencer
-_BaseWaveguideOptionsType: TypeAlias = dict[str, dict[str, Hashable] | bool | float]
+_BaseWaveguideOptionsType: TypeAlias = dict[str, dict[str, object] | bool | float]
 
 
 def create_base_waveguide_options() -> _BaseWaveguideOptionsType:
@@ -328,12 +327,12 @@ def create_base_waveguide_commands() -> smseq.COMMANDS_DICT_TYPE:
 class BaseWaveguideSequencer(smseq.Sequencer):
     """Simple waveguide sequencer."""
 
-    def __init__(self, seq: list[list[Any]]) -> None:
+    def __init__(self, seq: list[list[object]]) -> None:
         """Create a custom sequencer for simple waveguides.
 
         Parameters
         ----------
-        seq : list[list[Any]]
+        seq : list[list[object]]
             The sequence to be executed.
 
         """

@@ -53,17 +53,17 @@ with `samplemaker`.
 """
 
 import math
-from collections.abc import Callable, Hashable, MutableMapping, Sequence
+from collections.abc import Callable, MutableMapping, Sequence
 from copy import deepcopy
-from typing import Any, TypeAlias
+from typing import TypeAlias
 
 from samplemaker.devices import _DeviceList
 from samplemaker.shapes import GeomGroup
 
-ARGS_TYPE: TypeAlias = Sequence[Any]
-STATE_TYPE: TypeAlias = MutableMapping[str, Any]
-OPTIONS_TYPE: TypeAlias = MutableMapping[str, Any]
-SEQ_TYPE: TypeAlias = Sequence[Sequence[Any]]
+ARGS_TYPE: TypeAlias = Sequence[object]
+STATE_TYPE: TypeAlias = MutableMapping[str, object]
+OPTIONS_TYPE: TypeAlias = MutableMapping[str, object]
+SEQ_TYPE: TypeAlias = Sequence[Sequence[object]]
 
 COMMAND_CALLABLE_TYPE: TypeAlias = Callable[
     [ARGS_TYPE, STATE_TYPE, OPTIONS_TYPE], GeomGroup
@@ -186,18 +186,18 @@ def default_command_list() -> COMMANDS_DICT_TYPE:
     }
 
 
-def default_options() -> dict[str, dict[str, Hashable] | bool]:
+def default_options() -> dict[str, dict[str, object] | bool]:
     """Create default options for the sequencer.
 
     This returns the essential base options.
 
     Returns
     -------
-    dict[str, dict[str, Hashable] | bool]
+    dict[str, dict[str, object] | bool]
         Returns the default options for the sequencer.
 
     """
-    defopts: dict[str, dict[str, Hashable] | bool] = {}
+    defopts: dict[str, dict[str, object] | bool] = {}
     for dname in _DeviceList:
         dev = _DeviceList[dname]()
         dev.parameters()

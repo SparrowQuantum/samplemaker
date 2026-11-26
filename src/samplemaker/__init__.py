@@ -20,7 +20,6 @@ Council (ERC) under the European Union's Horizon 2020 research and innovation pr
 .. include:: ./documentation.md
 """
 
-from collections.abc import Hashable
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -47,7 +46,7 @@ This class should generally not be used directly, but only through the Mask clas
 _DevicePool: dict[int, str] = {}
 """Connects a device hash to a SREF to be instantiated."""
 
-_DeviceLocalParamPool: dict[int, dict[str, Hashable]] = {}
+_DeviceLocalParamPool: dict[int, dict[str, object]] = {}
 """Connects a device hash to local parameters created by the call to geom()."""
 
 _DeviceLocalPortPool: dict[int, dict[str, "DevicePort"]] = {}
