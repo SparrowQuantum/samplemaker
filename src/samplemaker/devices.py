@@ -1340,7 +1340,6 @@ class Circuit(Device):
     def __init__(self) -> None:  # noqa: D107
         super().__init__()
         self._netlist: NetList | None = None
-        self._external_ports: dict[str, DevicePort] = {}
 
     def __flatdict(self, d: dict[str, Any], parent_str: str) -> dict[str, Any]:
         flatdict = {}
@@ -1478,6 +1477,8 @@ class Circuit(Device):
 
         dev = _DeviceList[nle.devname].build()
         dev.use_references = self.use_references
+        if isinstance(dev, Circuit):
+            dev.set_netlist(nle.params.get("NETLIST"))
 
         # Force sequencer reset if has _seq subfield.
         # This keeps device behavior independent from prior sequencer state.
@@ -1595,7 +1596,7 @@ class Circuit(Device):
                 input_port._parentports = {}
                 port = deepcopy(input_port)
                 port.name = portname
-                self._external_ports[portname] = port
+                self.addlocalport(port)
             else:
                 # Stacklevel=3 to point at code calling self.run() and not this method.
                 msg = f"Port {portname} is unconnected."
@@ -1614,6 +1615,8 @@ class Circuit(Device):
         if self._netlist is None:
             msg = "NETLIST is not set."
             raise ValueError(msg)
+        # Replace rather than clear the dictionary, which may belong to the cache.
+        self._localports = {}
         netlist = self._netlist.entry_list
         external_ports = self._netlist.external_ports
         aligned_ports = self._netlist.aligned_ports
@@ -1644,9 +1647,8 @@ class Circuit(Device):
         None
 
         """
-        ext_ports = self._external_ports
-        for p in ext_ports.values():
-            self.addport(deepcopy(p))
+        self._ports.clear()
+        super().ports()
 
 
 _DeviceList: dict[str, type[Device]] = {"X": Circuit}
