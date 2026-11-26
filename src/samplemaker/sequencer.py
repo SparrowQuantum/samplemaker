@@ -58,7 +58,7 @@ from copy import deepcopy
 from numbers import Integral, Real
 from typing import TypeAlias, TypeGuard
 
-from samplemaker.devices import _DeviceList
+from samplemaker.devices import Circuit, _DeviceList
 from samplemaker.shapes import GeomGroup
 
 ARGS_TYPE: TypeAlias = Sequence[object]
@@ -180,7 +180,13 @@ def _insert_device(
     if not _is_parameter_dict(params):
         msg = f"Options for device {devname} must be a dictionary with string keys."
         raise TypeError(msg)
-    dev._p = params
+    if isinstance(dev, Circuit):
+        dev.set_param("NETLIST", params.get("NETLIST"))
+        for name, value in params.items():
+            if name != "NETLIST":
+                dev.set_param(name, value)
+    else:
+        dev._p = params
     if hasattr(dev, "_seq"):
         dev._seq.state = deepcopy(state)  # pyright: ignore[reportAttributeAccessIssue]
         dev._seq.options = deepcopy(options)  # pyright: ignore[reportAttributeAccessIssue]
@@ -216,7 +222,7 @@ def _insert_device(
         + (xdo - xd) * math.sin(math.radians(angle - ad))
         + (ydo - yd) * math.cos(math.radians(angle - ad))
     )
-    state["a"] = angle + ado
+    state["a"] = angle + ado - ad % 360
 
     return g
 
@@ -229,7 +235,8 @@ def default_command_list() -> COMMANDS_DICT_TYPE:
     * STATE: change the state variable to something else
     * CENTER: forces the current position state to change
     * STORE: stores the current position state
-    * DEV: Inserts a device at the current postion
+    * DEV: Inserts a device at the current position. For a circuit, its device options
+      must include ``NETLIST`` and may include its instance parameter dictionaries.
 
     Returns
     -------
