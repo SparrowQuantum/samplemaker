@@ -185,7 +185,7 @@ import inspect
 import math
 import sys
 import warnings
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
 from typing import NoReturn, Self, TypeAlias, cast
@@ -800,6 +800,49 @@ class Device:
             raise ValueError(msg)
         self._p[param_name] = value
 
+    def get_param(
+        self, param_name: str, cast_type: bool, clip_in_range: bool = True
+    ) -> object:
+        """Get a parameter value.
+
+        Parameters
+        ----------
+        param_name : str
+            The parameter to be retrieved.
+        cast_type : bool
+            Whether to cast the parameter to its defined type.
+        clip_in_range : bool, optional
+            Whether to clip the parameter value within its defined range, by default
+            True.
+
+        Returns
+        -------
+        object
+            The value of the parameter.
+
+        Raises
+        ------
+        ValueError
+            If the parameter is not defined by the device.
+
+        """
+        if param_name not in self._p:
+            msg = (
+                f"Could not get parameter '{param_name}', "
+                "as it was not defined by device."
+            )
+            raise ValueError(msg)
+        value = self._p[param_name]
+        if cast_type:
+            value = self._ptype[param_name](value)
+        if clip_in_range and not isinstance(value, Iterable):
+            try:
+                vmin, vmax = self._prange[param_name]
+                value = min(max(value, vmin), vmax)  # type: ignore[call-overload]
+            except TypeError:
+                pass
+        return value
+
     def get_params(
         self, cast_types: bool = True, clip_in_range: bool = True
     ) -> dict[str, object]:
@@ -820,19 +863,7 @@ class Device:
             A dictionary with the parameter value map.
 
         """
-        params = self._p.copy()
-        if cast_types:
-            for p, val in params.items():
-                params[p] = self._ptype[p](val)
-        if clip_in_range:
-            for p, val in params.items():
-                try:
-                    vmin, vmax = self._prange[p]
-                    clamped_param = min(max(val, vmin), vmax)  # type: ignore[call-overload]
-                    params[p] = clamped_param
-                except TypeError:
-                    pass
-        return params
+        return {p: self.get_param(p, cast_types, clip_in_range) for p in self._p}
 
     def get_port(self, port_name: str) -> DevicePort:
         """Get a named port.
