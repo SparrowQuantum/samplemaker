@@ -1079,24 +1079,7 @@ class Device:
             A new instance of the device with the same parameters and ports.
 
         """
-        new_dev = type(self)()
-        new_dev._p = deepcopy(self._p)
-        new_dev._pdescr = self._pdescr.copy()
-        new_dev._ptype = self._ptype.copy()
-        new_dev._prange = self._prange.copy()
-        new_dev._localp = deepcopy(self._localp)
-        new_dev._x0 = self._x0
-        new_dev._y0 = self._y0
-        new_dev._hv = self._hv
-        new_dev._bf = self._bf
-        new_dev._ports = deepcopy(self._ports)
-        new_dev._localports = deepcopy(self._localports)
-        new_dev._name = self._name
-        new_dev._description = self._description
-        new_dev.use_references = self.use_references
-        if hasattr(self, "_seq"):
-            new_dev._seq = deepcopy(self._seq)  # type: ignore[attr-defined]
-        return new_dev
+        return deepcopy(self)
 
     def __copy__(self) -> Self:
         """Create a deep copy of the device."""
@@ -1744,12 +1727,6 @@ class Circuit(Device):
         """
         self._ports.clear()
         super().ports()
-
-    def copy(self) -> Self:  # noqa: D102
-        dev = super().copy()
-        dev._netlist = deepcopy(self._netlist)
-        dev._netlist_parameter_names = self._netlist_parameter_names.copy()
-        return dev
 
 
 _DeviceList: dict[str, type[Device]] = {"X": Circuit}
