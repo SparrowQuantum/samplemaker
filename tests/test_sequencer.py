@@ -4,6 +4,7 @@ import inspect
 from collections.abc import Callable
 from copy import deepcopy
 
+import numpy as np
 import pytest
 
 from samplemaker import devices as smdev
@@ -202,6 +203,13 @@ class TestDefaultCommandList:
         assert isinstance(res, GeomGroup)
         assert len(res.group) == 0
 
+    def test_center_rejects_non_numeric_coordinate(
+        self, default_command_list: _DCMD, sequencer_test_state: dict
+    ) -> None:
+        _, fun = default_command_list["CENTER"]
+        with pytest.raises(TypeError, match="CENTER x must be a real number"):
+            fun(["invalid", 0], sequencer_test_state, {})
+
     def test_store_command_has_correct_signature(
         self, default_command_list: _DCMD
     ) -> None:
@@ -350,6 +358,43 @@ class TestDefaultCommandList:
         with pytest.raises(ValueError, match=match):
             fun(args, sequencer_test_state.copy(), options)
 
+    def test_dev_command_rejects_invalid_device_options(
+        self,
+        dummy_device_list: dict[str, type[smdev.Device]],
+        default_command_list: _DCMD,
+    ) -> None:
+        _, fun = default_command_list["DEV"]
+        state = smseq.SequencerState().state
+        args = ["TESTLIB_TWO_PORT", "p1", "p2"]
+        with pytest.raises(TypeError, match="dictionary with string keys"):
+            fun(args, state, {"dev_TESTLIB_TWO_PORT": {1: "invalid"}})
+
+
+@pytest.mark.parametrize("value", [np.float32(1.5), np.float64(1.5), np.int64(2)])
+def test_require_number_accepts_numpy_scalars(value: object) -> None:
+    assert smseq.require_number(value, "value") == pytest.approx(value)
+
+
+def test_require_integer_accepts_numpy_integer_and_rejects_fraction() -> None:
+    assert smseq.require_integer(np.int64(4), "resolution") == 4
+    with pytest.raises(TypeError, match="resolution must be an integer"):
+        smseq.require_integer(2.5, "resolution")
+
+
+@pytest.mark.parametrize("value", [True, False, np.bool_(True), np.bool_(False)])
+@pytest.mark.parametrize(
+    ("validator", "message"),
+    [
+        (smseq.require_number, "value must be a real number"),
+        (smseq.require_integer, "value must be an integer"),
+    ],
+)
+def test_numeric_validators_reject_booleans(
+    value: object, validator: Callable[[object, str], float], message: str
+) -> None:
+    with pytest.raises(TypeError, match=message):
+        validator(value, "value")
+
 
 def test_default_options_configuration(
     dummy_device_list: dict[str, type[smdev.Device]],
@@ -385,9 +430,119 @@ def test_init_sequencer_state() -> None:
 
 
 class TestSequencer:
+    @pytest.mark.parametrize("child_rotation", ["E", "N"])
+    def test_dev_inserts_nested_circuit_with_configured_parameters(
+        self,
+        dummy_device_list: dict[str, type[smdev.Device]],
+        child_rotation: str,
+    ) -> None:
+        child_entries = [
+            smdev.NetListEntry(
+                devname="TESTLIB_TWO_PORT",
+                x0=0,
+                y0=0,
+                rot="E",
+                portmap={"p1": "in", "p2": "out"},
+                params={},
+            )
+        ]
+        child = smdev.NetList("child", child_entries)
+        child.set_external_ports(["in", "out"])
+        parent_entries = [
+            smdev.NetListEntry(
+                devname="X",
+                x0=2,
+                y0=3,
+                rot=child_rotation,
+                portmap={"in": "input", "out": "output"},
+                params={"NETLIST": child},
+            )
+        ]
+        parent = smdev.NetList("parent", parent_entries)
+        parent.set_external_ports(["input", "output"])
+        circuit = smdev.Circuit.build()
+        circuit.set_netlist(parent)
+        circuit.set_param("dev_X_1::dev_TESTLIB_TWO_PORT_1::length", 5)
+        params = {"NETLIST": parent, **deepcopy(circuit._p)}
+        options = {"__no_init__": False, "dev_X": params}
+        sequencer = smseq.Sequencer(
+            seq=[
+                ["STATE", "x", 10],
+                ["STATE", "y", 20],
+                ["STATE", "a", 90],
+                ["DEV", "X", "input", "output"],
+                ["DEV", "X", "input", "output"],
+            ],
+            seq_options=options,
+            seq_state=smseq.SequencerState(),
+            seq_dictionary=smseq.default_command_list(),
+        )
+
+        geometry = sequencer.run().flatten()
+
+        assert len(geometry.group) == 2
+        box = geometry.bounding_box()
+        assert box.llx == pytest.approx(0)
+        assert box.lly == pytest.approx(20)
+        assert box.width == pytest.approx(10)
+        assert box.height == pytest.approx(5)
+        assert sequencer.state["x"] == pytest.approx(0)
+        assert sequencer.state["y"] == pytest.approx(20)
+        assert sequencer.state["a"] == pytest.approx(270)
+        assert params["NETLIST"] is parent
+        assert params["dev_X_1"] == circuit._p["dev_X_1"]
+
+    def test_dev_circuit_uses_netlist_defaults(
+        self, dummy_device_list: dict[str, type[smdev.Device]]
+    ) -> None:
+        netlist_entry = [
+            smdev.NetListEntry(
+                "TESTLIB_TWO_PORT", 0, 0, "E", {"p1": "in", "p2": "out"}, {}
+            )
+        ]
+        netlist = smdev.NetList("defaults", netlist_entry)
+        netlist.set_external_ports(["in", "out"])
+        sequencer = smseq.Sequencer(
+            seq=[["DEV", "X", "in", "out"]],
+            seq_options={"__no_init__": False, "dev_X": {"NETLIST": netlist}},
+            seq_state=smseq.SequencerState(),
+            seq_dictionary=smseq.default_command_list(),
+        )
+
+        geometry = sequencer.run().flatten()
+
+        assert geometry.bounding_box().width == pytest.approx(10)
+        assert sequencer.state["x"] == pytest.approx(10)
+        assert sequencer.state["y"] == pytest.approx(10)
+        assert sequencer.state["a"] == pytest.approx(90)
+
+    @pytest.mark.parametrize(
+        ("params", "error", "message"),
+        [
+            ({}, ValueError, "NETLIST is not set"),
+            ({"NETLIST": "invalid"}, TypeError, "NETLIST must be of type NetList"),
+        ],
+    )
+    def test_dev_circuit_rejects_missing_or_invalid_netlist(
+        self,
+        dummy_device_list: dict[str, type[smdev.Device]],
+        params: dict[str, object],
+        error: type[Exception],
+        message: str,
+    ) -> None:
+        sequencer = smseq.Sequencer(
+            seq=[["DEV", "X", "in", "out"]],
+            seq_options={"__no_init__": False, "dev_X": params},
+            seq_state=smseq.SequencerState(),
+            seq_dictionary=smseq.default_command_list(),
+        )
+
+        with pytest.raises(error, match=message):
+            sequencer.run()
+
     def test_init_sets_correct_attributes(self) -> None:
         seq = [["S", 10], ["CENTER", 1, 2]]
-        seq_options = {"hello": "world"}
+        seq_options: dict[str, object] = {"hello": "world"}
         seq_state = smseq.SequencerState()
         seq_dict = {"a": "b"}
         sequencer = smseq.Sequencer(
@@ -468,6 +623,25 @@ class TestSequencer:
         seq = [["INVALID_CMD", 1, 2]]
         sequencer = FakeSequencer(seq)
         with pytest.raises(ValueError, match=r"Command INVALID_CMD does not exist."):
+            sequencer.run()
+
+    def test_run_rejects_non_string_command(self) -> None:
+        sequencer = FakeSequencer([[["invalid"]]])
+        with pytest.raises(ValueError, match="does not exist"):
+            sequencer.run()
+
+    def test_run_accepts_custom_state_values(self) -> None:
+        value = {"custom": [1, 2]}
+        sequencer = FakeSequencer([["STATE", "metadata", value]])
+
+        sequencer.run()
+
+        assert sequencer.state["metadata"] == value
+
+    def test_run_rejects_invalid_stored_coordinates(self) -> None:
+        sequencer = FakeSequencer([["STATE", "STORED", [["invalid", 0]]]])
+
+        with pytest.raises(TypeError, match="stored x must be a real number"):
             sequencer.run()
 
     def test_run_raises_for_wrong_number_of_arguments(self) -> None:

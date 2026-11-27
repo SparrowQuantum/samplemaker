@@ -350,8 +350,8 @@ class Crystal:
 
         """
         startx = 0
-        x1 = []
-        x2 = []
+        x1 = np.array([])
+        x2 = np.array([])
         a = spacing
         totalp = np.sum(periods)
         nx_original = nx

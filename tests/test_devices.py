@@ -1,10 +1,12 @@
 import math
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
 import samplemaker.devices as smdev
 import samplemaker.shapes as sp
+from samplemaker.baselib.devices import DirectionalCoupler, FocusingGratingCoupler
 from samplemaker.baselib.waveguides import BaseWaveguidePort, BaseWaveguideSequencer
 from samplemaker.shapes import GeomGroup
 from tests import dummy as dm
@@ -141,15 +143,16 @@ class TestDevice:
     def test_initialize_sets_default_attributes(self) -> None:
         dev = dm.DummyDevice()
         assert dev._p == {}
-        assert dev._pdescr == {"_ports_": "Ports calculated by geom"}
-        assert "_ports_" in dev._ptype  # Is really float...
-        assert "_ports_" in dev._prange  # Range not applicable to ports.
-        assert dev._localp == {"_ports_": {}}
+        assert dev._pdescr == {}
+        assert dev._ptype == {}
+        assert dev._prange == {}
+        assert dev._localp == {}
         assert dev._x0 == 0
         assert dev._y0 == 0
         assert dev._hv is True
         assert dev._bf is True
         assert dev._ports == {}
+        assert dev._localports == {}
         assert dev._name == ""
         assert dev._description == "No description yet"
         assert dev.use_references is True
@@ -220,6 +223,16 @@ class TestDevice:
         with pytest.raises(ValueError, match="Could not set parameter"):
             dummy_device.set_param("does_not_exist", 1)
 
+    def test_set_param_does_not_traverse_device_parameters(
+        self, dummy_device: smdev.Device
+    ) -> None:
+        dummy_device.addparameter("options", {"width": 1}, "Options")
+
+        with pytest.raises(ValueError, match="Could not set parameter"):
+            dummy_device.set_param("options::width", 2)
+
+        assert dummy_device._p["options"] == {"width": 1}
+
     def test_get_params_casts_and_clips(self, dummy_device: smdev.Device) -> None:
         dummy_device.set_param("width", "1234")
         dummy_device.set_param("height", -23)
@@ -246,9 +259,9 @@ class TestDevice:
     def test_remove_localport(self, dummy_device: smdev.Device) -> None:
         port = BaseWaveguidePort(0, 0, name="test")
         dummy_device.addlocalport(port)
-        assert "test" in dummy_device._localp["_ports_"]
+        assert "test" in dummy_device._localports
         dummy_device.remove_localport("test")
-        assert "test" not in dummy_device._localp["_ports_"]
+        assert "test" not in dummy_device._localports
 
     def test_remove_localport_unknown_raises(self, dummy_device: smdev.Device) -> None:
         with pytest.raises(ValueError, match="Could not find port"):
@@ -310,6 +323,69 @@ class TestDevice:
 
         assert len(g.group) == 1
         assert isinstance(g.group[0], sp.Poly)
+
+    def test_copy(self, dummy_device: smdev.Device) -> None:
+        dummy_device.run()
+        copied_device = dummy_device.copy()
+        assert copied_device is not dummy_device
+        assert copied_device._p == dummy_device._p
+        assert copied_device._pdescr == dummy_device._pdescr
+        assert copied_device._ptype == dummy_device._ptype
+        assert copied_device._prange == dummy_device._prange
+        assert copied_device._localp == dummy_device._localp
+        assert copied_device._x0 == dummy_device._x0
+        assert copied_device._y0 == dummy_device._y0
+        assert copied_device._hv == dummy_device._hv
+        assert copied_device._bf == dummy_device._bf
+        assert copied_device._name == dummy_device._name
+        assert copied_device._description == dummy_device._description
+        assert copied_device.use_references == dummy_device.use_references
+        assert hash(copied_device) == hash(dummy_device)
+
+        device_port = dummy_device._ports["in"]
+        copied_port = copied_device._ports["in"]
+        assert copied_port is not device_port
+        assert copied_port.x0 == device_port.x0
+        assert copied_port.y0 == device_port.y0
+        assert copied_port.hv == device_port.hv
+        assert copied_port.bf == device_port.bf
+        assert copied_port.name == device_port.name
+
+        assert copied_device._p is not dummy_device._p
+        assert copied_device._pdescr is not dummy_device._pdescr
+        assert copied_device._ptype is not dummy_device._ptype
+        assert copied_device._prange is not dummy_device._prange
+        assert copied_device._localp is not dummy_device._localp
+        assert copied_device._ports is not dummy_device._ports
+        assert copied_device._localports is not dummy_device._localports
+
+    def test_copy_dunder(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        dummy_device: smdev.Device,
+    ) -> None:
+        copy_mock = Mock(return_value="copied_device")
+        monkeypatch.setattr(smdev.Device, "copy", copy_mock)
+        assert dummy_device.copy() == "copied_device"
+        copy_mock.assert_called_once()
+
+    def test_copy_with_sequencer(self, dummy_device: smdev.Device) -> None:
+        class DummySequencer:
+            def __init__(self) -> None:
+                self.seq_val = 42
+                self.options = {"a": 2.0, "b": 3.0}
+
+            def __hash__(self) -> int:
+                return hash(self.seq_val)
+
+        dummy_device._seq = DummySequencer()
+        copied_device = dummy_device.copy()
+        assert hasattr(copied_device, "_seq")
+        assert copied_device._seq is not dummy_device._seq
+        assert copied_device._seq.options is not dummy_device._seq.options
+        assert copied_device._seq.seq_val == dummy_device._seq.seq_val
+        assert copied_device._seq.options == dummy_device._seq.options
+        assert hash(copied_device) == hash(dummy_device)
 
 
 class TestNetListEntry:
@@ -387,6 +463,131 @@ class TestNetList:
 
 
 class TestCircuit:
+    def test_set_netlist_replaces_parameters_and_clears_ports(
+        self, dummy_device_list: dict[str, type[smdev.Device]]
+    ) -> None:
+        first_netlist_entries = [
+            smdev.NetListEntry("TESTLIB_DUMMY_CONNECTOR", 0, 0, "E", {"io": "old"}, {}),
+            smdev.NetListEntry("TESTLIB_DUMMY", 0, 0, "E", {}, {}),
+        ]
+        first = smdev.NetList("first", first_netlist_entries)
+        first.set_external_ports(["old"])
+        second_netlist_entries = [
+            smdev.NetListEntry("TESTLIB_DUMMY", 0, 0, "E", {}, {"width": 20})
+        ]
+        second = smdev.NetList("second", second_netlist_entries)
+        circuit = smdev.Circuit.build()
+        circuit.addparameter("custom", 7, "Custom parameter")
+        circuit.set_netlist(first)
+        circuit.run()
+        circuit.set_netlist(second)
+
+        assert circuit._netlist is second
+        assert set(circuit._p) == {"custom", "dev_TESTLIB_DUMMY_1"}
+        assert circuit._p["dev_TESTLIB_DUMMY_1"]["width"] == 20
+        for metadata in (circuit._pdescr, circuit._ptype, circuit._prange):
+            assert set(metadata) == {"custom", "dev_TESTLIB_DUMMY_1"}
+        assert circuit._ports == {}
+        assert circuit._localports == {}
+        assert circuit.run().bounding_box().width == pytest.approx(20)
+
+        circuit.set_netlist(None)
+        assert circuit._netlist is None
+        assert circuit._p == {"custom": 7}
+        assert circuit._ports == {}
+        assert circuit._localports == {}
+        for metadata in (circuit._pdescr, circuit._ptype, circuit._prange):
+            assert set(metadata) == {"custom"}
+        with pytest.raises(ValueError, match="NETLIST is not set"):
+            circuit.run()
+
+    def test_setting_same_netlist_resets_instance_parameters(
+        self, simple_netlist: smdev.NetList
+    ) -> None:
+        circuit = smdev.Circuit.build()
+        circuit.set_netlist(simple_netlist)
+        circuit.set_param("dev_TESTLIB_DUMMY_CONNECTOR_1::length", 25)
+
+        circuit.set_netlist(simple_netlist)
+
+        assert circuit._p["dev_TESTLIB_DUMMY_CONNECTOR_1"]["length"] == 10
+
+    @pytest.mark.parametrize("invalid", ["unknown_device", "unknown_parameter"])
+    def test_invalid_netlist_preserves_previous_circuit(
+        self, dummy_device_list: dict[str, type[smdev.Device]], invalid: str
+    ) -> None:
+        entry = smdev.NetListEntry(
+            "TESTLIB_DUMMY_CONNECTOR", 0, 0, "E", {"io": "port"}, {"length": 15}
+        )
+        valid = smdev.NetList("valid", [entry])
+        valid.set_external_ports(["port"])
+        bad_entry = (
+            smdev.NetListEntry("MISSING", 0, 0, "E", {}, {})
+            if invalid == "unknown_device"
+            else smdev.NetListEntry(
+                "TESTLIB_DUMMY_CONNECTOR", 0, 0, "E", {}, {"missing": 1}
+            )
+        )
+        changed_entry = smdev.NetListEntry(
+            "TESTLIB_DUMMY_CONNECTOR", 0, 0, "E", {}, {"length": 21}
+        )
+        invalid_netlist = smdev.NetList("invalid", [changed_entry, bad_entry])
+        circuit = smdev.Circuit.build()
+        circuit.set_netlist(valid)
+        circuit.run()
+
+        message = (
+            "No device named MISSING"
+            if invalid == "unknown_device"
+            else ("Could not set parameter 'missing'")
+        )
+        with pytest.raises(ValueError, match=message):
+            circuit.set_netlist(invalid_netlist)
+
+        assert circuit._netlist is valid
+        assert set(circuit._p) == {"dev_TESTLIB_DUMMY_CONNECTOR_1"}
+        assert circuit._p["dev_TESTLIB_DUMMY_CONNECTOR_1"]["length"] == 15
+        assert set(circuit._ports) == {"port"}
+        assert circuit.run().bounding_box().width == pytest.approx(15)
+
+    def test_build_device_geometry_instantiates_before_run(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        dummy_device_list: dict[str, type[smdev.Device]],
+    ) -> None:
+        _ = dummy_device_list
+        entry = smdev.NetListEntry(
+            "TESTLIB_DUMMY_CONNECTOR",
+            12.0,
+            34.0,
+            "N",
+            {"io": "wire"},
+            {"length": 25.0},
+        )
+        circuit = smdev.Circuit.build()
+        circuit.use_references = False
+        circuit.set_netlist(smdev.NetList("single", [entry]))
+
+        original_run = dm.DummyConnectorDevice.run
+
+        def assert_initialized_before_run(device: smdev.Device) -> GeomGroup:
+            assert device._name == "TESTLIB_DUMMY_CONNECTOR"
+            assert device._p == {"length": 25.0}
+            assert device._x0 == pytest.approx(12.0)
+            assert device._y0 == pytest.approx(34.0)
+            assert device.angle() == pytest.approx(math.pi / 2)
+            assert device.use_references is False
+            return original_run(device)
+
+        monkeypatch.setattr(
+            dm.DummyConnectorDevice, "run", assert_initialized_before_run
+        )
+
+        geom, ports = circuit._build_device_geometry(entry, 1)
+
+        assert isinstance(geom, GeomGroup)
+        assert set(ports) == {"io"}
+
     def test_set_param_netlist_updates_hierarchical_parameters(
         self,
         dummy_device_list: dict[str, type[smdev.Device]],
@@ -394,10 +595,55 @@ class TestCircuit:
     ) -> None:
         _ = dummy_device_list
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", simple_netlist)
+        circuit.set_netlist(simple_netlist)
 
         assert "dev_TESTLIB_DUMMY_CONNECTOR_1" in circuit._p
         assert "dev_TESTLIB_DUMMY_CONNECTOR_2" in circuit._p
+
+    def test_set_param_updates_nested_circuit_parameters(
+        self, dummy_device_list: dict[str, type[smdev.Device]]
+    ) -> None:
+        child_entry = smdev.NetListEntry(
+            "TESTLIB_DUMMY_CONNECTOR", 0, 0, "E", {}, {"length": 10.0}
+        )
+        child = smdev.NetList("child", [child_entry])
+        outer_entry = smdev.NetListEntry("X", 0, 0, "E", {}, {"NETLIST": child})
+        circuit = smdev.Circuit.build()
+        circuit.set_netlist(smdev.NetList("outer", [outer_entry]))
+
+        circuit.set_param("dev_X_1::dev_TESTLIB_DUMMY_CONNECTOR_1::length", 25.0)
+
+        assert circuit._p["dev_X_1"]["dev_TESTLIB_DUMMY_CONNECTOR_1"]["length"] == 25.0
+
+    def test_set_param_updates_rendered_device(
+        self, simple_netlist: smdev.NetList
+    ) -> None:
+        circuit = smdev.Circuit.build()
+        circuit.use_references = False
+        circuit.set_netlist(simple_netlist)
+        circuit.set_param("dev_TESTLIB_DUMMY_CONNECTOR_1::length", 25.0)
+
+        geom, _ = circuit._build_device_geometry(simple_netlist.entry_list[0], 1)
+
+        assert geom.bounding_box().width == pytest.approx(25.0)
+        assert circuit._p["dev_TESTLIB_DUMMY_CONNECTOR_2"]["length"] == 10.0
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "missing::length",
+            "dev_TESTLIB_DUMMY_CONNECTOR_1::missing",
+            "dev_TESTLIB_DUMMY_CONNECTOR_1::length::extra",
+        ],
+    )
+    def test_set_param_rejects_invalid_hierarchical_paths(
+        self, simple_netlist: smdev.NetList, name: str
+    ) -> None:
+        circuit = smdev.Circuit.build()
+        circuit.set_netlist(simple_netlist)
+
+        with pytest.raises(ValueError, match="Could not set parameter"):
+            circuit.set_param(name, 25.0)
 
     def test_run_connects_two_compatible_ports(
         self,
@@ -406,10 +652,169 @@ class TestCircuit:
     ) -> None:
         _ = dummy_device_list
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", simple_netlist)
+        circuit.set_netlist(simple_netlist)
 
         g = circuit.run()
         assert isinstance(g, GeomGroup)
+
+    @pytest.mark.parametrize("use_references", [False, True])
+    def test_nested_circuits_connect_and_place_geometry(
+        self,
+        dummy_device_list: dict[str, type[smdev.Device]],
+        monkeypatch: pytest.MonkeyPatch,
+        use_references: bool,
+    ) -> None:
+        _ = dummy_device_list
+        connections: list[tuple[float, float, float, float]] = []
+
+        def connector(port1: smdev.DevicePort, port2: smdev.DevicePort) -> GeomGroup:
+            connections.append((port1.x0, port1.y0, port2.x0, port2.y0))
+            poly = sp.Box(
+                min(port1.x0, port2.x0),
+                min(port1.y0, port2.y0),
+                abs(port1.x0 - port2.x0),
+                abs(port1.y0 - port2.y0),
+            ).to_poly()
+            poly.layer = 9
+            group = GeomGroup()
+            group.add(poly)
+            return group
+
+        monkeypatch.setattr(dm, "_dummy_connector", connector)
+        child_entries = [
+            smdev.NetListEntry(
+                devname="TESTLIB_TWO_PORT",
+                x0=0,
+                y0=0,
+                rot="E",
+                portmap={"p1": "in", "p2": "out"},
+                params={},
+            )
+        ]
+        child = smdev.NetList("child", child_entries)
+        child.set_external_ports(["in", "out"])
+        parent_entries = [
+            smdev.NetListEntry(
+                devname="X",
+                x0=0,
+                y0=0,
+                rot="E",
+                portmap={"in": "input", "out": "link"},
+                params={"NETLIST": child},
+            ),
+            smdev.NetListEntry(
+                devname="X",
+                x0=30,
+                y0=0,
+                rot="E",
+                portmap={"in": "link", "out": "output"},
+                params={"NETLIST": child},
+            ),
+        ]
+        parent = smdev.NetList("parent", parent_entries)
+        parent.set_external_ports(["input", "output"])
+        circuit = smdev.Circuit.build()
+        circuit.use_references = use_references
+        circuit.set_param("NETLIST", parent)
+        circuit.set_param("dev_X_2::dev_TESTLIB_TWO_PORT_1::length", 4)
+
+        geometry = circuit.run().flatten()
+
+        assert connections == [(10, 10, 30, 0)]
+        assert set(circuit._ports) == {"input", "output"}
+        assert circuit.get_port("input").x0 == 0
+        assert circuit.get_port("input").y0 == 0
+        assert circuit.get_port("output").x0 == 34
+        assert circuit.get_port("output").y0 == 4
+        assert len(geometry.group) == 3
+        boxes = [
+            (shape.layer, box.llx, box.lly, box.width, box.height)
+            for shape in geometry.group
+            for box in [shape.bounding_box()]
+        ]
+        for box, expected in zip(
+            boxes,
+            [(1, 0, 0, 10, 10), (1, 30, 0, 4, 4), (9, 10, 0, 20, 10)],
+            strict=True,
+        ):
+            assert box == pytest.approx(expected)
+
+    @pytest.mark.parametrize("modified_instance", [1, 2])
+    def test_tutorial_nested_circuits_use_independent_parameters(
+        self,
+        default_device_list: dict[str, type[smdev.Device]],
+        modified_instance: int,
+    ) -> None:
+        default_device_list["BASELIB_DCPL"] = DirectionalCoupler
+        default_device_list["BASELIB_FGC"] = FocusingGratingCoupler
+        child = smdev.NetList(
+            "my_circuit",
+            [
+                smdev.NetListEntry(
+                    "BASELIB_DCPL",
+                    0,
+                    0,
+                    "E",
+                    {"p1": "inA", "p4": "inB", "p3": "AAA", "p2": "BBB"},
+                    {},
+                ),
+                smdev.NetListEntry("BASELIB_FGC", -30, 0, "W", {"p1": "inA"}, {}),
+                smdev.NetListEntry("BASELIB_FGC", 30, -15, "S", {"p1": "inB"}, {}),
+            ],
+        )
+        child.set_aligned_ports(["inA"])
+        child.set_external_ports(["AAA", "BBB"])
+        parent = smdev.NetList(
+            "bigger",
+            [
+                smdev.NetListEntry(
+                    "X", 0, 0, "E", {"AAA": "input", "BBB": "link"}, {"NETLIST": child}
+                ),
+                smdev.NetListEntry(
+                    "X",
+                    40,
+                    12,
+                    "E",
+                    {"AAA": "link", "BBB": "output"},
+                    {"NETLIST": child},
+                ),
+            ],
+        )
+        parent.set_external_ports(["input", "output"])
+        circuit = smdev.Circuit.build()
+        circuit.set_param("NETLIST", parent)
+        circuit.set_param(f"dev_X_{modified_instance}::dev_BASELIB_DCPL_1::gap", 0.1)
+
+        result = circuit.run()
+
+        assert len(result.group) == 1
+        parent_ref = result.group[0]
+        assert isinstance(parent_ref, sp.SRef)
+        first, second, *connector = parent_ref.group.group
+        assert isinstance(first, sp.SRef)
+        assert isinstance(second, sp.SRef)
+        assert (first.x0, first.y0, second.x0, second.y0) == (0, 0, 40, 12)
+        assert connector
+        assert all(isinstance(shape, sp.Poly) for shape in connector)
+        first_coupler = first.group.group[0]
+        second_coupler = second.group.group[0]
+        assert isinstance(first_coupler, sp.SRef)
+        assert isinstance(second_coupler, sp.SRef)
+        expected_heights = (5.7, 6.1) if modified_instance == 1 else (6.1, 5.7)
+        assert (
+            first_coupler.bounding_box().height,
+            second_coupler.bounding_box().height,
+        ) == pytest.approx(expected_heights)
+        assert result.get_layer_list() == {1, 3}
+        assert set(circuit._ports) == {"input", "output"}
+        assert circuit.get_port("input").x0 == pytest.approx(-17)
+        assert circuit.get_port("output").x0 == pytest.approx(57)
+        assert circuit.get_port("input").y0 == pytest.approx(
+            -2.7 if modified_instance == 1 else -2.9
+        )
+        assert circuit.get_port("output").y0 == pytest.approx(
+            14.7 if modified_instance == 2 else 14.9
+        )
 
     def test_run_warns_for_unconnected_non_external_port(
         self,
@@ -423,7 +828,7 @@ class TestCircuit:
         ]
         netlist = smdev.NetList("warn", netlist_entries)
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", netlist)
+        circuit.set_netlist(netlist)
 
         with pytest.warns(UserWarning, match="unconnected"):
             _ = circuit.run()
@@ -442,10 +847,102 @@ class TestCircuit:
         netlist.set_external_ports(["wire_out"])
 
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", netlist)
+        circuit.set_netlist(netlist)
         circuit.run()
 
         assert "wire_out" in circuit._ports
+
+    def test_cached_nested_circuits_restore_external_ports(
+        self, dummy_device_list: dict[str, type[smdev.Device]]
+    ) -> None:
+        child_entries = [
+            smdev.NetListEntry(
+                devname="TESTLIB_TWO_PORT",
+                x0=0,
+                y0=0,
+                rot="E",
+                portmap={"p1": "in", "p2": "out"},
+                params={},
+            )
+        ]
+        child = smdev.NetList("child", child_entries)
+        child.set_external_ports(["in", "out"])
+        parent_entries = [
+            smdev.NetListEntry(
+                devname="X",
+                x0=0,
+                y0=0,
+                rot="E",
+                portmap={"in": "first_in", "out": "first_out"},
+                params={"NETLIST": child},
+            ),
+            smdev.NetListEntry(
+                devname="X",
+                x0=30,
+                y0=0,
+                rot="E",
+                portmap={"in": "second_in", "out": "second_out"},
+                params={"NETLIST": child},
+            ),
+        ]
+        parent = smdev.NetList("parent", parent_entries)
+        parent.set_external_ports(["first_in", "first_out", "second_in", "second_out"])
+        circuit = smdev.Circuit.build()
+        circuit.set_netlist(parent)
+
+        first_geometry = circuit.run()
+        second = smdev.Circuit.build()
+        second.set_netlist(parent)
+        second.set_position(100, 20)
+        second_geometry = second.run()
+
+        first_ref = first_geometry.group[0]
+        second_ref = second_geometry.group[0]
+        assert isinstance(first_ref, sp.SRef)
+        assert isinstance(second_ref, sp.SRef)
+        assert first_ref.cellname == second_ref.cellname
+        first_child, second_child = first_ref.group.group
+        assert isinstance(first_child, sp.SRef)
+        assert isinstance(second_child, sp.SRef)
+        assert first_child.cellname == second_child.cellname
+        assert len(first_geometry.flatten().group) == 2
+        assert set(second._ports) == set(parent.external_ports)
+        assert second.get_port("first_out").x0 == 110
+        assert second.get_port("first_out").y0 == 30
+        assert second.get_port("second_out").x0 == 140
+        assert second.get_port("second_out").y0 == 30
+
+    @pytest.mark.parametrize("use_references", [False, True])
+    def test_changed_netlist_replaces_exported_ports(
+        self, dummy_device_list: dict[str, type[smdev.Device]], use_references: bool
+    ) -> None:
+        def netlist(name: str, port: str) -> smdev.NetList:
+            netlist_entries = [
+                smdev.NetListEntry(
+                    "TESTLIB_DUMMY_CONNECTOR", 0, 0, "E", {"io": port}, {}
+                )
+            ]
+            result = smdev.NetList(name, netlist_entries)
+            result.set_external_ports([port])
+            return result
+
+        circuit = smdev.Circuit.build()
+        circuit.use_references = use_references
+        first_netlist = netlist("first", "old")
+        circuit.set_netlist(first_netlist)
+        circuit.run()
+        circuit.set_netlist(netlist("second", "new"))
+        circuit.run()
+
+        assert set(circuit._ports) == {"new"}
+        assert circuit.get_localport("new").name == "new"
+
+        original = smdev.Circuit.build()
+        original.use_references = use_references
+        original.set_netlist(first_netlist)
+        original.run()
+        assert set(original._ports) == {"old"}
+        assert original.get_localport("old").name == "old"
 
     def test_run_aligns_ports_on_y_when_aligned_wire_exists(
         self,
@@ -474,7 +971,7 @@ class TestCircuit:
         netlist.set_aligned_ports(["w1"])
 
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", netlist)
+        circuit.set_netlist(netlist)
         circuit.run()
 
         assert captured
@@ -508,7 +1005,7 @@ class TestCircuit:
         netlist.set_aligned_ports(["w1"])
 
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", netlist)
+        circuit.set_netlist(netlist)
         circuit.run()
 
         assert captured
@@ -542,7 +1039,7 @@ class TestCircuit:
         netlist.set_path("w1", [10.0, 0.0, 0.0])
 
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", netlist)
+        circuit.set_netlist(netlist)
         _ = circuit.run()
 
         # One call for the virtual point, one final call to the destination port.
@@ -580,7 +1077,7 @@ class TestCircuit:
         netlist.set_path("w1", [10.0, 0.0, 0.0, 10.0, 5.0, 90])
 
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", netlist)
+        circuit.set_netlist(netlist)
         _ = circuit.run()
 
         assert len(captured) == 3
@@ -609,11 +1106,69 @@ class TestCircuit:
         dev._seq = seq
 
         circuit = smdev.Circuit.build()
-        circuit.set_param("NETLIST", simple_netlist)
+        circuit.set_netlist(simple_netlist)
         circuit.run()
 
         # Two devices in the netlist, so should be reset twice
         assert captured == [True, True]
+
+    def test_set_netlist_parameter_updates_netlist(
+        self,
+        simple_netlist: smdev.NetList,
+        dummy_device_list: dict[str, type[smdev.Device]],
+    ) -> None:
+        circuit = smdev.Circuit.build()
+
+        circuit.set_param("NETLIST", simple_netlist)
+        assert circuit._netlist == simple_netlist
+        assert "NETLIST" not in circuit._p
+        assert set(circuit._p) == {
+            "dev_TESTLIB_DUMMY_CONNECTOR_1",
+            "dev_TESTLIB_DUMMY_CONNECTOR_2",
+        }
+
+    def test_copy(
+        self,
+        dummy_device_list: dict[str, type[smdev.Device]],
+    ) -> None:
+        _ = dummy_device_list
+        netlist_entries = [
+            smdev.NetListEntry(
+                "TESTLIB_DUMMY_CONNECTOR", 0.0, 0.0, "E", {"io": "w1"}, {}
+            ),
+            smdev.NetListEntry(
+                "TESTLIB_DUMMY_CONNECTOR", 20.0, 0.0, "W", {"io": "w1"}, {}
+            ),
+        ]
+        netlist = smdev.NetList("multi_path_route", netlist_entries)
+        netlist.set_path("w1", [10.0, 0.0, 0.0, 10.0, 5.0, 90])
+
+        circuit = smdev.Circuit.build()
+        circuit.set_netlist(netlist)
+        _ = circuit.run()
+
+        cur_hash = hash(circuit)
+        copied_circuit = circuit.copy()
+        param_names = circuit._netlist_parameter_names
+        copied_param_names = copied_circuit._netlist_parameter_names
+
+        assert copied_param_names == param_names
+        assert copied_param_names is not param_names
+        assert hash(circuit) == cur_hash
+        assert hash(copied_circuit) == cur_hash
+        for entry, copied_entry in zip(
+            circuit._netlist.entry_list,
+            copied_circuit._netlist.entry_list,
+            strict=True,
+        ):
+            assert copied_entry.devname == entry.devname
+            assert copied_entry.x0 == entry.x0
+            assert copied_entry.y0 == entry.y0
+            assert copied_entry.rot == entry.rot
+            assert copied_entry.portmap == entry.portmap
+            assert copied_entry.portmap is not entry.portmap
+            assert copied_entry.params == entry.params
+            assert copied_entry.params is not entry.params
 
 
 class TestDeviceLibraryExports:

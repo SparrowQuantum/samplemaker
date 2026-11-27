@@ -43,7 +43,7 @@ netlist.set_external_ports(["AAA", "BBB"])
 # Now let's create a circuit, which is also a Device and can be placed inside netlists!
 cir = smdev.Circuit.build()
 # We need to pass the NETLIST parameter
-cir.set_param("NETLIST", netlist)
+cir.set_netlist(netlist)
 
 # Here we go
 g = cir.run()
@@ -63,7 +63,7 @@ elist = [
 netlist2 = smdev.NetList("bigger", elist)
 
 cir2 = smdev.Circuit.build()
-cir2.set_param("NETLIST", netlist2)
+cir2.set_netlist(netlist2)
 
 # Now suppose we want to change the gap of the second beam splitter, how do we do that?
 # Namespaces separated by ::

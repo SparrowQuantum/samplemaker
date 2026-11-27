@@ -19,6 +19,7 @@ def reset_samplemaker() -> None:
     samplemaker.LayoutPool.clear()
     samplemaker._DevicePool.clear()
     samplemaker._DeviceLocalParamPool.clear()
+    samplemaker._DeviceLocalPortPool.clear()
     samplemaker._DeviceCountPool.clear()
     samplemaker._BoundingBoxPool.clear()
 

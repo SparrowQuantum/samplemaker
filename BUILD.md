@@ -17,6 +17,10 @@ Boost.Polygon and is exposed to Python via pybind11. The project uses:
 
 ## Local Development Build
 
+### Nix
+
+Run `nix build` to build the Python package and run its pytest and mypy checks.
+
 ### Prerequisites
 - Python 3.10 or later
 - CMake 3.15 or later

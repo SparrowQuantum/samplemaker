@@ -47,7 +47,7 @@ nlist = smdev.NetList("SimpleCircuit", elist)
 nlist.set_aligned_ports(["in"])
 
 cir = smdev.Circuit.build()
-cir.set_param("NETLIST", nlist)
+cir.set_netlist(nlist)
 
 # Now we make a table of that circuit
 rowv = {"dev_BASELIB_DCPL_1::gap": np.array([0.1, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22])}

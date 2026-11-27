@@ -93,7 +93,7 @@ import pickle  # for caching
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
-from typing import Any, TypeAlias
+from typing import TypeAlias
 
 import numpy as np
 
@@ -102,16 +102,22 @@ from samplemaker import (
     _BoundingBoxPool,
     _DeviceCountPool,
     _DeviceLocalParamPool,
+    _DeviceLocalPortPool,
     _DevicePool,
 )
 from samplemaker.devices import Device, DevicePort, IncompatiblePortError
 from samplemaker.gdsreader import GDSReader
 from samplemaker.gdswriter import GDSWriter
 from samplemaker.makers import make_aref, make_circle, make_path, make_text
+from samplemaker.sequencer import require_number
 from samplemaker.shapes import Box, GeomGroup, SRef, _DumpContext, _fingerprint
 
-TAB_POS_TYPE: TypeAlias = list[list[tuple[float, float]]]
-TAB_POS_INPUT_TYPE: TypeAlias = Sequence[Sequence[Sequence[float]]]
+_TablePositions: TypeAlias = list[list[tuple[float, float]]]
+_TablePositionInput: TypeAlias = Sequence[Sequence[Sequence[float]]]
+_WriteFieldInfo: TypeAlias = tuple[float, float, float, int, float]
+_Coordinate: TypeAlias = tuple[float, float]
+_PortMapRow: TypeAlias = list[dict[str, DevicePort]]
+_RowGeometries: TypeAlias = list[GeomGroup]
 
 
 class Marker:
@@ -213,6 +219,9 @@ class MarkerSet(Marker):
         self.dev.use_references = True
         g = self.dev.run()
         sref = g.group[0]
+        if not isinstance(sref, SRef):
+            msg = f"Expected sref to be an instance of SRef. Got {type(sref)} instead."
+            raise TypeError(msg)
         if self.mset == 2:
             return make_aref(
                 self.x0,
@@ -339,8 +348,8 @@ class DeviceTableAnnotations:
         cols: int,
         x0: float,
         y0: float,
-        rowdict: Mapping[str, Sequence[Any] | np.ndarray],
-        coldict: Mapping[str, Sequence[Any] | np.ndarray],
+        rowdict: Mapping[str, Sequence[object] | np.ndarray],
+        coldict: Mapping[str, Sequence[object] | np.ndarray],
     ) -> GeomGroup:
         """Render the text for a given element in a table.
 
@@ -361,9 +370,9 @@ class DeviceTableAnnotations:
             X-Position of the item on the table.
         y0 : float
             Y-Position of the item on the table.
-        rowdict : Mapping[str, Sequence[Any]]
+        rowdict : Mapping[str, Sequence[object]]
             The dictionary associating the variables and values that change along rows.
-        coldict : Mapping[str, Sequence[Any]]
+        coldict : Mapping[str, Sequence[object]]
             The dictionary associating the variables and values that change along
             columns.
 
@@ -382,12 +391,14 @@ class DeviceTableAnnotations:
         for v in range(len(self.colvars)):
             pstr = "%C" + str(v)
             rval = coldict[self.colvars[v]][j]
+            rval = require_number(rval, f"coldict['{self.colvars[v]}'][{j}]")
             rval = round(rval * 1000) / 1000
             coltxt = coltxt.replace(pstr, str(rval))
             rowtxt = rowtxt.replace(pstr, str(rval))
         for v in range(len(self.rowvars)):
             pstr = "%R" + str(v)
             rval = rowdict[self.rowvars[v]][i]
+            rval = require_number(rval, f"rowdict['{self.rowvars[v]}'][{i}]")
             rval = round(rval * 1000) / 1000
             coltxt = coltxt.replace(pstr, str(rval))
             rowtxt = rowtxt.replace(pstr, str(rval))
@@ -432,8 +443,8 @@ class DeviceTable:
         dev: Device,
         nrow: int,
         ncol: int,
-        rowvars: Mapping[str, Sequence[Any] | np.ndarray],
-        colvars: Mapping[str, Sequence[Any] | np.ndarray],
+        rowvars: Mapping[str, Sequence[object] | np.ndarray],
+        colvars: Mapping[str, Sequence[object] | np.ndarray],
     ) -> None:
         """Initialize the DeviceTable class.
 
@@ -464,17 +475,19 @@ class DeviceTable:
         self.row_linkports: Sequence[tuple[str, str]] = ()
         self.col_alignports = False
         self.row_alignports = False
-        self.device_rotation = 0
-        self.annotations = None
+        self.device_rotation: float = 0.0
+        self.annotations: DeviceTableAnnotations | None = None
         self.use_references = True
-        self.pos_xy = [[(0, 0) for _ in range(ncol)] for _ in range(nrow)]
-        self._external_ports = {}
-        self._geometries = []
-        self._portmap = []
+        self.pos_xy: list[list[_Coordinate]] = [
+            [(0, 0) for _ in range(ncol)] for _ in range(nrow)
+        ]
+        self._external_ports: dict[str, DevicePort] = {}
+        self._geometries: list[_RowGeometries] = []
+        self._portmap: list[_PortMapRow] = []
         self._backup_dev = deepcopy(dev)  # Keep it to reset the whole thing
         self._getgeom_ran = False
 
-    def set_table_positions(self, positions: TAB_POS_INPUT_TYPE) -> None:
+    def set_table_positions(self, positions: _TablePositionInput) -> None:
         """Define the position of each element in the table.
 
         Uses a 3-dimensional Sequence of the kind pos[i][j][k] where i,j control the row
@@ -482,7 +495,7 @@ class DeviceTable:
 
         Parameters
         ----------
-        positions : TAB_POS_INPUT_TYPE
+        positions : _TablePositionInput
             The sequence describing the position of each element in the table.
 
         Returns
@@ -814,7 +827,7 @@ class DeviceTable:
         by: float,
         x0: float = 0,
         y0: float = 0,
-    ) -> TAB_POS_TYPE:
+    ) -> _TablePositions:
         """Create coordinates for a regular table array.
 
         Returns a nested list that can be passed to `DeviceTable.set_table_positions`.
@@ -840,7 +853,7 @@ class DeviceTable:
 
         Returns
         -------
-        TAB_POS_TYPE
+        _TablePositions
             3-dimensional list of positions.
 
         """
@@ -848,6 +861,71 @@ class DeviceTable:
             [(x0 + i * ax + j * bx, y0 + i * ay + j * by) for i in range(cols)]
             for j in range(rows)
         ]
+
+
+class _CacheValidationError(Exception):
+    """Exception raised when cache validation fails."""
+
+
+def _ensure_dict_str_keys(entry: object, entry_name: str) -> None:
+    if not isinstance(entry, dict):
+        msg = f"{entry_name} is not a dictionary."
+        raise _CacheValidationError(msg)
+    if not all(isinstance(k, str) for k in entry):
+        msg = f"{entry_name} contains non-string keys."
+        raise _CacheValidationError(msg)
+
+
+def _ensure_dict_int_keys(entry: object, entry_name: str) -> None:
+    if not isinstance(entry, dict):
+        msg = f"{entry_name} is not a dictionary."
+        raise _CacheValidationError(msg)
+    if not all(isinstance(k, int) for k in entry):
+        msg = f"{entry_name} contains non-integer keys."
+        raise _CacheValidationError(msg)
+
+
+def _validate_cache_data(cache_data: object) -> None:
+    if not isinstance(cache_data, tuple) or len(cache_data) != 6:
+        msg = "Cache data is corrupted or outdated."
+        raise _CacheValidationError(msg)
+
+    cached_layoutpool = cache_data[0]
+    _ensure_dict_str_keys(cached_layoutpool, "Cached layout pool")
+    if not all(isinstance(v, GeomGroup) for v in cached_layoutpool.values()):
+        msg = "Cached layout pool contains invalid entries."
+        raise _CacheValidationError(msg)
+
+    cached_devicecountpool = cache_data[1]
+    _ensure_dict_str_keys(cached_devicecountpool, "Cached device count pool")
+    if not all(isinstance(v, int) for v in cached_devicecountpool.values()):
+        msg = "Cached device count pool contains invalid entries."
+        raise _CacheValidationError(msg)
+
+    cached_devicelocalparampool = cache_data[2]
+    _ensure_dict_int_keys(cached_devicelocalparampool, "Cached device local param pool")
+    for v in cached_devicelocalparampool.values():
+        _ensure_dict_str_keys(v, "Cached device local param entry")
+
+    cached_devicelocalportpool = cache_data[3]
+    _ensure_dict_int_keys(cached_devicelocalportpool, "Cached device local port pool")
+    for v in cached_devicelocalportpool.values():
+        _ensure_dict_str_keys(v, "Cached device local port entry")
+        if not all(isinstance(vv, DevicePort) for vv in v.values()):
+            msg = "Cached device local port entry contains invalid entries."
+            raise _CacheValidationError(msg)
+
+    cached_devicepool = cache_data[4]
+    _ensure_dict_int_keys(cached_devicepool, "Cached device pool")
+    if not all(isinstance(v, str) for v in cached_devicepool.values()):
+        msg = "Cached device pool contains invalid entries."
+        raise _CacheValidationError(msg)
+
+    cached_boundingboxpool = cache_data[5]
+    _ensure_dict_str_keys(cached_boundingboxpool, "Cached bounding box pool")
+    if not all(isinstance(v, Box) for v in cached_boundingboxpool.values()):
+        msg = "Cached bounding box pool contains invalid entries."
+        raise _CacheValidationError(msg)
 
 
 class Mask:
@@ -864,7 +942,7 @@ class Mask:
         """
         self.name = name
         self.mainsymbol = "CELL00"
-        self.writefields = []
+        self.writefields: list[_WriteFieldInfo] = []
         self.cache = False
         self.clear()  # A new mask clears the pool
 
@@ -879,6 +957,7 @@ class Mask:
         LayoutPool.clear()
         _DeviceCountPool.clear()
         _DeviceLocalParamPool.clear()
+        _DeviceLocalPortPool.clear()
         _DevicePool.clear()
         _BoundingBoxPool.clear()
         self.writefields.clear()
@@ -892,7 +971,7 @@ class Mask:
         script multiple times). Additionally, the cache system re-uses the GDS bitstream
         from a previously generated GDS file.
 
-        Any changes made to the devices or instances are automatically detected
+        object changes made to the devices or instances are automatically detected
         and updated even if the cache is on.
 
         This option saves a lot of time when executing scripts while making minor
@@ -1042,6 +1121,7 @@ class Mask:
             LayoutPool,
             _DeviceCountPool,
             _DeviceLocalParamPool,
+            _DeviceLocalPortPool,
             _DevicePool,
             _BoundingBoxPool,
         )
@@ -1053,7 +1133,12 @@ class Mask:
         try:
             with _Path(self.name + ".cache").open("rb") as cachefile:
                 print("Loading cache data...")
-                data = pickle.load(cachefile)  # noqa: S301, to be replaced
+                try:
+                    data = pickle.load(cachefile)  # noqa: S301, to be replaced
+                except (pickle.UnpicklingError, EOFError) as e:
+                    msg = "Cache data could not be unpickled."
+                    raise _CacheValidationError(msg) from e
+                _validate_cache_data(data)
                 print("Done.")
                 for key in data[0]:
                     LayoutPool[key] = data[0][key]
@@ -1063,11 +1148,21 @@ class Mask:
                 for key in data[2]:
                     _DeviceLocalParamPool[key] = data[2][key]
                 for key in data[3]:
-                    _DevicePool[key] = data[3][key]
+                    _DeviceLocalPortPool[key] = data[3][key]
                 for key in data[4]:
-                    _BoundingBoxPool[key] = data[4][key]
+                    _DevicePool[key] = data[4][key]
+                for key in data[5]:
+                    _BoundingBoxPool[key] = data[5][key]
         except OSError:
-            pass
+            print("Failed to load cache data.")
+        except _CacheValidationError as e:
+            print(f"Cache validation failed: {e}")
+            print("Attempting to remove cache file...")
+            try:
+                _Path(self.name + ".cache").unlink()
+                print("Cache file removed.")
+            except OSError:
+                print("Failed to remove cache file.")
 
     def __cleanup_cellref(self) -> None:
         # Remove useless references
@@ -1089,6 +1184,7 @@ class Mask:
         for hsh in unref_hsh:
             # _DeviceCountPool.pop(hsh,None)
             _DeviceLocalParamPool.pop(hsh, None)
+            _DeviceLocalPortPool.pop(hsh, None)
             _DevicePool.pop(hsh, None)
 
     def export_gds(self) -> None:

@@ -6,11 +6,13 @@ viewers.
 """
 
 import warnings
+from collections.abc import Callable
+from typing import cast
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import PatchCollection
-from matplotlib.patches import Arrow, Circle, Ellipse, PathPatch, Polygon
+from matplotlib.patches import Arrow, Circle, Ellipse, Patch, PathPatch, Polygon
 from matplotlib.textpath import TextPath
 from matplotlib.widgets import Slider
 
@@ -18,7 +20,7 @@ import samplemaker.shapes as smsh
 from samplemaker.devices import Device, DevicePort
 from samplemaker.shapes import GeomGroup
 
-_ViewerCurrentSliders: list[Slider] = []
+_ViewerCurrentSliders: dict[str, Slider] = {}
 _ViewerCurrentDevice: Device | None = None
 _ViewerCurrentAxes: plt.Axes | None = None
 
@@ -26,7 +28,7 @@ _ViewerCurrentAxes: plt.Axes | None = None
 def __get_geom_patches(grp: GeomGroup) -> list:
     prop_cycle = plt.rcParams["axes.prop_cycle"]
     colors = prop_cycle.by_key()["color"]
-    patches = []
+    patches: list[Patch] = []
     for geom in grp.group:
         if geom.layer < 0:
             continue
@@ -49,9 +51,9 @@ def __get_geom_patches(grp: GeomGroup) -> list:
             warnings.warn(msg, stacklevel=3, category=UserWarning)
         elif isinstance(geom, smsh.Ring):
             gpl = geom.to_polygon()
-            g = gpl.group[0]
-            n = int(len(g.data) / 2)
-            xy = np.reshape(g.data, (n, 2))
+            poly = cast("smsh.Poly", gpl.group[0])
+            n = int(len(poly.data) / 2)
+            xy = np.reshape(poly.data, (n, 2))
             tmpp = Polygon(xy, closed=True)
             tmpp.set_facecolor(lcolor)
             patches.append(tmpp)
@@ -112,38 +114,40 @@ def view_geometry(grp: GeomGroup) -> None:
     plt.show()
 
 
-def __update_scrollbar(_val: float) -> None:
-    dev = _ViewerCurrentDevice
-    ax = _ViewerCurrentAxes
-    if dev is None or ax is None:
-        return
+def _update_scrollbar_factory(param: str) -> Callable[[float], None]:
+    """Get an update function for the specified parameter."""
 
-    for i, param in enumerate(dev._p):
-        dev.set_param(param, _ViewerCurrentSliders[i].val)
+    def __update_scrollbar(_val: float) -> None:
+        dev = _ViewerCurrentDevice
+        ax = _ViewerCurrentAxes
+        if dev is None or ax is None:
+            return
 
-    dev.initialize()
-    g = dev.run()
+        dev.set_param(param, _val)
 
-    patches = __get_geom_patches(g)
-    patches += __get_device_ports_patches(dev)
-    p = PatchCollection(patches, match_original=True)
+        dev.initialize()
+        g = dev.run()
 
-    ax.clear()
-    ax.add_collection(p)
-    ax.grid(True)
-    ax.set_title(dev._name)
+        patches = __get_geom_patches(g)
+        patches += __get_device_ports_patches(dev)
+        p = PatchCollection(patches, match_original=True)
 
-    ax.margins(0.02)
-    ax.autoscale_view()
+        ax.clear()
+        ax.add_collection(p)
+        ax.grid(True)
+        ax.set_title(dev.get_name())
 
-    ax.figure.canvas.draw_idle()
+        ax.margins(0.02)
+        ax.autoscale_view()
+
+        ax.figure.canvas.draw_idle()
+
+    return __update_scrollbar
 
 
 def _build_device(devcl: Device | type[Device]) -> Device:
     if isinstance(devcl, Device):
-        dev = devcl.build()  # Device copy with default parameters
-        for param, value in devcl._p.items():
-            dev.set_param(param, value)
+        dev = devcl.copy()
     elif isinstance(devcl, type) and issubclass(devcl, Device):
         dev = devcl.build()
     else:
@@ -194,32 +198,39 @@ def inspect_device(devcl: Device | type[Device]) -> None:
 
     ax.add_collection(p)
     ax.grid(True)
-    ax.set_title(dev._name)
+    ax.set_title(dev.get_name())
 
     ax.set_aspect("equal", adjustable="datalim")
     ax.margins(0.02)
 
     plt.subplots_adjust(bottom=0.5)
 
-    _ViewerCurrentSliders = []
-    n_params = len(dev._p.keys())
-    for pn, param in enumerate(dev._p.keys()):
+    _ViewerCurrentSliders = {}
+    param_dict = dev.get_params(cast_types=False)
+    n_params = len(param_dict)
+    for pn, param in enumerate(param_dict.keys()):
+        pval = dev.get_param(param)
+        try:
+            maxv = float(pval) * 10  # type: ignore[arg-type]
+        except TypeError:
+            # Likely not a numeric parameter, skip it
+            continue
+        minv: float | int = 0
         ax_amp = plt.axes((0.25, 0.05 + pn * 1.0 / n_params * 0.35, 0.65, 0.03))
-        minv = 0
-        maxv = dev._p[param] * 10
         prange = dev._prange[param]
         if prange[1] != np.inf:
             maxv = prange[1]
         if prange[0] != 0:
             minv = prange[0]
 
-        valstep = dev._p[param] / 10
+        valstep = pval / 10  # type: ignore[operator]
         if valstep == 0:
             valstep = 0.1
-        if isinstance(dev._ptype[param], int):
+        ptype = dev._ptype[param]
+        if ptype is int:
             maxv = int(maxv)
             valstep = 1
-        if isinstance(dev._ptype[param], bool):
+        elif ptype is bool:
             maxv = 1
             valstep = 1
         if maxv == 0:
@@ -229,11 +240,12 @@ def inspect_device(devcl: Device | type[Device]) -> None:
             param,
             minv,
             maxv,
-            valinit=dev._p[param],
+            valinit=pval,  # type: ignore[arg-type]
             color="green",
             valstep=valstep,
         )
-        samp.on_changed(__update_scrollbar)
-        _ViewerCurrentSliders.append(samp)
+        update_fun = _update_scrollbar_factory(param)
+        samp.on_changed(update_fun)
+        _ViewerCurrentSliders[param] = samp
 
     plt.show()

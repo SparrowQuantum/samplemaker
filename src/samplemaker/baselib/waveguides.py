@@ -7,7 +7,6 @@ This module can be used as template to develop different waveguide libraries.
 
 import math
 from copy import deepcopy
-from typing import Any
 
 import numpy as np
 
@@ -21,13 +20,12 @@ from samplemaker.shapes import GeomGroup
 # and its dictionary.
 
 
-# Let's define some options for the BaseWaveguide sequencer
-def create_base_waveguide_options() -> smseq.OPTIONS_TYPE:
+def create_base_waveguide_options() -> dict[str, object]:
     """Create a dictionary with the default options for the BaseWaveguide sequencer.
 
     Returns
     -------
-    smseq.OPTIONS_TYPE
+    dict[str, object]
         The default options for the BaseWaveguide sequencer.
 
     """
@@ -105,18 +103,23 @@ def base_waveguide_straight(
         The waveguide geometry.
 
     """
-    dist = args[0]
+    dist = smseq.require_number(args[0], "S length")
     if dist == 0:
         return GeomGroup()
 
+    x = smseq.require_number(state["x"], "state['x']")
+    y = smseq.require_number(state["y"], "state['y']")
+    angle = smseq.require_number(state["a"], "state['a']")
+    width = smseq.require_number(state["w"], "state['w']")
+    layer = smseq.require_integer(options["wgLayer"], "options['wgLayer']")
     # Let's draw a simple rectangle
-    wg = sm.make_rect(0, 0, dist, state["w"], numkey=4, layer=options["wgLayer"])
+    wg = sm.make_rect(0, 0, dist, width, numkey=4, layer=layer)
     # Now rotate and translate according to pointer orientation
-    wg.rotate_translate(state["x"], state["y"], state["a"])
+    wg.rotate_translate(x, y, angle)
     # Finally, update the state
-    state["x"] += dist * math.cos(math.radians(state["a"]))
-    state["y"] += dist * math.sin(math.radians(state["a"]))
-    state["__OL__"] += dist
+    state["x"] = x + dist * math.cos(math.radians(angle))
+    state["y"] = y + dist * math.sin(math.radians(angle))
+    state["__OL__"] = smseq.require_number(state["__OL__"], "state['__OL__']") + dist
     return wg
 
 
@@ -140,10 +143,18 @@ def base_waveguide_bend(
         The waveguide geometry.
 
     """
-    angle = args[0]
-    radius = args[1]
+    angle = smseq.require_number(args[0], "B angle")
     if angle == 0:
         return GeomGroup()
+    radius = smseq.require_number(args[1], "B radius")
+    x = smseq.require_number(state["x"], "state['x']")
+    y = smseq.require_number(state["y"], "state['y']")
+    direction = smseq.require_number(state["a"], "state['a']")
+    width = smseq.require_number(state["w"], "state['w']")
+    layer = smseq.require_integer(options["wgLayer"], "options['wgLayer']")
+    resolution = smseq.require_integer(
+        options["bendResolution"], "options['bendResolution']"
+    )
 
     wg = sm.make_arc(
         0,
@@ -151,12 +162,12 @@ def base_waveguide_bend(
         radius,
         radius,
         -90,
-        state["w"],
+        width,
         0,
         abs(angle),
-        vertices=options["bendResolution"],
+        vertices=resolution,
         to_poly=True,
-        layer=options["wgLayer"],
+        layer=layer,
     )
     xf = radius * math.sin(math.radians(abs(angle)))
     yf = radius * (1 - math.cos(math.radians(abs(angle))))
@@ -165,13 +176,15 @@ def base_waveguide_bend(
         yf = -yf
     ept = sm.make_dot(xf, yf)  # helps calculating the end point
     # Now rotate and translate according to pointer orientation
-    wg.rotate_translate(state["x"], state["y"], state["a"])
-    ept.rotate_translate(state["x"], state["y"], state["a"])
+    wg.rotate_translate(x, y, direction)
+    ept.rotate_translate(x, y, direction)
     # Finally, update the state
     state["x"] = ept.x
     state["y"] = ept.y
-    state["a"] += angle
-    state["__OL__"] += radius * 2 * math.pi / 360 * abs(angle)
+    state["a"] = direction + angle
+    state["__OL__"] = smseq.require_number(
+        state["__OL__"], "state['__OL__']"
+    ) + radius * 2 * math.pi / 360 * abs(angle)
 
     return wg
 
@@ -199,13 +212,18 @@ def base_waveguide_cosine_bend(
         The waveguide geometry.
 
     """
-    off = args[0]
-    radius = args[1]
+    off = smseq.require_number(args[0], "C offset")
+    radius = smseq.require_number(args[1], "C radius")
     delta = 0.01  # at the very beginning and at the end go straight by delta
     radius -= delta
     if radius == 0:
         return GeomGroup()
-    npts = options["bendResolution"]
+    npts = smseq.require_integer(options["bendResolution"], "options['bendResolution']")
+    x = smseq.require_number(state["x"], "state['x']")
+    y = smseq.require_number(state["y"], "state['y']")
+    direction = smseq.require_number(state["a"], "state['a']")
+    width = smseq.require_number(state["w"], "state['w']")
+    layer = smseq.require_integer(options["wgLayer"], "options['wgLayer']")
     amp = math.pi * off / 4 / radius
     t = np.linspace(0, 2, npts)
     s = [math.asin(math.tan(math.atan(amp) * x) / amp) for x in t if x < 1]
@@ -214,21 +232,21 @@ def base_waveguide_cosine_bend(
         for x in t
         if x >= 1
     ]
-    s = np.array(s)
-    xpts = s / math.pi * 2 * radius + state["x"]
-    ypts = off * (np.cos(s + math.pi) + 1) / 2 + state["y"]
-    xpts = np.append(xpts[0], xpts + delta)
-    xpts = list(np.append(xpts, xpts[-1] + delta))
-    ypts = np.append(ypts[0], ypts)
-    ypts = list(np.append(ypts, ypts[-1]))
+    s_np = np.array(s)
+    xvals = s_np / math.pi * 2 * radius + x
+    yvals = off * (np.cos(s_np + math.pi) + 1) / 2 + y
+    xvals = np.append(xvals[0], xvals + delta)
+    xpts = list(np.append(xvals, xvals[-1] + delta))
+    yvals = np.append(yvals[0], yvals)
+    ypts = list(np.append(yvals, yvals[-1]))
     ol = np.sum(np.sqrt(np.power(np.ediff1d(xpts), 2) + np.power(np.ediff1d(ypts), 2)))
-    wg = sm.make_path(xpts, ypts, state["w"], to_poly=True, layer=options["wgLayer"])
+    wg = sm.make_path(xpts, ypts, width, to_poly=True, layer=layer)
     outdot = sm.make_dot(xpts[-1], ypts[-1])
-    wg.rotate(state["x"], state["y"], state["a"])
-    outdot.rotate(state["x"], state["y"], state["a"])
+    wg.rotate(x, y, direction)
+    outdot.rotate(x, y, direction)
     state["x"] = outdot.x
     state["y"] = outdot.y
-    state["__OL__"] += ol
+    state["__OL__"] = smseq.require_number(state["__OL__"], "state['__OL__']") + ol
     return wg
 
 
@@ -253,22 +271,24 @@ def base_waveguide_taper(
         The waveguide geometry.
 
     """
-    dist = args[0]
-    wf = args[1]
+    dist = smseq.require_number(args[0], "T length")
     if dist == 0:
         return GeomGroup()
+    wf = smseq.require_number(args[1], "T width")
     if wf < 0:
-        wf = options["defaultWidth"]
-    a = math.radians(state["a"])
-    xf = state["x"] + dist * math.cos(a)
-    yf = state["y"] + dist * math.sin(a)
-    wg = sm.make_tapered_path(
-        [state["x"], xf], [state["y"], yf], [state["w"], wf], layer=options["wgLayer"]
-    )
+        wf = smseq.require_number(options["defaultWidth"], "options['defaultWidth']")
+    x = smseq.require_number(state["x"], "state['x']")
+    y = smseq.require_number(state["y"], "state['y']")
+    width = smseq.require_number(state["w"], "state['w']")
+    layer = smseq.require_integer(options["wgLayer"], "options['wgLayer']")
+    a = math.radians(smseq.require_number(state["a"], "state['a']"))
+    xf = x + dist * math.cos(a)
+    yf = y + dist * math.sin(a)
+    wg = sm.make_tapered_path([x, xf], [y, yf], [width, wf], layer=layer)
     state["x"] = xf
     state["y"] = yf
     state["w"] = wf
-    state["__OL__"] += dist
+    state["__OL__"] = smseq.require_number(state["__OL__"], "state['__OL__']") + dist
     return wg
 
 
@@ -294,10 +314,10 @@ def base_waveguide_offset(
         The waveguide geometry.
 
     """
-    off = args[0]
-    a = math.radians(state["a"] + 90)
-    state["x"] += off * math.cos(a)
-    state["y"] += off * math.sin(a)
+    off = smseq.require_number(args[0], "OFF offset")
+    a = math.radians(smseq.require_number(state["a"], "state['a']") + 90)
+    state["x"] = smseq.require_number(state["x"], "state['x']") + off * math.cos(a)
+    state["y"] = smseq.require_number(state["y"], "state['y']") + off * math.sin(a)
     return GeomGroup()
 
 
@@ -324,12 +344,12 @@ def create_base_waveguide_commands() -> smseq.COMMANDS_DICT_TYPE:
 class BaseWaveguideSequencer(smseq.Sequencer):
     """Simple waveguide sequencer."""
 
-    def __init__(self, seq: list[list[Any]]) -> None:
+    def __init__(self, seq: list[list[object]]) -> None:
         """Create a custom sequencer for simple waveguides.
 
         Parameters
         ----------
-        seq : list[list[Any]]
+        seq : list[list[object]]
             The sequence to be executed.
 
         """

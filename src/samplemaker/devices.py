@@ -174,7 +174,7 @@ exactly as a standard device:
 
     netlist = NetList("my_circuit", [entry1,entry2,entry3])
     cir_dev = Circuit.build() # Note that we build first
-    cir_dev.set_param("NETLIST") = netlist # Set the NETLIST parameter
+    cir_dev.set_netlist(netlist) # Set the netlist
     g = cir_dev.run() # and finally run the device
 
 More details on specifying circuits are given in the tutorials, where it is also
@@ -185,10 +185,10 @@ import inspect
 import math
 import sys
 import warnings
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from copy import deepcopy
 from pathlib import Path as _Path
-from typing import Any, NoReturn, Self, TypeAlias
+from typing import NoReturn, Self, TypeAlias, cast
 
 import numpy as np
 
@@ -197,6 +197,7 @@ from samplemaker import (
     _BoundingBoxPool,
     _DeviceCountPool,
     _DeviceLocalParamPool,
+    _DeviceLocalPortPool,
     _DevicePool,
 )
 from samplemaker.gdswriter import GDSWriter
@@ -264,7 +265,7 @@ class DevicePort:
         # _geometry can carry a full geom to which it is connected:
         self._geometry = GeomGroup()
         # any other port shared with this port in the same device:
-        self._parentports = {}
+        self._parentports: dict[str, DevicePort] = {}
         self.connector_function: ConnectorFunctionType = _empty_connector_function
 
     def set_name(self, name: str) -> None:
@@ -505,22 +506,22 @@ class Device:
 
     def __init__(self) -> None:
         """Initialize a Device. Should never be called by the user."""
-        self._p = {}
-        self._pdescr = {}
-        self._ptype = {}  # stores the type of the parameter
-        self._prange = {}  # stores the min-max range of the parameter in a tuple
-        self._localp = {}
-        self.addlocalparameter("_ports_", {}, "Ports calculated by geom")
-        self._x0 = 0
-        self._y0 = 0
+        self._p: dict[str, object] = {}
+        self._pdescr: dict[str, str] = {}
+        self._ptype: dict[str, type] = {}
+        self._prange: dict[str, tuple[float, float]] = {}
+        self._localp: dict[str, object] = {}
+        self._x0 = 0.0
+        self._y0 = 0.0
         self._hv = True
         self._bf = True
-        self._ports = {}
+        self._ports: dict[str, DevicePort] = {}
+        self._localports: dict[str, DevicePort] = {}
         self._name = ""
         self._description = "No description yet"
         self.use_references = True
 
-    def __flatdict(self, d: dict[str, Any], parent_str: str) -> dict[str, Any]:
+    def __flatdict(self, d: dict[str, object], parent_str: str) -> dict[str, object]:
         flatdict = {}
         for key, value in d.items():
             if isinstance(value, dict):
@@ -614,7 +615,7 @@ class Device:
     def addparameter(
         self,
         param_name: str,
-        default_value: Any,  # noqa: ANN401
+        default_value: object,
         param_description: str,
         param_type: type = float,
         param_range: tuple[float, float] = (0, np.inf),
@@ -657,7 +658,7 @@ class Device:
     def addlocalparameter(
         self,
         param_name: str,
-        default_value: Any,  # noqa: ANN401
+        default_value: object,
         param_description: str,
         param_type: type = float,
         param_range: tuple[float, float] = (0, np.inf),
@@ -668,7 +669,7 @@ class Device:
         ----------
         param_name : str
             The parameter name.
-        default_value : Any
+        default_value : object
             The value of the paramter.
         param_description : str
             Description of the parameter.
@@ -716,7 +717,7 @@ class Device:
         None
 
         """
-        self._localp["_ports_"][port.name] = port
+        self._localports[port.name] = port
 
     def get_localport(self, portname: str) -> DevicePort:
         """Get the local port (i.e. within the geom() function.).
@@ -737,14 +738,13 @@ class Device:
             If the port is not defined by the device.
 
         """
-        lports = self._localp["_ports_"]
-        if portname not in lports:
+        if portname not in self._localports:
             msg = (
                 f"Could not find port named {portname} in {self._name} as it was "
                 f"not defined by device."
             )
             raise ValueError(msg)
-        return lports[portname]
+        return self._localports[portname]
 
     def remove_localport(self, portname: str) -> None:
         """Remove a local port.
@@ -764,23 +764,22 @@ class Device:
             If the port is not defined by the device.
 
         """
-        lports = self._localp["_ports_"]
-        if portname not in lports:
+        if portname not in self._localports:
             msg = (
                 f"Could not find port named {portname} in {self._name} as it was "
                 f"not defined by device."
             )
             raise ValueError(msg)
-        self._localp["_ports_"].pop(portname)
+        self._localports.pop(portname)
 
-    def set_param(self, param_name: str, value: Any) -> None:  # noqa: ANN401
-        """Change a paramter. To be called after build().
+    def set_param(self, param_name: str, value: object) -> None:
+        """Change a parameter. To be called after build().
 
         Parameters
         ----------
         param_name : str
             The parameter to be changed.
-        value : Any
+        value : object
             The new value of the parameter.
 
         Returns
@@ -793,23 +792,60 @@ class Device:
             If the parameter is not defined by the device.
 
         """
-        param_hier = param_name.split("::")
-        p = self._p
-        for i, cur_p in enumerate(param_hier):
-            if i == (len(param_hier) - 1) and cur_p in p:
-                p[cur_p] = value
-            elif cur_p in p:
-                p = p[cur_p]
-            else:
-                msg = (
-                    f"Could not set parameter '{param_name}', "
-                    "as it was not defined by device."
-                )
-                raise ValueError(msg)
+        if param_name not in self._p:
+            msg = (
+                f"Could not set parameter '{param_name}', "
+                "as it was not defined by device."
+            )
+            raise ValueError(msg)
+        self._p[param_name] = value
+
+    def get_param(
+        self, param_name: str, cast_type: bool = True, clip_in_range: bool = True
+    ) -> object:
+        """Get a parameter value.
+
+        Parameters
+        ----------
+        param_name : str
+            The parameter to be retrieved.
+        cast_type : bool
+            Whether to cast the parameter to its defined type.
+        clip_in_range : bool, optional
+            Whether to clip the parameter value within its defined range, by default
+            True.
+
+        Returns
+        -------
+        object
+            The value of the parameter.
+
+        Raises
+        ------
+        ValueError
+            If the parameter is not defined by the device.
+
+        """
+        if param_name not in self._p:
+            msg = (
+                f"Could not get parameter '{param_name}', "
+                "as it was not defined by device."
+            )
+            raise ValueError(msg)
+        value = self._p[param_name]
+        if cast_type:
+            value = self._ptype[param_name](value)
+        if clip_in_range and not isinstance(value, Iterable):
+            try:
+                vmin, vmax = self._prange[param_name]
+                value = min(max(value, vmin), vmax)  # type: ignore[call-overload]
+            except TypeError:
+                pass
+        return value
 
     def get_params(
         self, cast_types: bool = True, clip_in_range: bool = True
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Return the dictionary with all parameters.
 
         Should be called by geom() functions.
@@ -823,19 +859,11 @@ class Device:
 
         Returns
         -------
-        dict[str, Any]
+        dict[str, object]
             A dictionary with the parameter value map.
 
         """
-        if cast_types:
-            for p, val in self._p.items():
-                self._p[p] = self._ptype[p](val)
-        if clip_in_range:
-            for p, val in self._p.items():
-                v = max(val, self._prange[p][0])
-                v = min(v, self._prange[p][1])
-                self._p[p] = v
-        return self._p
+        return {p: self.get_param(p, cast_types, clip_in_range) for p in self._p}
 
     def get_port(self, port_name: str) -> DevicePort:
         """Get a named port.
@@ -877,7 +905,18 @@ class Device:
         None
 
         """
-        self._name = name
+        self._name = str(name)
+
+    def get_name(self) -> str:
+        """Get the device name.
+
+        Returns
+        -------
+        str
+            The device name.
+
+        """
+        return self._name
 
     def set_description(self, descr: str) -> None:
         """Set the device description (should be called from initialize).
@@ -941,7 +980,7 @@ class Device:
         if self.use_references:
             # Check if it is in the device pool
             hsh = self.__hash__()
-            srefname = self._p["NETLIST"].name if "NETLIST" in self._p else self._name
+            srefname = self.get_name()
             if srefname not in _DeviceCountPool:
                 _DeviceCountPool[srefname] = 0
 
@@ -952,9 +991,11 @@ class Device:
                 _BoundingBoxPool[srefname] = LayoutPool[srefname].bounding_box()
                 _DevicePool[hsh] = srefname
                 _DeviceLocalParamPool[hsh] = deepcopy(self._localp)
+                _DeviceLocalPortPool[hsh] = deepcopy(self._localports)
             else:
                 srefname += f"_{_DeviceCountPool[srefname]:04d}"
                 self._localp = _DeviceLocalParamPool[hsh]
+                self._localports = _DeviceLocalPortPool[hsh]
             # now create a ref
             g = make_sref(
                 self._x0,
@@ -990,9 +1031,8 @@ class Device:
         None
 
         """
-        if "_ports_" in self._localp:
-            for p in self._localp["_ports_"].values():
-                self.addport(deepcopy(p))
+        for p in self._localports.values():
+            self.addport(deepcopy(p))
 
     @staticmethod
     def build_registered(name: str) -> "Device":
@@ -1030,6 +1070,21 @@ class Device:
         device.ports()
         return device
 
+    def copy(self) -> Self:
+        """Create a copy of the device.
+
+        Returns
+        -------
+        Self
+            A new instance of the device with the same parameters and ports.
+
+        """
+        return deepcopy(self)
+
+    def __copy__(self) -> Self:
+        """Create a deep copy of the device."""
+        return self.copy()
+
 
 class NetListEntry:
     """Class that defines a single entry in a netlist."""
@@ -1041,7 +1096,7 @@ class NetListEntry:
         y0: float,
         rot: str,
         portmap: dict[str, str],
-        params: dict[str, Any],
+        params: dict[str, object],
     ) -> None:
         """Initialize a netlist entry.
 
@@ -1060,7 +1115,7 @@ class NetListEntry:
             A dictionary that associates a port in the device to a wire. The keys of
             the dictionary are the port names defined in the device and the values are
             the wire names. Wires with the same name will be connected together.
-        params : dict[str, Any]
+        params : dict[str, object]
             A dictionary of parameters to be used when creating the device.
 
         """
@@ -1192,6 +1247,56 @@ class NetList:
         """
         self.paths[port_name] = coords
 
+    @staticmethod
+    def _parse_path(tokens: list[str]) -> tuple[str, list[float]]:
+        wire_name = tokens[1]
+        path_tokens = tokens[2:]
+        if len(path_tokens) % 3:
+            msg = (
+                "Wrong number of values specified for .PATH command. "
+                f"Got {len(path_tokens)} values, expected a multiple of 3."
+            )
+            raise ValueError(msg)
+
+        direction_angles = {"N": 90, "E": 0, "W": 180, "S": 270}
+        coordinates: list[float] = []
+        for index in range(0, len(path_tokens), 3):
+            coordinates.extend(
+                (float(path_tokens[index]), float(path_tokens[index + 1]))
+            )
+            angle = direction_angles.get(path_tokens[index + 2])
+            if angle is not None:
+                coordinates.append(angle)
+        return wire_name, coordinates
+
+    @staticmethod
+    def _parse_entry(
+        tokens: list[str], netlists: Mapping[str, "NetList"]
+    ) -> NetListEntry:
+        device_name = tokens[0]
+        params: dict[str, object] = {}
+        cursor = 1
+        if device_name == "X":
+            params["NETLIST"] = netlists[tokens[cursor]]
+            cursor += 1
+
+        x = float(tokens[cursor])
+        y = float(tokens[cursor + 1])
+        rotation = tokens[cursor + 2]
+        cursor += 3
+
+        port_map: dict[str, str] = {}
+        while tokens[cursor] != ".":
+            port_map[tokens[cursor]] = tokens[cursor + 1]
+            cursor += 2
+        cursor += 1
+
+        while cursor < len(tokens):
+            params[tokens[cursor]] = float(tokens[cursor + 1])
+            cursor += 2
+
+        return NetListEntry(device_name, x, y, rotation, port_map, params)
+
     @classmethod
     def import_circuit(
         cls, file_name: str, circuit_name: str = ""
@@ -1216,93 +1321,45 @@ class NetList:
             The NetList with the imported circuit.
 
         """
-        # Import all netlists
-        with _Path(file_name).open() as f:
-            current_netlist = ""
-            current_entrylist = []
-            current_align = []
-            current_path = {}
-            all_lists = {}  # stores all the imported netlists
-            for line in f:
+        netlists: dict[str, Self] = {}
+        current_header: list[str] | None = None
+        entries: list[NetListEntry] = []
+        aligned_ports: list[str] = []
+        paths: dict[str, list[float]] = {}
+
+        with _Path(file_name).open() as circuit_file:
+            for line in circuit_file:
                 tokens = line.split()
-                if len(tokens) == 0:  # empty line
+                if not tokens or tokens[0].startswith("#"):
+                    # Empty line or comment
                     continue
-                if tokens[0][0] == "#":  # Comment
-                    continue
-                if tokens[0] == ".CIRCUIT" and current_netlist == "":
-                    current_netlist = tokens[1:]
-                    print("Reading ", current_netlist[0])
-                    continue
-                if tokens[0] == ".ALIGN" and current_netlist != "":
-                    current_align = tokens[1:]
-                    continue
-                if tokens[0] == ".PATH" and current_netlist != "":
-                    # expect 4 tokens minimum
-                    wirename = tokens[1]
-                    pathlist = []
-                    if (len(tokens[2:]) % 3) > 0:
-                        msg = (
-                            "Wrong number of values specified for .PATH command. "
-                            f"Got {len(tokens[2:])} values, expected a multiple of 3."
-                        )
-                        raise ValueError(msg)
 
-                    for i in range(0, len(tokens[2:]), 3):
-                        pathlist += [float(tokens[2 + i])]  # X
-                        pathlist += [float(tokens[3 + i])]  # Y
-                        angle = tokens[4 + i]  # angle
-                        if angle == "N":
-                            pathlist += [90]
-                        if angle == "E":
-                            pathlist += [0]
-                        if angle == "W":
-                            pathlist += [180]
-                        if angle == "S":
-                            pathlist += [270]
+                command = tokens[0]
+                if command == ".CIRCUIT" and current_header is None:
+                    current_header = tokens[1:]
+                    print("Reading ", current_header[0])
+                elif command == ".ALIGN" and current_header is not None:
+                    aligned_ports = tokens[1:]
+                elif command == ".PATH" and current_header is not None:
+                    wire_name, coordinates = cls._parse_path(tokens)
+                    paths[wire_name] = coordinates
+                elif command == ".END" and current_header is not None:
+                    netlist = cls(current_header[0], deepcopy(entries))
+                    netlist.aligned_ports = aligned_ports
+                    netlist.external_ports = current_header[1:]
+                    netlist.paths = deepcopy(paths)
+                    netlists[netlist.name] = netlist
 
-                    current_path[wirename] = pathlist
-                    continue
-                if tokens[0] == ".END" and current_netlist != "":
-                    clist = cls(current_netlist[0], deepcopy(current_entrylist))
-                    clist.aligned_ports = current_align
-                    clist.external_ports = current_netlist[1:]
-                    clist.paths = deepcopy(current_path)
-                    current_entrylist = []
-                    current_netlist = ""
-                    current_align = []
-                    current_path.clear()
-                    all_lists[clist.name] = clist
-                    continue
-                # Now we should have only entries
-                if current_netlist != "":
-                    # parse entries
-                    devname = tokens[0]
-                    params = {}
-                    cin = 1
-                    if devname == "X":
-                        params["NETLIST"] = all_lists[tokens[1]]  # must exist
-                        cin += 1
-                    x = float(tokens[cin])
-                    cin += 1
-                    y = float(tokens[cin])
-                    cin += 1
-                    rot = tokens[cin]
-                    cin += 1
-                    portdict = {}
-                    while tokens[cin] != ".":  # Should always end the entry with a dot
-                        portdict[tokens[cin]] = tokens[cin + 1]
-                        cin += 2
-                    cin += 1
-                    while cin < len(tokens):
-                        params[tokens[cin]] = float(tokens[cin + 1])
-                        cin += 2
-                    current_entrylist.append(
-                        NetListEntry(devname, x, y, rot, portdict, params)
-                    )
+                    current_header = None
+                    entries = []
+                    aligned_ports = []
+                    paths.clear()
+                elif current_header is not None:
+                    entries.append(cls._parse_entry(tokens, netlists))
 
         if circuit_name == "":
-            return all_lists
-        return all_lists[circuit_name]
+            return netlists
+        return netlists[circuit_name]
 
 
 class Circuit(Device):
@@ -1311,7 +1368,7 @@ class Circuit(Device):
     The netlist is a parameter of the circuit and can be changed after building the
     device by calling
 
-        cir_dev.set_param("NETLIST", new_netlist)
+        cir_dev.set_netlist(new_netlist)
 
     which will automatically add the parameters associated with the devices in the
     netlist to the circuit parameters. They can then be set by calling
@@ -1326,7 +1383,12 @@ class Circuit(Device):
     method.
     """
 
-    def __flatdict(self, d: dict[str, Any], parent_str: str) -> dict[str, Any]:
+    def __init__(self) -> None:  # noqa: D107
+        super().__init__()
+        self._netlist: NetList | None = None
+        self._netlist_parameter_names: set[str] = set()
+
+    def __flatdict(self, d: dict[str, object], parent_str: str) -> dict[str, object]:
         flatdict = {}
         for key, value in d.items():
             if isinstance(value, dict):
@@ -1339,7 +1401,7 @@ class Circuit(Device):
     def __hash__(self) -> int:
         """Hash function for the circuit.
 
-        Based on the NETLIST parameter and the device name.
+        Based on the netlist and the device name.
 
         Returns
         -------
@@ -1347,8 +1409,14 @@ class Circuit(Device):
             The hash value of the circuit.
 
         """
-        flatdict = self.__flatdict(self._p, "")
+        total_dict = {**self._p, "NETLIST": self._netlist}
+        flatdict = self.__flatdict(total_dict, "")
         return hash((frozenset(flatdict.items()), self._name))
+
+    def get_name(self) -> str:  # noqa: D102
+        if self._netlist is None:
+            return super().get_name()
+        return self._netlist.name
 
     def initialize(self) -> None:
         """Name the Circuit as 'X' to be referred in other circuits.
@@ -1360,28 +1428,11 @@ class Circuit(Device):
         """
         self._name = "X"
 
-    def parameters(self) -> None:
-        """Define the parameter NETLIST taking a `NetList` object as input.
-
-        Returns
-        -------
-        None
-
-        """
-        self.addparameter(
-            param_name="NETLIST",
-            default_value=[],
-            param_description="A list of NetListEntry specifying a circuit",
-        )
-        self.addlocalparameter(
-            param_name="external_ports",
-            default_value={},
-            param_description="Locally store the ports that connect to the circuit",
-        )
-
-    def _update_parameters(self) -> None:
-        netlist = self._p["NETLIST"].entry_list
-        for i, nle in enumerate(netlist):
+    def _build_netlist_parameters(self, netlist: NetList | None) -> Device:
+        parameters = Device()
+        if netlist is None:
+            return parameters
+        for i, nle in enumerate(netlist.entry_list):
             if nle.devname not in _DeviceList:
                 msg = f"No device named {nle.devname} found."
                 raise ValueError(msg)
@@ -1389,13 +1440,49 @@ class Circuit(Device):
             dev = _DeviceList[nle.devname].build()
             for key, value in nle.params.items():
                 dev.set_param(key, value)
-            self.addparameter(
+            parameters.addparameter(
                 param_name=f"dev_{nle.devname}_{i + 1:d}",
                 default_value=dev._p,
                 param_description=f"Device parameters for {nle.devname}",
+                param_type=dict,
             )
+        return parameters
 
-    def set_param(self, param_name: str, value: Any) -> None:  # noqa: ANN401
+    def set_netlist(self, netlist: NetList | None) -> None:
+        """Set the netlist for the circuit.
+
+        Replacing a netlist resets its instance parameters and clears generated ports.
+        If the new netlist cannot be configured, the existing circuit is unchanged.
+
+        Parameters
+        ----------
+        netlist : NetList | None
+            The netlist to be set. Can be None to unset the netlist.
+
+        Returns
+        -------
+        None
+
+        """
+        if netlist is not None and not isinstance(netlist, NetList):
+            msg = "NETLIST must be of type NetList or None."
+            raise TypeError(msg)
+        parameters = self._build_netlist_parameters(netlist)
+        for name in self._netlist_parameter_names:
+            self._p.pop(name)
+            self._pdescr.pop(name)
+            self._ptype.pop(name)
+            self._prange.pop(name)
+        self._p.update(parameters._p)
+        self._pdescr.update(parameters._pdescr)
+        self._ptype.update(parameters._ptype)
+        self._prange.update(parameters._prange)
+        self._netlist_parameter_names = set(parameters._p)
+        self._netlist = netlist
+        self._localports = {}
+        self._ports.clear()
+
+    def set_param(self, param_name: str, value: object) -> None:
         """Set the value of a parameter.
 
         In a Circuit, you can refer to individual device parameters by using the
@@ -1411,7 +1498,7 @@ class Circuit(Device):
         ----------
         param_name : str
             The name of the parameter to be set.
-        value : Any
+        value : object
             The new value of the parameter.
 
         Returns
@@ -1419,9 +1506,32 @@ class Circuit(Device):
         None
 
         """
-        super().set_param(param_name, value)
         if param_name == "NETLIST":
-            self._update_parameters()
+            if value is not None and not isinstance(value, NetList):
+                msg = "NETLIST must be of type NetList or None."
+                raise TypeError(msg)
+            self.set_netlist(value)
+            return
+        if "::" not in param_name:
+            super().set_param(param_name, value)
+            return
+
+        parts = param_name.split("::")
+        params = self._p
+        for part in parts[:-1]:
+            child = params.get(part)
+            if not isinstance(child, dict):
+                break
+            params = child
+        else:
+            if parts[-1] in params:
+                params[parts[-1]] = value
+                return
+
+        msg = (
+            f"Could not set parameter '{param_name}', as it was not defined by device."
+        )
+        raise ValueError(msg)
 
     def _build_device_geometry(
         self,
@@ -1434,15 +1544,27 @@ class Circuit(Device):
 
         dev = _DeviceList[nle.devname].build()
         dev.use_references = self.use_references
+        if isinstance(dev, Circuit):
+            circuit_netlist = nle.params.get("NETLIST")
+            if not isinstance(circuit_netlist, NetList):
+                msg = f"NETLIST parameter for {nle.devname} is not a valid NetList."
+                raise TypeError(msg)
+            dev.set_netlist(circuit_netlist)
 
         # Force sequencer reset if has _seq subfield.
         # This keeps device behavior independent from prior sequencer state.
         if hasattr(dev, "_seq"):
-            dev._seq.reset()
+            dev._seq.reset()  # pyright: ignore[reportAttributeAccessIssue]
 
-        dev._p = self._p[f"dev_{nle.devname}_{instance_number:d}"]
-        dev._x0 = nle.x0
-        dev._y0 = nle.y0
+        dev_params = self._p[f"dev_{nle.devname}_{instance_number:d}"]
+        if not isinstance(dev_params, dict):
+            msg = (
+                f"Device parameters for {nle.devname} "
+                f"instance {instance_number} are not defined correctly."
+            )
+            raise TypeError(msg)
+        dev._p = cast("dict[str, object]", dev_params)
+        dev.set_position(nle.x0, nle.y0)
         dev.set_angle(math.radians(nle.rot))
         return dev.run(), dev._ports
 
@@ -1552,7 +1674,7 @@ class Circuit(Device):
                 input_port._parentports = {}
                 port = deepcopy(input_port)
                 port.name = portname
-                self._localp["external_ports"][portname] = port
+                self.addlocalport(port)
             else:
                 # Stacklevel=3 to point at code calling self.run() and not this method.
                 msg = f"Port {portname} is unconnected."
@@ -1568,10 +1690,15 @@ class Circuit(Device):
             The entire circuit geometry including connectors.
 
         """
-        netlist = self._p["NETLIST"].entry_list
-        external_ports = self._p["NETLIST"].external_ports
-        aligned_ports = self._p["NETLIST"].aligned_ports
-        paths = self._p["NETLIST"].paths
+        if self._netlist is None:
+            msg = "NETLIST is not set."
+            raise ValueError(msg)
+        # Replace rather than clear the dictionary, which may belong to the cache.
+        self._localports = {}
+        netlist = self._netlist.entry_list
+        external_ports = self._netlist.external_ports
+        aligned_ports = self._netlist.aligned_ports
+        paths = self._netlist.paths
 
         g = GeomGroup()
         input_ports: dict[str, DevicePort] = {}
@@ -1598,9 +1725,8 @@ class Circuit(Device):
         None
 
         """
-        ext_ports = self._localp["external_ports"]
-        for p in ext_ports.values():
-            self.addport(deepcopy(p))
+        self._ports.clear()
+        super().ports()
 
 
 _DeviceList: dict[str, type[Device]] = {"X": Circuit}
@@ -1632,7 +1758,7 @@ def register_devices_in_module(module_name: str) -> None:
                 else:
                     break
 
-            if baseobj == Device:
+            if baseobj == Device and issubclass(obj, Device):
                 oj = obj()
                 oj.initialize()
                 _DeviceList[oj._name] = obj

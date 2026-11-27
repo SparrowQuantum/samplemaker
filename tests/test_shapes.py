@@ -471,7 +471,6 @@ class TestPoly:
 
     Methods without coverage:
 
-    * `three_point_filter`
     * `identical_to`
     * `anisotropic_resize`
 
@@ -525,6 +524,34 @@ class TestPoly:
 
     def test_centroid(self, poly_obj: sp.Poly) -> None:
         assert poly_obj.centroid() == pytest.approx((1.5, 1.0))
+
+    def test_three_point_filter_removes_collinear_vertex(self) -> None:
+        poly = sp.Poly(
+            (0.0, 1.0, 2.0, 2.0, 0.0),
+            (0.0, 0.0, 0.0, 2.0, 2.0),
+            layer=2,
+        )
+
+        discarded = poly.three_point_filter("A > 0")
+
+        assert discarded == 1
+        vertices = poly.data.reshape(-1, 2)
+        assert len(vertices) == 5
+        assert {tuple(point) for point in vertices[:-1]} == {
+            (0.0, 0.0),
+            (2.0, 0.0),
+            (2.0, 2.0),
+            (0.0, 2.0),
+        }
+        assert vertices[-1] == pytest.approx(vertices[0])
+
+    def test_three_point_filter_rejects_unknown_names(self, poly_obj: sp.Poly) -> None:
+        original = poly_obj.data.copy()
+
+        with pytest.raises(NameError, match="unknown"):
+            poly_obj.three_point_filter("unknown > 0")
+
+        np.testing.assert_array_equal(poly_obj.data, original)
 
     def test_translate(self, poly_obj: sp.Poly) -> None:
         poly_obj.translate(1.0, 2.0)
@@ -2869,5 +2896,4 @@ class TestGeomGroup:
         before_npts = poly.npts
         ndisc = g.poly_filter(keep_str)
 
-        assert ndisc >= 1
-        assert g.group[0].npts == before_npts - ndisc + 1
+        assert ndisc == before_npts - g.group[0].npts
