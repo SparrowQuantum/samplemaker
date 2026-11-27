@@ -147,10 +147,7 @@ def _update_scrollbar_factory(param: str) -> Callable[[float], None]:
 
 def _build_device(devcl: Device | type[Device]) -> Device:
     if isinstance(devcl, Device):
-        dev = devcl.build()  # Device copy with default parameters
-        params = devcl.get_params(clip_in_range=False)
-        for param, value in params.items():
-            dev.set_param(param, value)
+        dev = devcl.copy()
     elif isinstance(devcl, type) and issubclass(devcl, Device):
         dev = devcl.build()
     else:
@@ -209,7 +206,7 @@ def inspect_device(devcl: Device | type[Device]) -> None:
     plt.subplots_adjust(bottom=0.5)
 
     _ViewerCurrentSliders = {}
-    param_dict = dev.get_params()
+    param_dict = dev.get_params(cast_types=False)
     n_params = len(param_dict)
     for pn, param in enumerate(param_dict.keys()):
         pval = dev.get_param(param)
