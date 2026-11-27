@@ -87,7 +87,7 @@ class CrossMark(Device):
             param_name="mark_number",
             default_value=0,
             param_description="Places a square in the corner, use 0 to remove",
-            param_type=float,
+            param_type=int,
             param_range=(0, 4),
         )
         self.addparameter(

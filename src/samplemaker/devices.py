@@ -801,7 +801,7 @@ class Device:
         self._p[param_name] = value
 
     def get_param(
-        self, param_name: str, cast_type: bool, clip_in_range: bool = True
+        self, param_name: str, cast_type: bool = True, clip_in_range: bool = True
     ) -> object:
         """Get a parameter value.
 
