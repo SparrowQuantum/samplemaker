@@ -1,5 +1,6 @@
 import math
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
@@ -322,6 +323,69 @@ class TestDevice:
 
         assert len(g.group) == 1
         assert isinstance(g.group[0], sp.Poly)
+
+    def test_copy(self, dummy_device: smdev.Device) -> None:
+        dummy_device.run()
+        copied_device = dummy_device.copy()
+        assert copied_device is not dummy_device
+        assert copied_device._p == dummy_device._p
+        assert copied_device._pdescr == dummy_device._pdescr
+        assert copied_device._ptype == dummy_device._ptype
+        assert copied_device._prange == dummy_device._prange
+        assert copied_device._localp == dummy_device._localp
+        assert copied_device._x0 == dummy_device._x0
+        assert copied_device._y0 == dummy_device._y0
+        assert copied_device._hv == dummy_device._hv
+        assert copied_device._bf == dummy_device._bf
+        assert copied_device._name == dummy_device._name
+        assert copied_device._description == dummy_device._description
+        assert copied_device.use_references == dummy_device.use_references
+        assert hash(copied_device) == hash(dummy_device)
+
+        device_port = dummy_device._ports["in"]
+        copied_port = copied_device._ports["in"]
+        assert copied_port is not device_port
+        assert copied_port.x0 == device_port.x0
+        assert copied_port.y0 == device_port.y0
+        assert copied_port.hv == device_port.hv
+        assert copied_port.bf == device_port.bf
+        assert copied_port.name == device_port.name
+
+        assert copied_device._p is not dummy_device._p
+        assert copied_device._pdescr is not dummy_device._pdescr
+        assert copied_device._ptype is not dummy_device._ptype
+        assert copied_device._prange is not dummy_device._prange
+        assert copied_device._localp is not dummy_device._localp
+        assert copied_device._ports is not dummy_device._ports
+        assert copied_device._localports is not dummy_device._localports
+
+    def test_copy_dunder(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        dummy_device: smdev.Device,
+    ) -> None:
+        copy_mock = Mock(return_value="copied_device")
+        monkeypatch.setattr(smdev.Device, "copy", copy_mock)
+        assert dummy_device.copy() == "copied_device"
+        copy_mock.assert_called_once()
+
+    def test_copy_with_sequencer(self, dummy_device: smdev.Device) -> None:
+        class DummySequencer:
+            def __init__(self) -> None:
+                self.seq_val = 42
+                self.options = {"a": 2.0, "b": 3.0}
+
+            def __hash__(self) -> int:
+                return hash(self.seq_val)
+
+        dummy_device._seq = DummySequencer()
+        copied_device = dummy_device.copy()
+        assert hasattr(copied_device, "_seq")
+        assert copied_device._seq is not dummy_device._seq
+        assert copied_device._seq.options is not dummy_device._seq.options
+        assert copied_device._seq.seq_val == dummy_device._seq.seq_val
+        assert copied_device._seq.options == dummy_device._seq.options
+        assert hash(copied_device) == hash(dummy_device)
 
 
 class TestNetListEntry:
@@ -1062,6 +1126,49 @@ class TestCircuit:
             "dev_TESTLIB_DUMMY_CONNECTOR_1",
             "dev_TESTLIB_DUMMY_CONNECTOR_2",
         }
+
+    def test_copy(
+        self,
+        dummy_device_list: dict[str, type[smdev.Device]],
+    ) -> None:
+        _ = dummy_device_list
+        netlist_entries = [
+            smdev.NetListEntry(
+                "TESTLIB_DUMMY_CONNECTOR", 0.0, 0.0, "E", {"io": "w1"}, {}
+            ),
+            smdev.NetListEntry(
+                "TESTLIB_DUMMY_CONNECTOR", 20.0, 0.0, "W", {"io": "w1"}, {}
+            ),
+        ]
+        netlist = smdev.NetList("multi_path_route", netlist_entries)
+        netlist.set_path("w1", [10.0, 0.0, 0.0, 10.0, 5.0, 90])
+
+        circuit = smdev.Circuit.build()
+        circuit.set_netlist(netlist)
+        _ = circuit.run()
+
+        cur_hash = hash(circuit)
+        copied_circuit = circuit.copy()
+        param_names = circuit._netlist_parameter_names
+        copied_param_names = copied_circuit._netlist_parameter_names
+
+        assert copied_param_names == param_names
+        assert copied_param_names is not param_names
+        assert hash(circuit) == cur_hash
+        assert hash(copied_circuit) == cur_hash
+        for entry, copied_entry in zip(
+            circuit._netlist.entry_list,
+            copied_circuit._netlist.entry_list,
+            strict=True,
+        ):
+            assert copied_entry.devname == entry.devname
+            assert copied_entry.x0 == entry.x0
+            assert copied_entry.y0 == entry.y0
+            assert copied_entry.rot == entry.rot
+            assert copied_entry.portmap == entry.portmap
+            assert copied_entry.portmap is not entry.portmap
+            assert copied_entry.params == entry.params
+            assert copied_entry.params is not entry.params
 
 
 class TestDeviceLibraryExports:
